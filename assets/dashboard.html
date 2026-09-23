@@ -121,8 +121,6 @@ button { font: inherit; color: inherit; }
 .btn.primary { background: var(--text); color: var(--black); box-shadow: none; font-weight: 500; }
 .btn.primary svg { color: var(--black); }
 .btn.primary:hover { opacity: 0.88; background: var(--text); }
-.btn.danger:hover { color: var(--red); }
-.btn.danger:hover svg { color: var(--red); }
 .btn .spin, .btn .done { display: none; }
 .btn.busy { pointer-events: none; opacity: 0.6; }
 .btn.busy .spin { display: block; animation: spin 900ms linear infinite; }
@@ -404,12 +402,6 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
 .side-tools .link { display: flex; align-items: center; gap: 11px; min-height: 36px; padding: 0 12px; border: 0; border-radius: 10px; background: none; color: var(--text-2); font-size: 13px; text-align: left; cursor: pointer; }
 .side-tools .link:hover { color: var(--text); background: var(--layer-1); }
 .side-tools .link svg { width: 16px; height: 16px; color: var(--text-3); }
-.switch { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 36px; padding: 0 12px; border-radius: 10px; color: var(--text-2); font-size: 13px; cursor: pointer; }
-.switch:hover { color: var(--text); background: var(--layer-1); }
-.switch input { appearance: none; position: relative; flex: none; width: 30px; height: 18px; margin: 0; border-radius: 999px; background: var(--layer-3); box-shadow: inset 0 0 0 1px var(--line-2); cursor: pointer; transition: background-color 160ms var(--ease); }
-.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--text-3); transition: transform 160ms var(--ease), background-color 160ms var(--ease); }
-.switch input:checked { background: var(--text-2); }
-.switch input:checked::after { transform: translateX(12px); background: var(--black); }
 .side-note { padding: 8px 12px 0; color: var(--text-3); font-size: 12px; line-height: 1.5; }
 .warn { color: var(--amber); }
 .panel-note { margin: -6px 0 0; padding: 0 var(--inset) 14px; color: var(--text-3); font-size: 12.5px; }
@@ -473,7 +465,6 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
   const OPENER_LABEL = { files: /Mac/.test(navigator.userAgent) ? "Finder" : "Files", terminal: "Terminal", vscode: "VS Code", cursor: "Cursor" };
   // The browser runs on the machine being checked, so it knows what to call it.
   const HERE = /Mac/.test(navigator.userAgent) ? "this Mac" : "this computer";
-  const DEPLOY = "If this project goes live whenever main changes (Vercel, Netlify and similar hosts do this), this can put it live.";
   // Where work lives online: a project's own server, or across all projects the one they share.
   const hostAll = () => {
     const hosts = [...new Set((data.projects || []).map((p) => p.host).filter(Boolean))];
@@ -494,10 +485,9 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
     stash: ["Stash", "Changes set aside with git stash to clear your working tree, without committing them. They sit out of sight until someone applies or drops them."],
     cleanup: ["Cleanup", "Merged branches and worktrees left behind after the work is done, locally or on the remote. Unmerged branches are work in progress, not mess."],
     squash: ["Squash-merged", "A branch can be merged by folding all its commits into one new commit on main. The branch's own commits never land in main, but every change on it does, so it's merged."],
-    detached: ["Detached HEAD", "A working tree that's on a specific commit instead of a branch. New commits made there belong to no branch, so switching away loses them unless they're saved to one. Push does that for you."],
+    detached: ["Detached HEAD", "A working tree that's on a specific commit instead of a branch. New commits made there belong to no branch, so switching away loses them unless they're saved to one. The push request asks your assistant to do that first."],
     diverged: ["Diverged", "Your main and the remote's main each have commits the other doesn't, so neither can simply fast-forward. It needs a careful fix."],
   };
-  const busy = new Set();
   const expanded = new Set();
   let route = null;
   let checking = false;
@@ -512,7 +502,6 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
     }
     return value;
   };
-  let advanced = pref("housekeep.advanced") === "1";
 
   /* ---------- helpers ---------- */
 
@@ -594,7 +583,7 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
 
   /* ---------- talking to the server ---------- */
 
-  // Demo mode: made-up projects, and buttons that show what they'd do without doing it.
+  // Demo mode: made-up projects. Requests copy as they would on your own; opening a folder is only described.
   const DEMO = Boolean(LIVE && LIVE.demo);
   // A demo page can be saved and served for months: keep it looking freshly checked.
   if (DEMO && data.generatedAt) {
@@ -606,12 +595,12 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
       for (const b of [...(p.branches || []), ...(p.remoteBranches || [])]) if (b.lastCommit) b.lastCommit += Math.round(shift / 1000);
     }
   }
-  const DEMO_DONE = "Demo: nothing was changed. On your own repos, this runs for real.";
+  const DEMO_OPEN = "Demo: on your own projects, this opens the folder.";
 
   async function api(path, body) {
     if (DEMO) {
       await new Promise((resolve) => setTimeout(resolve, 700));
-      return path.startsWith("/api/check") ? data : { ok: true, message: DEMO_DONE, output: "" };
+      return path.startsWith("/api/check") ? data : { ok: true, message: DEMO_OPEN };
     }
     const response = await fetch(path, {
       method: body ? "POST" : "GET",
@@ -627,7 +616,7 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
   function setLive(state) {
     liveButton.dataset.state = state;
     liveButton.querySelector(".word").textContent = { live: "Live", reconnecting: "Reconnecting", restart: "Reload", snapshot: "Snapshot", demo: "Demo" }[state];
-    liveButton.title = { live: "Updates arrive as your projects change", reconnecting: "Lost the connection to Housekeep. Trying again.", restart: "Housekeep restarted. Reload to reconnect.", snapshot: "A saved copy. Run housekeep open for live updates and buttons.", demo: "Made-up projects, so you can try every button. Nothing on your computer is read or changed." }[state];
+    liveButton.title = { live: "Updates arrive as your projects change", reconnecting: "Lost the connection to Housekeep. Trying again.", restart: "Housekeep restarted. Reload to reconnect.", snapshot: "A saved copy. Run housekeep open for live updates.", demo: "Made-up projects, so you can try it. Nothing on your computer is read or changed." }[state];
   }
   liveButton.addEventListener("click", () => { if (liveButton.dataset.state === "restart") location.reload(); });
 
@@ -660,63 +649,32 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
     setTimeout(dismiss, tier === "at-risk" ? 12000 : 6000);
   }
 
-  function ask({ title, body, warning, items = [], command, confirmText, danger }) {
-    return new Promise((resolve) => {
-      const cancel = el("button", { class: "btn ghost", type: "button" }, el("span", { text: "Cancel" }));
-      const ok = el("button", { class: "btn primary", type: "button" }, el("span", { text: confirmText }));
-      const dialog = el("dialog", { class: "confirm", "aria-label": title },
-        el("div", { class: "confirm-body" },
-          el("h3", { text: title }),
-          body ? el("p", { text: body }) : null,
-          warning ? el("p", { class: "warn", text: warning }) : null,
-          items.length ? el("ul", {}, items.map(([a, b]) => el("li", {}, el("span", { text: a }), el("span", { text: b || "" })))) : null,
-          command ? el("pre", { text: command }) : null),
-        el("div", { class: "confirm-actions" }, cancel, ok));
-      cancel.addEventListener("click", () => dialog.close("cancel"));
-      ok.addEventListener("click", () => dialog.close("ok"));
-      dialog.addEventListener("close", () => { resolve(dialog.returnValue === "ok"); dialog.remove(); });
-      document.body.append(dialog);
-      dialog.showModal();
-      (danger || warning ? cancel : ok).focus();
-    });
-  }
-
-  async function run(p, action, payload, key) {
-    busy.add(key);
-    render();
-    try {
-      const result = await api("/api/action", { project: p.path, action, ...payload });
-      toast("safe", result.message, action === "open" ? "" : result.output);
-    } catch (err) {
-      toast("at-risk", err.message);
-    } finally {
-      busy.delete(key);
-      render();
-    }
-  }
-
-  // A button that runs one allow-listed action, optionally behind a confirm dialog.
-  function actionButton(p, action, { payload = {}, text, iconName, tone = "", title, confirm } = {}) {
+  // Opening a folder in another app: the one thing the map does here. It never runs git.
+  function openButton(p, app, path, { text, iconName, tone = "", title } = {}) {
     if (!LIVE) return null;
-    const key = `${p.path}|${action}|${JSON.stringify(payload)}`;
-    const working = busy.has(key);
-    const button = el("button", { class: `btn${tone ? " " + tone : ""}${text ? "" : " icon"}${working ? " busy" : ""}`, type: "button", title: title || null, "aria-label": title || text },
-      iconName ? icon(iconName, "idle") : null, spinner(), text ? el("span", { text: working ? "Working" : text }) : null);
+    const button = el("button", { class: `btn${tone ? " " + tone : ""}${text ? "" : " icon"}`, type: "button", title: title || null, "aria-label": title || text },
+      iconName ? icon(iconName, "idle") : null, text ? el("span", { text }) : null);
     button.addEventListener("click", async () => {
-      if (confirm && !(await ask(confirm))) return;
-      run(p, action, payload, key);
+      try {
+        toast("safe", (await api("/api/open", { project: p.path, app, path })).message);
+      } catch (err) {
+        toast("at-risk", err.message);
+      }
     });
     return button;
   }
 
-  function copyButton(text, { label = "Copy request", tone = "" } = {}) {
-    const button = el("button", { class: `btn${tone ? " " + tone : ""}`, type: "button" }, icon("copy", "idle"), icon("check", "done"), el("span", { text: label }));
+  // Every fix is a request to copy for your AI assistant: Housekeep itself never changes a repo.
+  function copyButton(text, { label = "Copy request", tone = "", title = null, iconOnly = false } = {}) {
+    const button = el("button", { class: `btn${tone ? " " + tone : ""}${iconOnly ? " icon" : ""}`, type: "button", title, "aria-label": title || label },
+      icon("copy", "idle"), icon("check", "done"), iconOnly ? null : el("span", { text: label }));
+    const words = button.querySelector("span");
     button.addEventListener("click", () => {
       const done = (ok) => {
         button.classList.toggle("copied", ok);
-        button.querySelector("span").textContent = ok ? "Copied" : label;
-        toast(ok ? "safe" : "at-risk", ok ? "Copied. Paste it into your AI coding assistant, opened in this project's folder." : "Couldn't reach the clipboard.");
-        setTimeout(() => { button.classList.remove("copied"); button.querySelector("span").textContent = label; }, 1800);
+        if (words) words.textContent = ok ? "Copied" : label;
+        toast(ok ? "safe" : "at-risk", ok ? "Copied. Paste it into your AI assistant (Claude Code, Codex, Cursor), opened in this project's folder." : "Couldn't reach the clipboard.", ok ? text : "");
+        setTimeout(() => { button.classList.remove("copied"); if (words) words.textContent = label; }, 1800);
       };
       if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(() => done(true), () => done(false));
       else {
@@ -736,7 +694,7 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
     if (!LIVE || !(LIVE.openers || []).length) return null;
     const menu = el("details", { class: "menu" },
       el("summary", { class: "btn", "aria-label": "Open this project in another app" }, el("span", { text: "Open in" }), icon("down", "trail")),
-      el("div", { class: "menu-list" }, LIVE.openers.map((k) => actionButton(p, "open", { payload: { app: k, path: p.path }, text: OPENER_LABEL[k], iconName: k === "terminal" ? "terminal" : k === "files" ? "folder" : "code" }))));
+      el("div", { class: "menu-list" }, LIVE.openers.map((k) => openButton(p, k, p.path, { text: OPENER_LABEL[k], iconName: k === "terminal" ? "terminal" : k === "files" ? "folder" : "code" }))));
     menu.addEventListener("click", (e) => { if (e.target.closest(".menu-list")) menu.open = false; });
     return menu;
   }
@@ -744,44 +702,12 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
     document.querySelectorAll("details.menu[open]").forEach((m) => { if (!m.contains(e.target)) m.open = false; });
   });
 
-  /* ---------- what each button means ---------- */
+  /* ---------- requests for your AI assistant ---------- */
 
-  const deletable = (p) => p.branches.filter((b) => b.state === "merged" && !b.worktree && !b.current);
+  // Written by the scanner, so the map, the report and the JSON say the same thing.
   const remoteName = (p) => (p.remotes && p.remotes.push) || "origin";
   const mainRef = (p) => (p.main && p.main.remoteRef) || `${remoteName(p)}/${(p.main && p.main.name) || "main"}`;
   const how = (b) => b.merged === "squashed" ? "squash-merged" : "merged";
-  const pushAllConfirm = (p) => {
-    const m = p.main || {};
-    const remote = remoteName(p);
-    const items = p.branches.filter((b) => b.localOnly).map((b) => [b.name, plural(b.localOnly, "unpushed commit")]);
-    const lines = p.branches.filter((b) => b.localOnly).map((b) => `git push -u ${remote} ${b.name}`);
-    if (m.localOnly) {
-      items.unshift([`${m.name}, pushed as a backup branch`, plural(m.localOnly, "unpushed commit")]);
-      lines.unshift(`git push ${remote} ${m.name}:housekeep/backup-${m.name}-<date>`);
-    }
-    return {
-      title: `Push to ${remote}`,
-      body: `Copies these commits to ${H(p)} so they're safe if ${HERE} is lost. ${m.localOnly ? `Commits on ${m.name} go to a separate backup branch, so ${mainRef(p)}, and your live site, stay exactly as they are.` : "Nothing is merged, rewritten or deleted."}`,
-      items, command: lines.join("\n"), confirmText: "Push",
-    };
-  };
-  const pushBranchConfirm = (p, b) => ({
-    title: `Push ${b.name}`,
-    body: `Copies this branch to ${H(p)} so its commits are safe if ${HERE} is lost. Nothing is merged or deleted, and nothing goes live.`,
-    items: [[b.name, plural(b.localOnly, "unpushed commit")]], command: `git push -u ${remoteName(p)} ${b.name}`, confirmText: "Push",
-  });
-  const pushMainConfirm = (p) => ({
-    title: `Push ${p.main.name} to ${remoteName(p)}`,
-    body: `Updates ${mainRef(p)} with ${plural(p.main.ahead, "commit")} from ${HERE}. This skips pull request reviews and checks.`,
-    warning: DEPLOY, command: `git push ${remoteName(p)} ${p.main.name}`, confirmText: `Push ${p.main.name}`, danger: true,
-  });
-  const deleteConfirm = (p, names) => ({
-    title: names.length === 1 ? `Delete ${names[0]}` : `Delete ${plural(names.length, "merged branch", "merged branches")}`,
-    body: `Everything on ${names.length === 1 ? "it" : "these"} is already in ${mainRef(p)}, so no work is lost. Branches on ${remoteName(p)} aren't touched. Each one is checked again right before it's deleted.`,
-    items: names.map((n) => [n, how(p.branches.find((b) => b.name === n) || {})]), command: names.map((n) => `git branch -D ${n}`).join("\n"),
-    confirmText: "Delete", danger: true,
-  });
-  const remoteClearable = (p) => (p.remoteBranches || []).filter((b) => b.deletable);
   const unchecked = (p) => {
     const g = p.github || {};
     if (g.checked) return null;
@@ -789,76 +715,9 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
       ? `GitHub couldn't be asked about protected branches or open pull requests (${g.reason || "unknown reason"}), so they're judged by name only.`
       : `${H(p)} can't be asked about protected branches or open pull requests, so they're judged by name only.`;
   };
-  const remoteConfirm = (p, names) => ({
-    title: names.length === 1 ? `Delete ${names[0]} on ${remoteName(p)}` : `Delete ${plural(names.length, "merged branch", "merged branches")} on ${remoteName(p)}`,
-    body: `Every change on ${names.length === 1 ? "it" : "these"} is already in ${mainRef(p)}, so no work is lost. ${mainRef(p)} and your live site aren't touched. Each one is checked against ${H(p)} again right before it's deleted, and left alone if anyone has pushed to it since.`,
-    warning: unchecked(p) ? `${unchecked(p)} Make sure nobody is still using these.` : null,
-    items: names.map((n) => [n, how(p.remoteBranches.find((g) => g.name === n) || {})]),
-    command: names.map((n) => `git push ${remoteName(p)} --delete ${n}`).join("\n"),
-    confirmText: `Delete on ${remoteName(p)}`, danger: true,
-  });
-  const canPR = (p) => Boolean(LIVE && p.github && p.github.checked && p.main && p.main.remoteMain);
-  const prConfirm = (p, b) => ({
-    title: `Open a pull request for ${b.name}`,
-    body: `Proposes merging ${plural(b.aheadOfMain, "commit")} into ${mainRef(p)} on GitHub, so checks and reviews can run first. ${b.localOnly || !b.onRemote ? "The branch is pushed first. " : ""}Nothing is merged yet, and nothing goes live.`,
-    command: [b.localOnly || !b.onRemote ? `git push -u ${remoteName(p)} ${b.name}` : "", `gh pr create --base ${p.main.name} --head ${b.name} --fill`].filter(Boolean).join("\n"),
-    confirmText: "Open pull request",
-  });
-  const mergeConfirm = (p, b) => ({
-    title: `Merge ${b.name} into ${p.main.name}`,
-    body: `Adds ${plural(b.aheadOfMain, "commit")} to your local ${p.main.name}. Nothing is pushed yet. If it conflicts, the merge is aborted and nothing changes. This skips pull request reviews and checks, and leaves the branch on ${remoteName(p)} to delete afterwards.`,
-    warning: `Once you push ${p.main.name} afterwards: ${DEPLOY}`, command: `git merge --no-ff ${b.name}`, confirmText: "Merge", danger: true,
-  });
-  const unsetConfirm = (p, names) => ({
-    title: names.length === 1 ? `Unset upstream on ${names[0]}` : `Unset upstream on ${plural(names.length, "branch", "branches")}`,
-    body: `${names.length === 1 ? "This branch tracks" : "These branches track"} ${mainRef(p)}. With some git settings (push.default=upstream), a plain git push would then update ${mainRef(p)} directly. This only changes that setting: no commits or files change, and the next push gives ${names.length === 1 ? "it" : "each one"} an upstream of its own.`,
-    command: names.map((n) => `git branch --unset-upstream ${n}`).join("\n"), confirmText: "Unset upstream",
-  });
-  const fetchAllConfirm = (p) => ({
-    title: p.limits && p.limits.shallow ? "Fetch the full history" : "Fetch all branches",
-    body: `This is a ${p.limits && p.limits.shallow ? "shallow" : "single-branch"} clone, so some checks can't see everything. This fetches the rest from ${H(p)}. It can take a while for big repos. Your files and branches don't change.`,
-    command: [p.limits && p.limits.singleBranch ? `git config --replace-all remote.${remoteName(p)}.fetch "+refs/heads/*:refs/remotes/${remoteName(p)}/*"` : "",
-      p.limits && p.limits.shallow ? `git fetch --unshallow ${(p.remotes || {}).truth || "origin"}` : "", "git fetch --prune"].filter(Boolean).join("\n"),
-    confirmText: "Fetch",
-  });
-  const autoDeleteConfirm = (p) => ({
-    title: "Let GitHub delete merged branches",
-    body: "Turns on GitHub's \"Automatically delete head branches\" setting for this repo, so each pull request's branch is deleted once it's merged. Protected branches, and branches merged any other way, aren't affected.",
-    command: `gh api -X PATCH repos/${(p.github || {}).slug} -F delete_branch_on_merge=true`, confirmText: "Turn on",
-  });
-  const divergedAsk = (p) => `In ${p.path}, local ${p.main.name} and ${mainRef(p)} have diverged: ${p.main.ahead} commits only here and ${p.main.behind} only there. Explain what's on each side in plain English and propose the safest way to reconcile them. Don't push, force-push or delete anything without asking.`;
-
-  // The button that carries out a project's Start here step, when it's safe enough for one click.
-  function primaryAction(p, tone = "primary") {
-    if (!LIVE || !p.next) return null;
-    const m = p.main || {};
-    switch (p.next.kind) {
-      case "push-all": return actionButton(p, "push-all", { text: `Push to ${remoteName(p)}`, iconName: "upload", tone, confirm: pushAllConfirm(p) });
-      case "pull": return actionButton(p, "pull", { text: `Pull ${m.name}`, iconName: "download", tone, title: "Fast-forward only: nothing here is lost" });
-      case "delete-merged": {
-        const names = deletable(p).map((b) => b.name);
-        return names.length ? actionButton(p, "delete-merged", { payload: { branches: names }, text: `Delete ${plural(names.length, "merged branch", "merged branches")}`, iconName: "trash", tone, confirm: deleteConfirm(p, names) }) : null;
-      }
-      case "delete-remote": {
-        const names = remoteClearable(p).map((b) => b.name);
-        return names.length ? actionButton(p, "delete-remote", { payload: { branches: names }, text: `Delete ${plural(names.length, "merged branch", "merged branches")} on ${remoteName(p)}`, iconName: "trash", tone, confirm: remoteConfirm(p, names) }) : null;
-      }
-      case "unset-upstream": {
-        const names = p.branches.filter((b) => b.pushesToMain).map((b) => b.name);
-        return names.length ? actionButton(p, "unset-upstream", { payload: { branches: names }, text: "Unset upstream", tone, confirm: unsetConfirm(p, names) }) : null;
-      }
-      case "fetch-all": return actionButton(p, "fetch-all", { text: p.limits && p.limits.shallow ? "Fetch full history" : "Fetch all branches", iconName: "download", tone, confirm: fetchAllConfirm(p) });
-      case "prune-worktrees": return actionButton(p, "prune-worktrees", { text: "Prune worktrees", iconName: "eraser", tone });
-      case "restore-pruned": {
-        const names = (p.pruned || []).map((b) => b.name);
-        return names.length ? actionButton(p, "restore-pruned", { payload: { branches: names }, text: `Restore ${plural(names.length, "branch", "branches")}`, iconName: "download", tone,
-          confirm: { title: `Restore ${plural(names.length, "deleted branch", "deleted branches")}`,
-            body: `${names.length === 1 ? "This branch was" : "These branches were"} deleted on ${remoteName(p)} while holding work that isn't in ${mainRef(p)}. Housekeep kept the commits; this turns them back into local branches so you can look at them, push them or delete them.`,
-            items: p.pruned.map((b) => [b.name, plural(b.commits, "commit")]), command: p.pruned.map((b) => `git branch ${b.name.split("/").slice(1).join("/")} ${b.ref}`).join("\n"), confirmText: "Restore" } }) : null;
-      }
-      default: return null;
-    }
-  }
+  const request = (p, about, name = null) => (p.requests || []).find((r) => r.about === about && r.name === name) || null;
+  const rowCopy = (r) => r ? copyButton(r.ask, { tone: "ghost", iconOnly: true, title: `Copy a request to ${r.does}` }) : null;
+  const bulkCopy = (r) => r ? copyButton(r.ask, { label: `Copy request: ${r.does}`, tone: "ghost" }) : null;
 
   /* ---------- chrome ---------- */
 
@@ -904,12 +763,8 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
 
     const help = el("button", { class: "link", type: "button" }, icon("help"), "How this works");
     help.addEventListener("click", () => startOnboarding());
-    const toggle = el("input", { type: "checkbox", role: "switch", "aria-describedby": "advanced-note" });
-    toggle.checked = advanced;
-    toggle.addEventListener("change", () => { advanced = toggle.checked; pref("housekeep.advanced", advanced ? "1" : "0"); render(); });
-    document.getElementById("side-tools").replaceChildren(help, LIVE ? el("label", { class: "switch" }, "Advanced actions", toggle) : null);
-    document.getElementById("side-foot").replaceChildren(el("span", { id: "advanced-note",
-      text: advanced ? "Merge and push to main are on. Pushing main can put a site live." : `Watching projects you've worked on in the last ${data.activeDays || 45} days.` }));
+    document.getElementById("side-tools").replaceChildren(help);
+    document.getElementById("side-foot").replaceChildren(el("span", { text: `Watching projects you've worked on in the last ${data.activeDays || 45} days. Housekeep only reads; every fix is a request for your AI assistant.` }));
   }
 
   function renderChecked() {
@@ -936,11 +791,11 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
     const todo = projects.filter((p) => p.next && p.next.tier !== "safe");
     if (!todo.length) return null;
     const rows = todo.slice(0, 3).map((p) => {
-      const open = el("a", { class: "btn", href: `#${p.slug}` }, el("span", { text: "Open" }));
+      const open = el("a", { class: "btn ghost", href: `#${p.slug}` }, el("span", { text: "Open" }));
       return el("div", { class: "plan-row" },
         dot(p.next.tier),
         el("div", { style: "min-width:0" }, el("b", { text: p.next.title }), el("small", { text: `${p.name} · ${p.next.why}` })),
-        el("div", { class: "row-actions" }, primaryAction(p, "") || open));
+        el("div", { class: "row-actions" }, p.next.ask ? copyButton(p.next.ask) : null, open));
     });
     return el("section", { class: "panel", "data-tour": "next-steps" },
       el("div", { class: "panel-head" }, el("h2", { text: "Your next steps" }), el("div", { class: "end", text: todo.length > 3 ? `Most urgent first · ${todo.length - 3} more below` : "Most urgent first" })),
@@ -1193,15 +1048,13 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
     else if (!m.local) mainStatus = status("safe", "No local copy");
     else if (m.ahead && m.behind) {
       mainStatus = el("span", { class: "term" }, status("attention", `Diverged from ${mainRef(p)}`), q("diverged"));
-      mainActions = [copyButton(divergedAsk(p), { label: "Copy request" })];
+      mainActions = [rowCopy(request(p, "main", m.name))];
     } else if (m.behind) {
       mainStatus = el("span", { class: "term" }, status("attention", `${m.behind} behind ${mainRef(p)}`), q("pull"));
-      mainActions = [actionButton(p, "pull", { text: "Pull", iconName: "download", title: `Fast-forward ${plural(m.behind, "commit")} from ${mainRef(p)}. Nothing here is lost.` })];
+      mainActions = [rowCopy(request(p, "main", m.name))];
     } else if (m.ahead) {
       mainStatus = status(m.localOnly ? "at-risk" : "attention", `${m.ahead} ahead of ${mainRef(p)}`);
-      mainActions = advanced
-        ? [actionButton(p, "push", { payload: { branches: [m.name] }, text: `Push ${m.name}`, iconName: "upload", confirm: pushMainConfirm(p) })]
-        : m.localOnly ? [actionButton(p, "push-all", { text: "Push", iconName: "upload", confirm: pushAllConfirm(p) })] : [];
+      mainActions = [rowCopy(request(p, "main", m.name))];
     } else mainStatus = status("safe", `Up to date with ${mainRef(p)}`);
 
     const mainRow = m.name ? el("tr", {},
@@ -1221,20 +1074,12 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
         : b.state === "merged" ? "In main"
         : b.behindUpstream ? `${b.behindUpstream} to pull`
         : `${b.aheadOfMain} ahead`;
+      // A link to its pull request, and at most one request: the one thing this branch needs.
       const actions = [];
-      if (b.state === "unpushed") actions.push(actionButton(p, "push", { payload: { branches: [b.name] }, text: "Push", iconName: "upload", confirm: pushBranchConfirm(p, b) }));
-      if ((b.state === "unmerged" || b.state === "unpushed") && b.aheadOfMain && !b.upstreamGone) {
-        if (b.pr) actions.push(el("a", { class: "btn ghost", href: b.pr.url, target: "_blank", rel: "noopener", title: "Open the pull request on GitHub" }, icon("pr", "idle"), el("span", { text: `#${b.pr.number}` })));
-        else if (canPR(p)) actions.push(actionButton(p, "open-pr", { payload: { branch: b.name }, text: "Open PR", iconName: "pr", confirm: prConfirm(p, b) }));
-      }
-      if (advanced && (b.state === "unpushed" || b.state === "unmerged") && b.aheadOfMain) actions.push(actionButton(p, "merge", { payload: { branch: b.name }, text: "Merge", iconName: "merge", confirm: mergeConfirm(p, b) }));
-      if (b.pushesToMain) actions.push(actionButton(p, "unset-upstream", { payload: { branches: [b.name] }, text: "Unset upstream", tone: "ghost", confirm: unsetConfirm(p, [b.name]) }));
-      if (b.upstreamGone && !b.merged) actions.push(copyButton(`In ${p.path}, the branch ${b.name}'s upstream was deleted on ${remoteName(p)}, but it has ${plural(b.aheadOfMain, "commit")} whose changes aren't in ${mainRef(p)}. Tell me what that work is and whether it's still needed. Don't delete anything without asking.`, { label: "Copy request" }));
-      if (b.state === "merged") {
-        if (b.current) actions.push(el("span", { class: "muted", text: "Checked out" }));
-        else if (b.worktree) actions.push(el("span", { class: "muted", text: "In a worktree" }));
-        else actions.push(actionButton(p, "delete-merged", { payload: { branches: [b.name] }, title: `Delete ${b.name}`, iconName: "trash", tone: "ghost danger", confirm: deleteConfirm(p, [b.name]) }));
-      }
+      if (b.pr && b.state !== "merged") actions.push(el("a", { class: "btn ghost", href: b.pr.url, target: "_blank", rel: "noopener", title: "Open the pull request on GitHub" }, icon("pr", "idle"), el("span", { text: `#${b.pr.number}` })));
+      if (b.state === "merged" && b.current) actions.push(el("span", { class: "muted", text: "Checked out" }));
+      else if (b.state === "merged" && b.worktree) actions.push(el("span", { class: "muted", text: "In a worktree" }));
+      actions.push(rowCopy(request(p, "branch", b.name)));
       // Tracking main is only dangerous when push.default=upstream sends a plain git push there.
       const upstream = b.pushesToMain ? el("span", { class: "tag warn", title: `Its upstream is ${mainRef(p)} and push.default=upstream, so a plain git push from it would update ${mainRef(p)}`, text: `Pushes to ${p.main.name}` }) : null;
       return el("tr", {},
@@ -1243,11 +1088,9 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
         el("td", { class: "end" }, el("div", { class: "row-actions" }, actions)));
     });
 
-    const merged = deletable(p).map((b) => b.name);
-    const note = advanced || canPR(p) ? null : el("span", { text: "Merge is under Advanced actions" });
     return el("section", { class: "panel" },
       el("div", { class: "panel-head" }, el("h2", {}, term("Local branches", "branch")),
-        el("div", { class: "end" }, note, merged.length > 1 ? actionButton(p, "delete-merged", { payload: { branches: merged }, text: `Delete ${merged.length} merged`, tone: "ghost danger", iconName: "trash", confirm: deleteConfirm(p, merged) }) : null)),
+        el("div", { class: "end" }, bulkCopy(request(p, "merged")))),
       el("div", { class: "scroll" }, el("table", {},
         el("thead", {}, el("tr", {}, ["Branch", "Status", "vs main", "Last commit", ""].map((h, i) => el("th", { class: i === 4 ? "end" : null, text: h })))),
         el("tbody", {}, mainRow, rows))),
@@ -1273,24 +1116,24 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
         : b.merged ? "In main" : `${b.aheadOfMain} ahead`;
       const actions = [];
       if (b.pr) actions.push(el("a", { class: "btn ghost", href: b.pr.url, target: "_blank", rel: "noopener", title: "Open the pull request on GitHub" }, icon("pr", "idle"), el("span", { text: `#${b.pr.number}` })));
-      if (b.deletable) actions.push(actionButton(p, "delete-remote", { payload: { branches: [b.name] }, title: `Delete ${b.name} on ${remote}`, iconName: "trash", tone: "ghost danger", confirm: remoteConfirm(p, [b.name]) }));
+      actions.push(rowCopy(request(p, "remote", b.name)));
       return el("tr", {},
         el("td", {}, el("div", { class: "bname" }, branchName(b.name), b.backup ? el("span", { class: "tag", title: "Pushed by Housekeep to keep commits from main safe", text: "Backup" }) : b.local ? el("span", { class: "tag", text: "Also local" }) : null)),
         el("td", {}, st), el("td", { class: "muted", text: work }), el("td", { class: "muted", text: agoUnix(b.lastCommit) }),
         el("td", { class: "end" }, el("div", { class: "row-actions" }, actions)));
     });
-    const deletableNames = remoteClearable(p).map((b) => b.name);
+    const clearable = list.some((b) => b.deletable);
     const g = p.github || {};
     const notes = [blind ? `This clone only fetches ${m.name || "main"}, so other branches on ${remote} can't be seen.` : null, unchecked(p)].filter(Boolean);
-    const autoRow = LIVE && g.autoDelete === false && g.canAdmin ? el("div", { class: "plan-row" }, dot("attention"),
+    const auto = request(p, "github");
+    const autoRow = auto ? el("div", { class: "plan-row" }, dot("attention"),
       el("div", { style: "min-width:0" }, el("b", { text: "Let GitHub delete merged branches" }), el("small", { text: "Merged pull requests are leaving branches behind on this repo. GitHub can delete them automatically." })),
-      el("div", { class: "row-actions" }, actionButton(p, "auto-delete", { text: "Turn on", confirm: autoDeleteConfirm(p) }))) : null;
+      el("div", { class: "row-actions" }, copyButton(auto.ask, { tone: "ghost" }))) : null;
     return el("section", { class: "panel" },
       el("div", { class: "panel-head" }, el("h2", { text: `Branches on ${remote}` }),
         el("div", { class: "end" },
-          blind ? actionButton(p, "fetch-all", { text: "Fetch all branches", iconName: "download", tone: "ghost", confirm: fetchAllConfirm(p) }) : null,
-          deletableNames.length > 1 ? actionButton(p, "delete-remote", { payload: { branches: deletableNames }, text: `Delete ${deletableNames.length} merged`, tone: "ghost danger", iconName: "trash", confirm: remoteConfirm(p, deletableNames) })
-            : deletableNames.length || blind ? null : el("span", { text: "No merged branches left behind" }))),
+          blind ? bulkCopy(request(p, "clone")) : null,
+          bulkCopy(request(p, "merged-remote")) || (clearable || blind ? null : el("span", { text: "No merged branches left behind" })))),
       notes.length ? el("p", { class: "panel-note", text: notes.join(" ") }) : null,
       list.length ? el("div", { class: "scroll" }, el("table", {},
         el("thead", {}, el("tr", {}, ["Branch", "Status", "vs main", "Last commit", ""].map((h, i) => el("th", { class: i === 4 ? "end" : null, text: h })))),
@@ -1316,17 +1159,14 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
         : n ? ["attention", `${n} uncommitted`]
         : ["safe", "Clean"];
       const actions = [];
-      if (c.missing && !c.offline && !c.locked) actions.push(actionButton(p, "prune-worktrees", { text: "Prune", tone: "ghost", title: "The folder was deleted; this only clears git's record of it" }));
-      else if (!c.missing) {
-        actions.push(actionButton(p, "open", { payload: { app: "files", path: c.path }, iconName: "folder", tone: "ghost", title: `Show in ${OPENER_LABEL.files}` }));
-        if (((LIVE && LIVE.openers) || []).includes("terminal")) actions.push(actionButton(p, "open", { payload: { app: "terminal", path: c.path }, iconName: "terminal", tone: "ghost", title: "Open in Terminal" }));
+      if (c.missing) actions.push(rowCopy(request(p, "worktree", c.path)));
+      else {
+        actions.push(openButton(p, "files", c.path, { iconName: "folder", tone: "ghost", title: `Show in ${OPENER_LABEL.files}` }));
+        if (((LIVE && LIVE.openers) || []).includes("terminal")) actions.push(openButton(p, "terminal", c.path, { iconName: "terminal", tone: "ghost", title: "Open in Terminal" }));
         const removable = !c.primary && !n && !c.operation && !c.unreadable && !c.detachedCommits;
         if (removable && c.ignoredKeep.length) {
           actions.push(el("span", { class: "muted", title: `Removing this worktree would delete: ${c.ignoredKeep.join(", ")}`, text: `Has ${c.ignoredKeep[0].replace(/\/$/, "").split("/").pop()}${c.ignoredKeep.length > 1 ? ` +${c.ignoredKeep.length - 1}` : ""}` }));
-        } else if (removable) {
-          actions.push(actionButton(p, "remove-worktree", { payload: { path: c.path }, iconName: "trash", tone: "ghost danger", title: "Remove worktree",
-            confirm: { title: "Remove this worktree", body: `Deletes the folder ${shortPath(c.path)}. Its working tree is clean and it has no ignored files worth keeping${c.branch ? `, and the branch ${c.branch} is kept` : ""}, so no work is lost. Your main working tree isn't touched.`, command: `git worktree remove ${c.path}`, confirmText: "Remove worktree", danger: true } }));
-        }
+        } else actions.push(rowCopy(request(p, "worktree", c.path)));
       }
       const where = c.branch ? `on ${c.branch}` : c.detachedCommits ? "detached HEAD, commits on no branch" : "detached HEAD";
       return el("div", { class: "folder", title: c.path },
@@ -1361,15 +1201,14 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
     });
 
     const step = p.next || { tier: "safe", kind: null, title: "You're all set", why: "", ask: "" };
-    const button = step.tier === "safe" ? null : primaryAction(p);
-    const needsAssistant = step.tier !== "safe" && !button;
+    const todo = step.tier !== "safe" && step.ask;
     const next = el("section", { class: "panel next", "data-tier": step.tier },
       el("div", { style: "min-width:0" },
         el("div", { class: "kicker" }, dot(step.tier), step.tier === "safe" ? "All clear" : "Start here"),
         el("h2", { text: step.title }),
         step.why ? el("p", { text: step.why }) : null,
-        needsAssistant ? el("ol", { class: "guide" }, el("li", { text: "Copy the request" }), el("li", { text: "Open your AI coding assistant (Claude Code, Codex, Cursor) in this project's folder" }), el("li", { text: "Paste it and send" })) : null),
-      step.tier === "safe" ? null : el("div", { class: "act" }, button, step.ask ? copyButton(step.ask, { tone: needsAssistant ? "primary" : "" }) : null));
+        todo ? el("ol", { class: "guide" }, el("li", { text: "Copy the request" }), el("li", { text: "Open your AI coding assistant (Claude Code, Codex, Cursor) in this project's folder" }), el("li", { text: "Paste it and send" })) : null),
+      todo ? el("div", { class: "act" }, copyButton(step.ask, { tone: "primary" })) : null);
 
     mapBox = el("div", { class: "map" });
     mapProject = p;
@@ -1530,7 +1369,7 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
       }),
       () => {
         // Where to start, for every project that needs you. Onboarding only explains:
-        // each fix runs from Your next steps, where it shows its command and asks first.
+        // each fix is a request to copy from Your next steps, for your AI assistant to carry out.
         const needy = [...risky, ...attention];
         const shown = needy.slice(0, 5);
         if (shown.length) {
@@ -1540,7 +1379,7 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
           art.replaceChildren(el("div", { class: "scan" }, rows, more));
         } else art.replaceChildren(orb(worst));
         words(el("h1", { text: risky.length ? (risky.length === 1 ? "Start with the red one" : `Start with the ${risky.length} red ones`) : attention.length ? "Nothing is at risk" : "You're all set" }),
-          el("p", { text: risky.length ? "Each has one next step. Every fix shows its git command and asks before it runs. They're first under Your next steps."
+          el("p", { text: risky.length ? "Each has one next step, with a request to copy for your AI assistant. Housekeep never changes your repos itself. They're first under Your next steps."
             : attention.length ? "These are waiting under Your next steps, whenever you have a minute."
             : "Housekeep will let you know the moment that changes." }));
         actions.replaceChildren(...endButtons());
@@ -1582,9 +1421,9 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
   // A spotlight over the real page, so the welcome connects to what's on screen.
   const TOUR = [
     { sel: "#nav-projects", title: "Your projects", body: "Each one has its own light. Click a project to see what's going on and how to fix it." },
-    { sel: "[data-tour='next-steps']", title: "Most urgent first", body: "Your next steps across every project. When a fix is safe to do for you there's a button, and you'll see exactly what it does before it runs." },
+    { sel: "[data-tour='next-steps']", title: "Most urgent first", body: "Your next steps across every project. Each has a request to copy: paste it into your AI assistant, and it does the fix where you can see it." },
     { sel: ".strip .q", title: "Unfamiliar word?", body: "Click the ? beside it for a plain-English explanation." },
-    { sel: "#side-tools", title: "Here whenever you need it", body: "Replay this from How this works. Turn on Advanced actions when you're ready to merge branches yourself." },
+    { sel: "#side-tools", title: "Here whenever you need it", body: "Replay this from How this works whenever you like." },
   ];
 
   function startTour() {

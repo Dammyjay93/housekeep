@@ -40,9 +40,14 @@ export interface Checkout {
 }
 
 /** A remote branch deleted on the server while it held work that isn't in main; Housekeep kept its commits. */
+/** A branch deleted on the remote while it held work that isn't in main, noted before git forgot it. */
 export interface PrunedBranch {
+  /** As the remote-tracking branch was named, e.g. origin/feat/checkout. */
   name: string;
-  ref: string;
+  /** Its last commit: a new branch here brings the work back, while git still has it. */
+  sha: string;
+  /** When Housekeep noticed it was deleted. */
+  at: string;
   commits: number;
 }
 
@@ -149,6 +154,19 @@ export interface FetchInfo {
   error: string | null;
 }
 
+/**
+ * A request for your AI assistant about one thing: a branch here or on the remote, main, a worktree,
+ * or a group. The map shows each beside its thing; assistants reading the JSON get them all.
+ */
+export interface Request {
+  about: "branch" | "remote" | "main" | "worktree" | "merged" | "merged-remote" | "github" | "clone";
+  /** The branch name or worktree path, for a request about one thing. */
+  name: string | null;
+  /** What it asks for, as a short phrase: "push feat/checkout". */
+  does: string;
+  ask: string;
+}
+
 export interface Project {
   name: string;
   slug: string;
@@ -172,6 +190,8 @@ export interface Project {
   committedSecrets: CommittedSecret[];
   signals: Signal[];
   next: NextStep | null;
+  /** Every request beyond the next step: one per branch, remote branch or worktree that needs something, and the groups. */
+  requests: Request[];
   tier: Tier;
   verdict: string;
 }

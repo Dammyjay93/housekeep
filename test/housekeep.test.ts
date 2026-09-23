@@ -24,7 +24,7 @@ const { buildProject, checkGit, folderStatus, gitSupport, inMain, lastActivity, 
 const { startServer } = await import("../src/server.js");
 const { SERVER_FILE, STATE_DIR, CONFIG_FILE } = await import("../src/config.js");
 const { githubRepo, hostName, localPathOf, remotesOf } = await import("../src/remote.js");
-const { ACTIONS, ActionError } = await import("../src/actions.js");
+const { OpenError, openIn } = await import("../src/open.js");
 const { menubar } = await import("../src/menubar.js");
 const { loadDemo } = await import("../src/demo.js");
 const { renderDashboard } = await import("../src/render.js");
@@ -43,7 +43,7 @@ function commit(repo: string, name: string): string {
   return run(repo, "rev-parse", "HEAD");
 }
 
-const freshMemo = (): Memo => ({ tried: {}, heads: {}, github: {} });
+const freshMemo = (): Memo => ({ tried: {}, heads: {}, github: {}, deleted: {} });
 
 class Sandbox {
   readonly server: string;
@@ -95,11 +95,6 @@ const remoteOf = (p: Project, name: string) => {
   const b = p.remoteBranches.find((x) => x.name === name);
   assert.ok(b, `no remote branch ${name}`);
   return b;
-};
-const act = (name: string, p: Project, body: object = {}) => {
-  const spec = ACTIONS[name];
-  assert.ok(spec, `no action ${name}`);
-  return spec.run(p, body);
 };
 
 let count = 0;
@@ -254,7 +249,7 @@ describe("remotes", () => {
     assert.equal(p.main.name, "trunk");
   });
 
-  it("doesn't call a shallow, single-branch clone clean, and can fetch the rest", async () => {
+  it("doesn't call a shallow, single-branch clone clean, and asks for the rest", async () => {
     const sb = sandbox();
     sb.branch("feat/hidden", ["g"]);
     const narrow = join(sb.root, "narrow");
@@ -264,10 +259,7 @@ describe("remotes", () => {
     assert.notEqual(sig(p, "cleanup").tier, "safe");
     assert.notEqual(sig(p, "sync").tier, "safe");
     assert.equal(p.next?.kind, "fetch-all");
-    await act("fetch-all", p);
-    const after = await sb.project(narrow);
-    assert.deepEqual(after.limits, { shallow: false, singleBranch: false });
-    assert.ok(after.remoteBranches.some((b) => b.name === "feat/hidden"));
+    assert.match(p.next?.ask ?? "", /whole history/);
   });
 });
 
@@ -285,20 +277,18 @@ describe("working trees", () => {
   it("flags a branch that tracks main only when a plain push would update main", async () => {
     const sb = sandbox();
     run(sb.repo, "branch", "-q", "--track", "feat/linked", "origin/main");
-    let b = branchOf(await sb.project(), "feat/linked");
+    const b = branchOf(await sb.project(), "feat/linked");
     assert.deepEqual([b.upstreamIsMain, b.pushesToMain], [true, false]);
     run(sb.repo, "config", "push.default", "upstream");
     const p = await sb.project();
     assert.equal(branchOf(p, "feat/linked").pushesToMain, true);
     assert.equal(p.next?.kind, "unset-upstream");
-    await act("unset-upstream", p, { branches: ["feat/linked"] });
-    b = branchOf(await sb.project(), "feat/linked");
-    assert.equal(b.upstreamIsMain, false);
+    assert.match(p.next?.ask ?? "", /feat\/linked/);
   });
 });
 
-describe("actions", () => {
-  it("deletes merged branches on the remote, and refuses anything else", async () => {
+describe("requests for your AI assistant", () => {
+  it("names only the merged branches to clean up, here and on the remote, and changes nothing itself", async () => {
     const sb = sandbox();
     sb.branch("feat/done", ["h"]);
     sb.branch("feat/squash", ["i1", "i2"]);
@@ -307,57 +297,37 @@ describe("actions", () => {
     run(sb.repo, "merge", "-q", "--squash", "feat/squash");
     run(sb.repo, "commit", "-qm", "squash");
     run(sb.repo, "push", "-q", "origin", "main", "main:production");
-    let p = await sb.project();
-    for (const [names, why] of [[["production"], /left alone/], [["feat/open"], /isn't in origin\/main/], [["nope"], /isn't one of/]] as const) {
-      await assert.rejects(act("delete-remote", p, { branches: [...names] }), (err: unknown) => err instanceof ActionError && why.test(err.message));
-    }
-    // Someone pushes to a merged branch after the check: nothing at all is deleted.
-    const other = sb.clone("other");
-    run(other, "switch", "-q", "feat/done");
-    commit(other, "late");
-    run(other, "push", "-q", "origin", "feat/done");
-    await assert.rejects(act("delete-remote", p, { branches: ["feat/squash", "feat/done"] }), ActionError);
-    assert.ok(sb.remoteNames().includes("feat/squash"));
-    p = await sb.project();
-    const result = await act("delete-remote", p, { branches: ["feat/squash"] });
-    assert.match(result.message, /Deleted 1 merged branch/);
-    const left = sb.remoteNames();
-    assert.ok(!left.includes("feat/squash"));
-    for (const name of ["feat/done", "feat/open", "production", "main"]) assert.ok(left.includes(name), name);
-  });
-
-  it("deletes squash-merged local branches, but never unmerged ones", async () => {
-    const sb = sandbox();
-    sb.branch("feat/local-squash", ["l1", "l2"], false);
-    sb.branch("feat/local-open", ["m"], false);
-    run(sb.repo, "merge", "-q", "--squash", "feat/local-squash");
-    run(sb.repo, "commit", "-qm", "squash");
-    run(sb.repo, "push", "-q", "origin", "main");
+    const before = sb.remoteNames();
     const p = await sb.project();
-    await assert.rejects(act("delete-merged", p, { branches: ["feat/local-squash", "feat/local-open"] }), ActionError);
-    assert.ok(run(sb.repo, "branch", "--format=%(refname:short)").includes("feat/local-squash"));
-    await act("delete-merged", p, { branches: ["feat/local-squash"] });
-    assert.ok(!run(sb.repo, "branch", "--format=%(refname:short)").includes("feat/local-squash"));
+    assert.equal(p.next?.kind, "delete-merged");
+    const ask = p.next?.ask ?? "";
+    for (const name of ["feat/done", "feat/squash"]) assert.ok(ask.includes(name), name);
+    for (const name of ["feat/open", "production"]) assert.ok(!ask.includes(name), name);
+    assert.match(ask, /don't force-push/);
+    assert.doesNotMatch(ask, /git branch|git push/); // plain words, not commands
+    // Every other request is in the JSON too: one per branch here and on the remote, and the groups.
+    const about = p.requests.map((r) => `${r.about}:${r.name ?? ""}`);
+    for (const k of ["branch:feat/done", "branch:feat/squash", "remote:feat/done", "remote:feat/squash", "merged:", "merged-remote:"]) assert.ok(about.includes(k), k);
+    assert.ok(!about.some((k) => k.includes("production") || k.includes("feat/open")));
+    for (const r of p.requests) assert.doesNotMatch(r.ask, /git branch|git push|--/);
+    assert.deepEqual(sb.remoteNames(), before);
   });
 
-  it("pushes everything without ever pushing main", async () => {
+  it("asks to push everything without ever pushing main", async () => {
     const sb = sandbox();
     sb.branch("feat/unpushed", ["n"], false);
     commit(sb.repo, "unpushed-on-main"); // after branching, so only main carries it
+    const serverMain = run(sb.server, "rev-parse", "main");
     const p = await sb.project();
     assert.equal(sig(p, "push").tier, "at-risk");
-    const serverMain = run(sb.server, "rev-parse", "main");
-    await act("push-all", p);
+    assert.equal(p.next?.kind, "push-all");
+    assert.match(p.next?.ask ?? "", /Don't push main itself/);
     assert.equal(run(sb.server, "rev-parse", "main"), serverMain);
-    const names = sb.remoteNames();
-    assert.ok(names.includes("feat/unpushed"));
-    assert.ok(names.some((n) => n.startsWith("housekeep/backup-main-")));
-    assert.equal(sig(await sb.project(), "push").value, 0);
   });
 });
 
 describe("work that could be lost", () => {
-  it("counts commits on a detached HEAD, and pushing saves them to a branch", async () => {
+  it("counts commits on a detached HEAD, and asks for a branch before pushing", async () => {
     const sb = sandbox();
     run(sb.repo, "switch", "-q", "--detach");
     commit(sb.repo, "detached-work");
@@ -365,12 +335,10 @@ describe("work that could be lost", () => {
     assert.equal(p.checkouts[0]?.detachedCommits, 1);
     assert.equal(sig(p, "push").tier, "at-risk");
     assert.equal(p.next?.kind, "push-all");
-    await act("push-all", p);
-    assert.ok(sb.remoteNames().some((n) => n.startsWith("housekeep/detached-")));
-    assert.equal(sig(await sb.project(), "push").value, 0);
+    assert.match(p.next?.ask ?? "", /give them a branch first/);
   });
 
-  it("won't remove a worktree whose ignored files exist nowhere else", async () => {
+  it("notices ignored files that exist only in a worktree", async () => {
     const sb = sandbox();
     writeFileSync(join(sb.repo, ".gitignore"), ".env\nnode_modules/\n");
     run(sb.repo, "add", ".gitignore");
@@ -383,11 +351,10 @@ describe("work that could be lost", () => {
     const p = await sb.project();
     const c = p.checkouts.find((x) => x.path.endsWith("/wt"));
     assert.deepEqual(c?.ignoredKeep, [".env"]);
-    await assert.rejects(act("remove-worktree", p, { path: c?.path }), /ignored files that only live there/);
-    assert.ok(existsSync(join(wt, ".env")));
   });
 
-  it("says it couldn't check, instead of clean, when git can't read a working tree", async () => {
+  // Root reads any folder whatever its permissions, so this can only be shown as an ordinary user.
+  it("says it couldn't check, instead of clean, when git can't read a working tree", { skip: process.getuid?.() === 0 ? "running as root, which can read any folder" : false }, async () => {
     const sb = sandbox();
     const wt = join(sb.root, "locked-out");
     run(sb.repo, "worktree", "add", "-q", wt, "-b", "feat/unreadable");
@@ -399,33 +366,38 @@ describe("work that could be lost", () => {
       assert.equal(c?.missing, false);
       assert.notEqual(sig(p, "commit").tier, "safe");
       assert.equal(sig(p, "commit").cell, "Couldn't check");
-      await assert.rejects(act("prune-worktrees", p), /can't read the worktree/);
     } finally {
       chmodSync(wt, 0o755);
     }
   });
 
-  it("keeps unmerged work when its branch is deleted on the remote, and can restore it", async () => {
+  it("notes unmerged work when its branch is deleted on the remote, without writing to the repo", async () => {
     const sb = sandbox();
     sb.branch("feat/lost", ["lost-work"]);
     sb.branch("feat/landed", ["landed-1", "landed-2"]);
+    const lost = run(sb.repo, "rev-parse", "feat/lost");
     run(sb.repo, "merge", "-q", "--squash", "feat/landed");
     run(sb.repo, "commit", "-qm", "squash");
     run(sb.repo, "push", "-q", "origin", "main");
     run(sb.repo, "branch", "-q", "-D", "feat/lost", "feat/landed");
     const other = sb.clone("other");
     run(other, "push", "-q", "origin", "--delete", "feat/lost", "feat/landed");
-    const p = await buildProject(sb.repo, "work", 600_000, true, freshMemo());
-    assert.deepEqual(p.pruned.map((b) => b.name), ["origin/feat/lost"]); // the squash-merged one isn't kept
+    const memo = freshMemo();
+    const p = await buildProject(sb.repo, "work", 600_000, true, memo);
+    assert.deepEqual(p.pruned.map((b) => [b.name, b.sha]), [["origin/feat/lost", lost]]); // the squash-merged one isn't noted
     assert.equal(sig(p, "push").tier, "at-risk");
     assert.equal(p.next?.kind, "restore-pruned");
-    await act("restore-pruned", p, { branches: ["origin/feat/lost"] });
-    const after = await sb.project();
+    assert.ok(p.next?.ask.includes(`feat/lost, whose last commit was ${lost}`));
+    assert.equal(run(sb.repo, "for-each-ref", "refs/housekeep/"), ""); // nothing written into the repo
+    assert.equal(memo.deleted[sb.repo]?.length, 1);
+    // Once the work is on a branch again, Housekeep stops noting it.
+    run(sb.repo, "branch", "feat/lost", lost);
+    const after = await sb.project(sb.repo, memo);
     assert.equal(after.pruned.length, 0);
-    assert.equal(branchOf(after, "feat/lost").state, "unpushed");
+    assert.equal(memo.deleted[sb.repo], undefined);
   });
 
-  it("won't prune a worktree on a drive that isn't connected", async () => {
+  it("doesn't call a worktree on a drive that isn't connected prunable", async () => {
     assert.equal(onMissingDrive("/Volumes/housekeep-no-such-drive/app"), process.platform === "darwin" || process.platform === "linux");
     assert.equal(onMissingDrive(join(scratch, "gone")), false);
     const sb = sandbox();
@@ -439,7 +411,6 @@ describe("work that could be lost", () => {
     const c = p.checkouts.find((x) => x.path.includes("housekeep-no-such-drive"));
     assert.equal(c?.offline, true);
     assert.equal(sig(p, "cleanup").prunable, 0);
-    await assert.rejects(act("prune-worktrees", p), /isn't connected/);
     assert.ok(existsSync(admin));
   });
 
@@ -460,6 +431,13 @@ describe("work that could be lost", () => {
 });
 
 describe("the live map", () => {
+  it("never runs git: it only opens the project's own folders", async () => {
+    const sb = sandbox();
+    const p = await sb.project();
+    assert.throws(() => openIn(p, scratch, "files"), OpenError);
+    assert.throws(() => openIn(p, sb.repo, "no-such-app"), OpenError);
+  });
+
   it("keeps its token and state readable only by you", async () => {
     mkdirSync(join(scratch, "nothing-here"), { recursive: true });
     mkdirSync(dirname(CONFIG_FILE), { recursive: true });

@@ -89,9 +89,9 @@
           <p id="next-why">They exist only on this Mac. Pushing copies them to GitHub; origin/main itself isn't changed.</p>
           <div class="act">
             <button class="btn primary" type="button" id="next-go">
-              <svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="next-icon" d="M8 10.5V2.5M4.5 6L8 2.5 11.5 6M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2"/></svg>
+              <svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6h6a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 12 15H6a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 6 6z"/><path d="M11 3.5V3A1.5 1.5 0 0 0 9.5 1.5h-6A1.5 1.5 0 0 0 2 3v6a1.5 1.5 0 0 0 1.5 1.5H4"/></svg>
               <svg class="spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 1-5.5 5.5"/></svg>
-              <span id="next-label">Push to origin</span>
+              <span id="next-label">Copy request</span>
             </button>
           </div>
         </div>
@@ -102,16 +102,15 @@
       </div>
 
       <div class="inst-dialog" id="dialog" hidden>
-        <div class="confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <div class="confirm" role="dialog" aria-modal="true" aria-labelledby="req-title">
           <div class="confirm-body">
-            <h3 id="confirm-title"></h3>
-            <p id="confirm-body"></p>
-            <ul id="confirm-items"></ul>
-            <pre id="confirm-command"></pre>
+            <h3 id="req-title">Request copied</h3>
+            <p>Paste it into your AI assistant (Claude Code, Cursor, Codex), opened in shop-app's folder. It does the work where you can see it, and Housekeep notices when it's done.</p>
+            <pre id="req-text"></pre>
           </div>
           <div class="confirm-actions">
-            <button class="btn ghost" type="button" id="confirm-cancel"><span>Cancel</span></button>
-            <button class="btn primary" type="button" id="confirm-ok"><span></span></button>
+            <button class="btn ghost" type="button" id="req-close"><span>Close</span></button>
+            <button class="btn primary" type="button" id="req-done"><span>See what happens</span></button>
           </div>
         </div>
       </div>
@@ -147,8 +146,8 @@
     <section class="sect wide" id="demo" aria-labelledby="demo-title">
       <header class="sect-head">
         <span class="kicker">The whole map</span>
-        <h2 id="demo-title">Five made-up projects, every button live</h2>
-        <p>The real map, running on scripted repos. Each button shows the exact command it would run, then changes nothing.</p>
+        <h2 id="demo-title">Five made-up projects, the real map</h2>
+        <p>Running on scripted repos. Every fix copies a request for your AI assistant, as it does on your own projects.</p>
       </header>
       <div class="sect-body">
         <div class="panel embed" id="embed" data-view="map">
@@ -187,6 +186,8 @@
 
   <span class="r">2 could lose work</span><span class="d">  ·  </span><span class="a">2 need attention</span><span class="d">  ·  </span><span class="g">1 all clear</span>
 
+<span class="d">  Each fix is a request for your AI assistant: housekeep &lt;repo&gt; shows it, housekeep copy &lt;repo&gt; copies it.</span>
+
   <span class="b">o</span> <span class="d">open the map</span>   <span class="b">q</span> <span class="d">quit</span> <span class="cursor"></span><!--/demo-report--></pre></div></div>
         </div>
         <p class="panel-note phone-only">The map is made for a bigger screen. <a href="demo.html">Open the full demo</a></p>
@@ -218,10 +219,10 @@
       <div class="sect-body">
         <div class="panel">
           <div class="plan-row" style="border-top:0"><span class="dot" data-tier="attention"></span><div><b>Merged, even when git says it isn't</b><small>GitHub squash-merged the branch, so its commits never reached main. Housekeep checks the changes, not the commits.</small></div><span class="status" data-tier="attention"><span class="dot" data-tier="attention"></span>Squash-merged</span></div>
-          <div class="plan-row"><span class="dot" data-tier="at-risk"></span><div><b>Commits on no branch at all</b><small>An agent committed on a detached HEAD. They count as unpushed, and pushing saves them to a branch.</small></div><span class="status" data-tier="at-risk"><span class="dot" data-tier="at-risk"></span>2 commits on no branch</span></div>
+          <div class="plan-row"><span class="dot" data-tier="at-risk"></span><div><b>Commits on no branch at all</b><small>An agent committed on a detached HEAD. They count as unpushed, and the request has your assistant give them a branch first.</small></div><span class="status" data-tier="at-risk"><span class="dot" data-tier="at-risk"></span>2 commits on no branch</span></div>
           <div class="plan-row"><span class="dot" data-tier="attention"></span><div><b>The .env.local only one worktree has</b><small>Removing a worktree deletes its ignored files too, so one holding anything found nowhere else is never removed.</small></div><span class="tag">Has .env.local</span></div>
           <div class="plan-row"><span class="dot" data-tier="at-risk"></span><div><b>A key committed, or already pushed</b><small>Flagged red, with the order to fix it in: rotate the keys first, then take the file out of git.</small></div><span class="status" data-tier="at-risk"><span class="dot" data-tier="at-risk"></span>Secret pushed: .env</span></div>
-          <div class="plan-row"><span class="dot" data-tier="at-risk"></span><div><b>Work on a branch someone deleted</b><small>When a branch with unmerged work disappears from GitHub, a copy is kept before git forgets it, ready to restore.</small></div><span class="tag">Restore 1 branch</span></div>
+          <div class="plan-row"><span class="dot" data-tier="at-risk"></span><div><b>Work on a branch someone deleted</b><small>When a branch with unmerged work disappears from GitHub, Housekeep notes its last commit, so your assistant can bring it back while git still has it.</small></div><span class="tag">Recreate 1 deleted branch</span></div>
           <div class="plan-row"><span class="dot" data-tier="attention"></span><div><b>Backups that aren't</b><small>A remote that's just another folder on the same disk isn't a backup, so it doesn't show green.</small></div><span class="status" data-tier="attention"><span class="dot" data-tier="attention"></span>Same disk</span></div>
         </div>
       </div>
@@ -230,13 +231,13 @@
     <section class="sect" aria-labelledby="careful-title">
       <header class="sect-head">
         <span class="kicker">Careful by design</span>
-        <h2 id="careful-title">It asks before it changes anything</h2>
-        <p>You saw it above: nothing changes until you press a button, and every button shows its git command first.</p>
+        <h2 id="careful-title">It never touches your repos</h2>
+        <p>You saw it above: Housekeep only looks. Every fix is a request you hand your AI assistant, which does the work where you can see it.</p>
       </header>
       <div class="sect-body">
         <div class="panel">
-          <div class="plan-row" style="border-top:0"><span class="dot" data-tier="safe"></span><div><b>Checks again right before it runs</b><small>A branch is only deleted once all its changes are in main, and a branch on GitHub only if nobody has pushed to it since.</small></div><span></span></div>
-          <div class="plan-row"><span class="dot" data-tier="safe"></span><div><b>Never force-pushes, never pushes main</b><small>Unpushed commits on main go to a separate backup branch, because pushing main can put a site live.</small></div><span></span></div>
+          <div class="plan-row" style="border-top:0"><span class="dot" data-tier="safe"></span><div><b>Only reads</b><small>It never commits, pushes, merges or deletes. The one thing it runs is git fetch, which updates git's record of the remote and nothing of yours.</small></div><span></span></div>
+          <div class="plan-row"><span class="dot" data-tier="safe"></span><div><b>Requests with the checks built in</b><small>Each tells your assistant what to check first: only delete what's provably in main, never force-push, never push main, because that can put a site live.</small></div><span></span></div>
           <div class="plan-row"><span class="dot" data-tier="safe"></span><div><b>Stays on your computer</b><small>No account, no telemetry, no server of ours. The only traffic is git's own, and GitHub's when you've set it up.</small></div><span></span></div>
         </div>
       </div>
@@ -246,7 +247,7 @@
       <header class="sect-head">
         <span class="kicker">For AI assistants</span>
         <h2 id="ai-title">Your assistant can check before it says “done”</h2>
-        <p>Claude Code, Cursor or Codex can run it in a repo and read the answer. Anything that needs judgement comes with a request written for them.</p>
+        <p>Claude Code, Cursor or Codex can run it and read the answer, with a request written for them for every fix. For Claude Code, <span class="mono">npx git-housekeep skill</span> teaches it to check before it says it's done; for the others, one line in <span class="mono">AGENTS.md</span> does.</p>
       </header>
       <div class="sect-body">
         <div class="panel">
@@ -256,7 +257,7 @@
   "next": {
     "title": "Push 3 unpushed commits",
     "why": "They exist only on this Mac. Pushing copies them to GitHub; origin/main itself isn't changed.",
-    "ask": "In /Users/you/code/shop-app, some commits exist only on this machine. Push every branch with unpushed commits to origin, without changing origin/main or anything that could deploy. Show me the plan first."
+    "ask": "In /Users/you/code/shop-app, some commits exist only on this computer. Push them to origin so they're backed up, each branch under its own name. Don't change origin/main, and don't force-push. Show me the plan before you start."
   }
 }</pre></div>
         </div>
@@ -272,7 +273,7 @@
       <div class="sect-body">
         <div class="panel">
           <div class="plan-row" style="border-top:0"><span class="num">1</span><div><b class="mono">npx git-housekeep</b><small>Checks every repo you've worked on in the last 45 days, and tells you what to do first.</small></div><span></span></div>
-          <div class="plan-row"><span class="num">2</span><div><b>Press <kbd>o</kbd></b><small>Opens the map in your browser, with a button for each fix.</small></div><span></span></div>
+          <div class="plan-row"><span class="num">2</span><div><b>Press <kbd>o</kbd></b><small>Opens the map in your browser, with a request to copy for each fix.</small></div><span></span></div>
           <div class="plan-row"><span class="num">3</span><div><b class="mono">housekeep install</b><small>On a Mac, keeps it running from login, with the light in your menu bar.</small></div><span></span></div>
         </div>
       </div>
@@ -372,24 +373,16 @@ const drawMap = () => {
   grp = [grpLines, grpMark, grpLabel];
 };
 
-const ICON = {
-  upload: "M8 10.5V2.5M4.5 6L8 2.5 11.5 6M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2",
-  trash: "M2.5 4.5h11M6 4.5V3a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1.5M4 4.5l.7 9h6.6l.7-9",
-};
-// Each step in the app's own words: its next step, its confirm dialog, and what the light says.
+// Each step in the app's own words: its next step, the request it hands your assistant, and what the light says.
 const STEPS = [
   { tier: "at-risk", verdict: "Could lose work", count: "1", meaning: "Red means work could be lost",
     kicker: "Start here", title: "Push 3 unpushed commits", why: "They exist only on this Mac. Pushing copies them to GitHub; origin/main itself isn't changed.",
-    go: "Push to origin", icon: "upload",
-    confirm: { title: "Push feat/checkout-redesign", body: "Copies this branch to GitHub so its commits are safe if this Mac is lost. Nothing is merged or deleted, and nothing goes live.",
-      items: [["feat/checkout-redesign", "3 unpushed commits"]], command: "git push -u origin feat/checkout-redesign", ok: "Push" },
-    done: "Pushed feat/checkout-redesign to origin" },
+    ask: "In /Users/you/code/shop-app, some commits exist only on this computer. Push them to origin so they're backed up, each branch under its own name. Don't change origin/main, and don't force-push. Show me the plan before you start.",
+    noticed: "feat/checkout-redesign is on origin now" },
   { tier: "attention", verdict: "Needs attention", count: "1", meaning: "Amber means something needs attention",
     kicker: "Next", title: "Delete 2 merged branches", why: "Their work is already in origin/main, so no work is lost.",
-    go: "Delete merged branches", icon: "trash",
-    confirm: { title: "Delete 2 merged branches", body: "Everything on these is already in origin/main, so no work is lost. Branches on origin aren't touched. Each one is checked again right before it's deleted.",
-      items: [["fix/cart-total", "squash-merged"], ["feat/rate-limit", "merged"]], command: "git branch -D fix/cart-total\ngit branch -D feat/rate-limit", ok: "Delete" },
-    done: "Deleted 2 merged branches" },
+    ask: "In /Users/you/code/shop-app, delete the local branches fix/cart-total, feat/rate-limit: their work is already in origin/main. Before deleting, check each one again: every change on it should be in origin/main. Some may have been squash-merged, so compare the changes, not the commits. Skip any that's checked out, and leave branches on origin alone.",
+    noticed: "The 2 merged branches are gone" },
   { tier: "safe", verdict: "All clear", count: "", meaning: "Green means you're all set",
     kicker: "All clear", title: "Nothing to do", why: "Everything is committed, pushed, in sync with origin/main, and cleaned up." },
 ];
@@ -407,11 +400,7 @@ const paint = (animate) => {
   $("next-kicker").textContent = s.kicker;
   $("next-title").textContent = s.title;
   $("next-why").textContent = s.why;
-  $("next-go").hidden = !s.go;
-  if (s.go) {
-    $("next-label").textContent = s.go;
-    $("next-icon").setAttribute("d", ICON[s.icon]);
-  }
+  $("next-go").hidden = !s.ask;
   setTier($("meaning"), s.tier);
   $("meaning").lastElementChild.textContent = s.meaning;
   $("reset").hidden = step === 0;
@@ -435,56 +424,57 @@ const toast = (message, output) => {
   setTimeout(() => { node.classList.add("leaving"); setTimeout(() => node.remove(), 160); }, 3200);
 };
 
-// What each confirmed step does to the map.
+// What your assistant's work does to the map, once Housekeep notices it.
 const APPLY = [
   () => { work.line.setAttribute("stroke", SOFT); work.note.textContent = "Unmerged · 3 commits not in origin/main"; work.note.setAttribute("fill", "var(--text-3)"); },
   () => { for (const g of grp) g.classList.add("gone"); },
 ];
 
 const dialog = $("dialog");
-const ask = () => {
-  const c = STEPS[step].confirm;
-  $("confirm-title").textContent = c.title;
-  $("confirm-body").textContent = c.body;
-  $("confirm-items").replaceChildren(...c.items.map(([a, b]) => {
-    const li = document.createElement("li");
-    const x = document.createElement("span"), y = document.createElement("span");
-    x.textContent = a;
-    y.textContent = b;
-    li.append(x, y);
-    return li;
-  }));
-  $("confirm-command").textContent = c.command;
-  $("confirm-ok").firstElementChild.textContent = c.ok;
+// Copies the request for real, then shows it: in the app, this is the whole of what a fix button does.
+const hand = async () => {
+  const text = STEPS[step].ask;
+  let copied = true;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    // Some browsers refuse clipboard access; the request is shown in full to copy by hand.
+    copied = false;
+  }
+  $("req-title").textContent = copied ? "Request copied" : "Here's the request";
+  $("req-text").textContent = text;
   dialog.hidden = false;
-  $("confirm-ok").focus();
+  $("req-done").focus();
 };
 const close = () => { dialog.hidden = true; $("next-go").focus(); };
-$("next-go").addEventListener("click", ask);
-$("confirm-cancel").addEventListener("click", close);
+$("next-go").addEventListener("click", hand);
+$("req-close").addEventListener("click", close);
 dialog.addEventListener("click", (e) => { if (e.target === dialog) close(); });
 dialog.addEventListener("keydown", (e) => {
   if (e.key === "Escape") close();
   if (e.key === "Tab") {
     // Keep focus inside the dialog, between its two buttons.
-    const [first, last] = [$("confirm-cancel"), $("confirm-ok")];
+    const [first, last] = [$("req-close"), $("req-done")];
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
 });
-$("confirm-ok").addEventListener("click", () => {
+// Your assistant does the work; Housekeep, watching, notices and the light follows.
+$("req-done").addEventListener("click", () => {
   const s = STEPS[step];
   close();
   const go = $("next-go");
   go.classList.add("busy");
+  $("next-label").textContent = "Your assistant is on it";
   setTimeout(() => {
     go.classList.remove("busy");
+    $("next-label").textContent = "Copy request";
     APPLY[step]();
-    toast(s.done, s.confirm.command);
+    toast(`Housekeep noticed: ${s.noticed}`, `The light is ${STEPS[step + 1].tier === "safe" ? "green" : "amber"} now`);
     step += 1;
     paint(true);
     (step < STEPS.length - 1 ? go : $("reset")).focus();
-  }, 900);
+  }, 1400);
 });
 const redraw = () => {
   drawMap();

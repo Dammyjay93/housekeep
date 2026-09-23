@@ -142,7 +142,7 @@ const lookLikeGitHub = (repo: string, name: string): void => {
 mkdirSync(join(work, "config"), { recursive: true });
 writeFileSync(join(work, "config", "config.json"), JSON.stringify({ roots: [code], maxDepth: 2, activeDays: 365, fetchEveryMinutes: 0 }));
 
-const { scan } = await import("../src/scan.js");
+const { requestsFor, scan } = await import("../src/scan.js");
 const snap = await scan({ offline: true });
 
 // What GitHub would have said, had it been asked.
@@ -153,6 +153,8 @@ for (const p of snap.projects) {
   if (p.fetch.hasRemote) p.fetch = { hasRemote: true, at: new Date(now - 4 * 60_000).toISOString(), error: null };
   for (const b of p.branches) if (b.name === "codex/add-logging") b.pr = { number: 14, url: `https://github.com/${slug}/pull/14` };
   for (const b of p.remoteBranches) if (b.name === "codex/add-logging") b.pr = { number: 14, url: `https://github.com/${slug}/pull/14` };
+  // The requests depend on what GitHub said, so write them again with it.
+  p.requests = requestsFor(p);
 }
 snap.generatedAt = new Date(now).toISOString();
 snap.configPath = "~/.config/housekeep/config.json";

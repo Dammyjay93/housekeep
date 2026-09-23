@@ -80,6 +80,9 @@ export function summaryReport(data: Snapshot, c: Paint): string {
     n("safe") ? c.green(`${n("safe")} all clear`) : "",
   ].filter(Boolean);
   if (counts.length) lines.push(`  ${counts.join(c.dim("  ·  "))}`);
+  if (data.projects.some((p) => p.tier !== "safe")) {
+    lines.push("", c.dim("  Each fix is a request for your AI assistant: housekeep <repo> shows it, housekeep copy <repo> copies it."));
+  }
   for (const notice of data.notices ?? []) lines.push("", c.dim(`  ${notice}`));
   if (data.blocked.length) {
     lines.push("", c.dim(`  Couldn't look inside ${data.blocked.slice(0, 3).join(", ")}${data.blocked.length > 3 ? " and more" : ""}.`),
@@ -104,7 +107,9 @@ export function detailReport(p: Project, c: Paint): string {
   if (p.fetch.error) lines.push("", `  ${c.dim(p.fetch.error)}`);
   if (p.next) {
     lines.push("", `  ${c.dim("→")} ${c.bold(p.next.title)}`, `    ${c.dim(p.next.why)}`);
-    if (p.next.kind === "assistant" && p.next.ask) lines.push("", c.dim("    Ask your AI coding assistant, from this repo:"), `    ${p.next.ask}`);
+    if (p.next.tier !== "safe" && p.next.ask) {
+      lines.push("", c.dim("    Ask your AI assistant, opened in this repo (housekeep copy copies it):"), `    ${p.next.ask}`);
+    }
   }
   lines.push("");
   return lines.join("\n");

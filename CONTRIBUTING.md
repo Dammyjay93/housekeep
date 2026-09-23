@@ -4,8 +4,8 @@ Thanks for helping. Housekeep has a few rules that every change follows, because
 
 ## The rules
 
-1. **Never lose work.** A button refuses rather than guesses. Before anything changes, it checks again, and it only deletes what's provably in `main` on the remote. Nothing is ever force-pushed.
-2. **Ask first.** Nothing changes a repo until the person presses a button, and the button shows the exact git command.
+1. **Only read.** Housekeep never changes a repo. The one exception is `git fetch`, which updates git's record of the remote. Every fix is a request for the person's AI assistant.
+2. **Never lose work.** A request says what to check before anything changes: only delete what's provably in `main` on the remote, never force-push, never push `main`.
 3. **Git's own words.** Say "unpushed commits", "origin/main", "worktree", not invented terms, and explain each one where it appears.
 4. **No dependencies.** The CLI runs on Node's standard library and the `git` already installed. `gh` is optional.
 5. **Say when you can't see.** If a check can't run, show "couldn't check", never green.
@@ -20,7 +20,7 @@ npm install
 npm test
 ```
 
-The tests build throwaway repos, each with a local bare repo standing in for the remote, so they never touch yours. Add a test for any change to what Housekeep decides or does, including the case where it should refuse.
+The tests build throwaway repos, each with a local bare repo standing in for the remote, so they never touch yours. Add a test for any change to what Housekeep decides, or to what a request asks for.
 
 To try your build without touching your own repos:
 
@@ -35,7 +35,7 @@ node dist/src/cli.js open --demo
 ## Where things live
 
 - `src/scan.ts` decides: what's committed, pushed, merged, safe to delete, and the next step.
-- `src/actions.ts` changes things, each action re-checking before it runs.
+- `src/open.ts` opens a project's folder in another app, the one thing the map does on your computer.
 - `assets/dashboard.html` is the live map; `src/report.ts` the terminal report.
 - `scripts/make-demo.ts` builds the demo repos; `npm run demo:build` regenerates `assets/demo.json` after a change to what the scanner reports.
 - `site/` is the website; `npm run site:build` builds it.
@@ -46,8 +46,8 @@ TypeScript, strict. No `any`, no `console.log`, no empty `catch`. Match the code
 
 ## Pull requests
 
-Keep each one to one change, say what it fixes or adds in plain words, and make sure `npm test` passes. For a change to what a button does, describe the case it refuses.
+Keep each one to one change, say what it fixes or adds in plain words, and make sure `npm test` passes. For a change to a request, say what your assistant should check before acting on it.
 
 ## Security
 
-Anything that could lose work or let something other than the person trigger a change: see [SECURITY.md](SECURITY.md) and report it privately.
+Anything that could change a repo, lose work, or let something other than the person use the map: see [SECURITY.md](SECURITY.md) and report it privately.

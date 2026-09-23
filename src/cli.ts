@@ -3,13 +3,14 @@
 
 import { spawn } from "node:child_process";
 import { parseArgs } from "node:util";
-import { pathToFileURL } from "node:url";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { join } from "node:path";
 import { CONFIG_FILE, MAP_FILE, STATE_DIR, writeAtomic } from "./config.js";
 import { loadDemo } from "./demo.js";
 import { cliPath, install, swiftBarApp, uninstall } from "./install.js";
 import { menubar } from "./menubar.js";
-import { ENV, run, tilde } from "./proc.js";
+import { ENV, HOME, run, tilde } from "./proc.js";
 import { renderDashboard } from "./render.js";
 import { detailReport, exitCode, paint, summaryReport } from "./report.js";
 import { VERSION, scan } from "./scan.js";
@@ -18,10 +19,13 @@ import { type LiveServer, runningServer, serverState, startServer } from "./serv
 const HELP = `housekeep ${VERSION}
 
 Is your git work committed, pushed, in sync with main, and cleaned up?
+Housekeep only reads: each fix is a request to paste into your AI assistant.
 
 Usage
   housekeep               Check every repo you've worked on recently
   housekeep <path>        Check one repo in detail (e.g. housekeep .)
+  housekeep copy <path>   Copy that repo's request for your AI assistant
+  housekeep skill         Teach Claude Code to check with Housekeep before it says it's done
   housekeep serve         Run the live map in this terminal
   housekeep open          Open the live map in your browser
   housekeep install       macOS: keep the live map running from login, with a menu bar light (SwiftBar)
@@ -86,7 +90,7 @@ async function openMap(port: number | undefined): Promise<LiveServer | null> {
 /** After the report: o opens the live map, q (or Ctrl-C) quits. */
 function waitForKeys(port: number | undefined, code: number, demo: boolean): Promise<never> {
   const c = paint(process.stdout);
-  out(`  ${c.bold("o")} ${c.dim("open the map")}   ${c.bold("q")} ${c.dim("quit")}`);
+  out(`\n  ${c.bold("o")} ${c.dim("open the map")}   ${c.bold("q")} ${c.dim("quit")}`);
   let server: LiveServer | null = null;
   const quit = async (): Promise<void> => {
     process.stdin.setRawMode(false);
@@ -150,6 +154,24 @@ async function copyCommand(path: string | undefined): Promise<number> {
   return 0;
 }
 
+/**
+ * Gives Claude Code the Housekeep skill, so it checks your work before saying it's done and acts on the
+ * requests with your OK. A different skill already there is kept alongside, not overwritten.
+ */
+function skillCommand(): number {
+  const source = fileURLToPath(new URL("../../skills/housekeep/SKILL.md", import.meta.url));
+  const dir = join(HOME, ".claude", "skills", "housekeep");
+  const target = join(dir, "SKILL.md");
+  mkdirSync(dir, { recursive: true });
+  const had = existsSync(target);
+  if (had && readFileSync(target, "utf8") !== readFileSync(source, "utf8")) renameSync(target, `${target}.previous`);
+  copyFileSync(source, target);
+  out(`${had ? "Updated" : "Installed"} the Housekeep skill for Claude Code in ${tilde(dir)}.` +
+    `${existsSync(`${target}.previous`) ? " Your previous version is next to it as SKILL.md.previous." : ""}\n` +
+    "For Cursor, Codex and other assistants, see For AI assistants in the README.");
+  return 0;
+}
+
 async function main(): Promise<number> {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
@@ -175,6 +197,7 @@ async function main(): Promise<number> {
   }
   if (command === "menubar") return menubarCommand();
   if (command === "copy") return copyCommand(rest[0]);
+  if (command === "skill") return skillCommand();
   if (values.demo && command === "open") return (openDemo(), 0);
   if (command === "serve" || command === "open") {
     if (command === "open") {

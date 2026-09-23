@@ -4,8 +4,8 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
-import { CONFIG_FILE, CheckFailed, type Config, type Memo, STATE_DIR, loadConfig, loadMemo, readJson, saveMemo, writeAtomic } from "./config.js";
-import type { Branch, Checkout, CommittedSecret, MergeKind, NextStep, Project, PrunedBranch, RemoteBranch, Signal, Snapshot, Tier } from "./model.js";
+import { CONFIG_FILE, CheckFailed, type Config, type DeletedBranch, type Memo, STATE_DIR, loadConfig, loadMemo, readJson, saveMemo, writeAtomic } from "./config.js";
+import type { Branch, Checkout, CommittedSecret, MergeKind, NextStep, Project, PrunedBranch, RemoteBranch, Request, Signal, Snapshot, Tier } from "./model.js";
 import { VERDICT, worst } from "./model.js";
 import { HERE, type RunResult, capFirst, count, countOrNull, git, isRecord, iso, plural, pool, run, tilde, untilde } from "./proc.js";
 import { type GitHubMeta, type RemoteSet, fetchDue, githubMeta, metaFromMemo, refreshRemote, remotesOf } from "./remote.js";
@@ -31,7 +31,7 @@ const SKIP_DIRS = new Set(["Library", "node_modules", "Applications", "Movies", 
 // main looks merged, but deleting it can take a site down. Protected branches and the default branch are kept too.
 const KEEP_BRANCHES = new Set(["main", "master", "trunk", "develop", "development", "dev", "staging", "stage", "production", "prod", "live", "release", "gh-pages"]);
 const KEEP_PREFIXES = ["release/", "releases/", "hotfix/", "support/"];
-export const BACKUP_PREFIX = "housekeep/backup-";
+const BACKUP_PREFIX = "housekeep/backup-";
 const BACKUP_PREFIXES = [BACKUP_PREFIX, "git-light/backup-"];
 
 // Files that usually hold passwords or keys. Template copies (.env.example) are committed on purpose.
@@ -294,27 +294,24 @@ async function committedSecrets(repo: string): Promise<CommittedSecret[]> {
   return out;
 }
 
-export const PRUNED_PREFIX = "refs/housekeep/pruned/";
-
-/** Deleted remote branches whose unmerged work Housekeep kept, and how many commits each still holds. */
-async function prunedBranches(repo: string): Promise<PrunedBranch[]> {
+/** Noted deleted branches whose work git still has, but no branch, remote branch or tag holds. */
+async function prunedBranches(repo: string, deleted: DeletedBranch[]): Promise<PrunedBranch[]> {
   const out: PrunedBranch[] = [];
-  for (const line of ((await git(repo, "for-each-ref", "--format=%(refname)%09%(objectname)", PRUNED_PREFIX)) ?? "").split("\n")) {
-    const [ref = "", sha = ""] = line.split("\t");
-    if (!ref) continue;
-    const commits = await count(repo, sha, "--not", "--branches", "--remotes", "--tags");
-    if (commits) out.push({ name: ref.slice(PRUNED_PREFIX.length), ref, commits });
+  for (const d of deleted) {
+    if ((await git(repo, "cat-file", "-e", `${d.sha}^{commit}`)) === null) continue; // git has thrown it away
+    const commits = await count(repo, d.sha, "--not", "--branches", "--remotes", "--tags");
+    if (commits) out.push({ ...d, commits });
   }
   return out;
 }
 
 /**
- * git fetch --prune, without losing work. When a branch is deleted on the remote, pruning drops your
- * last pointer to its commits, and git later throws them away. If those commits aren't anywhere else and
- * their changes aren't in main (a squash-merged branch deleted after merging is fine), keep them under
- * refs/housekeep/pruned/ so they can be restored.
+ * git fetch --prune, noting what it forgets. When a branch is deleted on the remote, pruning drops your
+ * last pointer to its commits, and git later throws them away. Housekeep doesn't write to the repo to keep
+ * them: if their changes aren't in main (a squash-merged branch deleted after merging is fine), it notes the
+ * branch and its last commit in its own state, so a request can bring the work back while git still has it.
  */
-export async function fetchPreserving(repo: string, names: string[], mainNames: (string | undefined)[], timeout = 60_000): Promise<RunResult> {
+export async function fetchNoting(repo: string, names: string[], mainNames: (string | undefined)[], deleted: DeletedBranch[], timeout = 60_000): Promise<RunResult> {
   const refs = async (): Promise<Map<string, string>> => new Map(
     ((await git(repo, "for-each-ref", "--format=%(refname)%09%(objectname)", ...names.map((n) => `refs/remotes/${n}/`))) ?? "")
       .split("\n").filter(Boolean).map((line) => line.split("\t") as [string, string]));
@@ -329,10 +326,11 @@ export async function fetchPreserving(repo: string, names: string[], mainNames: 
   }
   for (const [ref, sha] of before) {
     if (after.has(ref) || ref.endsWith("/HEAD")) continue;
-    if (!(await count(repo, sha, "--not", "--branches", "--remotes", "--tags", `--glob=${PRUNED_PREFIX}*`))) continue;
+    if (!(await count(repo, sha, "--not", "--branches", "--remotes", "--tags"))) continue;
     let landed = false;
     for (const base of bases) if (await inMain(repo, sha, base)) landed = true;
-    if (!landed) await git(repo, "update-ref", PRUNED_PREFIX + ref.slice("refs/remotes/".length), sha);
+    const name = ref.slice("refs/remotes/".length);
+    if (!landed && !deleted.some((d) => d.name === name && d.sha === sha)) deleted.push({ name, sha, at: new Date().toISOString() });
   }
   return r;
 }
@@ -494,7 +492,7 @@ export async function remoteBranches(repo: string, rem: RemoteSet, main: string,
 
 // --- what it means --------------------------------------------------------------
 
-type Draft = Omit<Project, "signals" | "next" | "tier" | "verdict">;
+type Draft = Omit<Project, "signals" | "next" | "requests" | "tier" | "verdict">;
 
 /** The four questions every project answers. Labels are git's terms; hints say what they mean. */
 export function signals(p: Draft): Signal[] {
@@ -557,7 +555,7 @@ export function signals(p: Draft): Signal[] {
     if (m.localOnly) details.unshift(`${m.name}: ${plural(m.localOnly, "unpushed commit")}`);
     const detached = p.checkouts.filter((c) => c.detachedCommits);
     for (const c of detached) details.push(`${plural(c.detachedCommits, "commit")} on a detached HEAD in ${c.primary ? "the main working tree" : `worktree ${c.label}`}, on no branch at all`);
-    for (const b of p.pruned) details.push(`${b.name} was deleted on ${remote} with ${plural(b.commits, "commit")} not in main; a copy is kept`);
+    for (const b of p.pruned) details.push(`${b.name} was deleted on ${remote} with ${plural(b.commits, "commit")} not in main; its last commit was ${b.sha.slice(0, 7)}`);
     const onNoBranch = detached.reduce((t, c) => t + c.detachedCommits, 0);
     const kept = p.pruned.reduce((t, b) => t + b.commits, 0);
     const unpushed = p.unpushed === null ? null : p.unpushed + onNoBranch + kept;
@@ -666,16 +664,16 @@ export function nextStep(p: Draft, sig: Record<Signal["key"], Signal>): NextStep
     return { tier: "at-risk", kind: "assistant", title: `${committed.pushed ? "Deal with a pushed secret" : "Remove a committed secret"}: ${committed.path}`,
       why: committed.pushed ? `It's on ${host}, so anyone with access to the repo can read it. If it holds real keys, rotate them first.`
         : "It's in git's history but not pushed yet. Take it out of git before you push.",
-      ask: `In ${path}, the file ${committed.path} is committed${committed.pushed ? ` and pushed to ${remote}` : ""}, and it looks like it holds secrets. ` +
-        "Check whether it has real keys. If it does, tell me which services I need to rotate them with, then remove it from git (git rm --cached), " +
-        "add it to .gitignore and commit that. Don't rewrite history or force-push without asking me first." };
+      ask: `In ${path}, the file ${committed.path} was committed${committed.pushed ? ` and pushed to ${remote}` : ""}, and it looks like it holds secrets. ` +
+        "Check whether the keys in it are real. If they are, tell me which services I need to change them on. Then take the file out of git " +
+        "without deleting it from my computer, and make git ignore it from now on. Don't rewrite history or force-push without asking me first." };
   }
   const secret = p.checkouts.flatMap((c) => c.secrets)[0];
   if (secret) {
     return { tier: "at-risk", kind: "assistant", title: `Check ${secret} for secrets`,
       why: `It looks like a password or key file, and git isn't ignoring it. If it holds real keys, they must never be pushed to ${host}.`,
       ask: `In ${path}, check whether ${secret} contains real secrets (API keys, passwords, tokens). If it only has placeholders, tell me and leave it. ` +
-        "If it has real secrets, add it to .gitignore and make sure it was never committed. Explain what you found before changing anything, and don't push." };
+        "If it has real secrets, make git ignore it and check it was never committed. Tell me what you found before changing anything, and don't push." };
   }
   if (!p.fetch.hasRemote) {
     return { tier: "at-risk", kind: "assistant", title: "Add a remote and push",
@@ -683,15 +681,22 @@ export function nextStep(p: Draft, sig: Record<Signal["key"], Signal>): NextStep
       ask: `The git repo in ${path} has no remote. Walk me through creating a private GitHub repository for it and pushing it there, step by step. Ask before creating anything.` };
   }
   if (push.tier === "at-risk" && p.pruned.length && !p.unpushed && !p.checkouts.some((c) => c.detachedCommits)) {
-    return { tier: "at-risk", kind: "restore-pruned", title: `Restore ${plural(p.pruned.length, "deleted branch", "deleted branches")}`,
-      why: `${p.pruned.map((b) => b.name).slice(0, 2).join(", ")} ${p.pruned.length === 1 ? "was" : "were"} deleted on ${remote} while holding work that isn't in ${ref}. Housekeep kept a copy; restore ${p.pruned.length === 1 ? "it" : "them"} as local branches to review.`,
-      ask: `In ${path}, Housekeep kept these branches after they were deleted on ${remote} with work not in ${ref}: ${p.pruned.map((b) => b.ref).join(", ")}. ` +
-        "Tell me what each one contains and whether that work landed somewhere else. Don't delete anything without asking." };
+    return { tier: "at-risk", kind: "restore-pruned", title: `Recreate ${plural(p.pruned.length, "deleted branch", "deleted branches")}`,
+      why: `${p.pruned.map((b) => b.name).slice(0, 2).join(", ")} ${p.pruned.length === 1 ? "was" : "were"} deleted on ${remote} while holding work that isn't in ${ref}. ` +
+        `Git still has the commits, but nothing points at them, so it will throw them away eventually.`,
+      ask: `In ${path}, ${p.pruned.length === 1 ? "a branch was" : "some branches were"} deleted on ${remote} while still holding work that isn't in ${ref}: ` +
+        `${p.pruned.map((b) => `${b.name.split("/").slice(1).join("/") || b.name}, whose last commit was ${b.sha}`).join("; ")}. ` +
+        "Git still has that work, but nothing points to it, so it will be cleaned up eventually. " +
+        `Bring ${p.pruned.length === 1 ? "it" : "each one"} back as a local branch with the same name (add "-restored" if the name is taken), ` +
+        "then tell me what's on it and whether that work already landed somewhere else. Don't push or delete anything without asking." };
   }
   if (push.tier === "at-risk") {
+    const onMain = m.localOnly ? ` Don't push ${name} itself: put its new commits on a branch of their own and push that instead, because pushing ${name} can put the site live.` : "";
+    const detached = p.checkouts.some((c) => c.detachedCommits) ? " Some commits aren't on any branch yet (a detached HEAD), so give them a branch first." : "";
     return { tier: "at-risk", kind: "push-all", title: `Push ${push.count ?? "unpushed commits"}`,
       why: `They exist only on ${HERE}. Pushing copies them to ${host}; ${ref} itself isn't changed.`,
-      ask: `In ${path}, some commits exist only on this machine. Push every branch with unpushed commits to ${remote}, without changing ${ref} or anything that could deploy. Show me the plan first.` };
+      ask: `In ${path}, some commits exist only on this computer. Push them to ${remote} so they're backed up, each branch under its own name.` +
+        `${onMain}${detached} Don't change ${ref}, and don't force-push. Show me the plan before you start.` };
   }
   const temp = p.checkouts.find(tempWork);
   if (temp) {
@@ -700,26 +705,26 @@ export function nextStep(p: Draft, sig: Record<Signal["key"], Signal>): NextStep
         temp.changed + temp.untracked ? plural(temp.changed + temp.untracked, "uncommitted change") : "",
         temp.ignoredKeep.slice(0, 2).join(", "),
       ].filter(Boolean).join(" and ")} with it.`,
-      ask: `In ${path}, the worktree at ${temp.path} is inside a temporary folder that the system clears. Move it somewhere permanent with ` +
-        `git worktree move (for example into ~/worktrees), making sure ignored files like ${temp.ignoredKeep[0] ?? ".env files"} come along. Don't delete anything.` };
+      ask: `In ${path}, the worktree at ${temp.path} is inside a temporary folder that the system empties on its own. Move it somewhere permanent ` +
+        `(for example into ~/worktrees), and make sure files git ignores, like ${temp.ignoredKeep[0] ?? ".env files"}, come with it. Don't delete anything.` };
   }
   if (p.checkouts.some((c) => c.unreadable) || p.unpushed === null || (m.local && m.remoteMain && (m.ahead === null || m.behind === null))) {
     return { tier: "attention", kind: "assistant", title: "Find out why git can't read this repo",
       why: "A git command failed or took too long, so Housekeep can't tell whether your work is safe here.",
-      ask: `In ${path}, some git commands fail or take very long (git status, or comparing branches with the remote). Find out why ` +
+      ask: `In ${path}, git is failing or very slow (checking the status, or comparing branches with the remote). Find out why ` +
         "(a huge folder that should be ignored, a broken index, permissions, a corrupt object) and tell me how to fix it. Don't change or delete files without asking." };
   }
   const loose = p.checkouts.reduce((t, c) => t + c.changed + c.untracked, 0);
   if (loose) {
     return { tier: "attention", kind: "assistant", title: `Commit ${plural(loose, "uncommitted change")}`,
       why: "Uncommitted work is the easiest kind to lose or overwrite by accident.",
-      ask: `In ${path} there are ${plural(loose, "uncommitted change")}. Look at what changed, group it into sensible commits with clear messages, ` +
+      ask: `In ${path} there ${loose === 1 ? "is" : "are"} ${plural(loose, "uncommitted change")}. Look at what changed, group it into sensible commits with clear messages, ` +
         "and show me the plan before committing. Leave out anything that looks like a secret or a build artefact. Don't push." };
   }
   if (p.stashes.length) {
     return { tier: "attention", kind: "assistant", title: `Review ${plural(p.stashes.length, "stash", "stashes")}`,
       why: "Stashed changes are easy to forget. Apply what matters and drop the rest.",
-      ask: `In ${path} there are ${plural(p.stashes.length, "stash", "stashes")}. For each, tell me in plain English what it contains and whether it's already committed. Recommend apply or drop, and don't drop anything without asking.` };
+      ask: `In ${path} there ${p.stashes.length === 1 ? "is" : "are"} ${plural(p.stashes.length, "stash", "stashes")}. For each, tell me in plain English what it contains and whether it's already committed. Recommend apply or drop, and don't drop anything without asking.` };
   }
   if (commit.tier !== "safe") {
     return { tier: "attention", kind: "assistant", title: `Finish or abort: ${commit.headline.toLowerCase()}`,
@@ -729,17 +734,17 @@ export function nextStep(p: Draft, sig: Record<Signal["key"], Signal>): NextStep
   if (p.limits.shallow || p.limits.singleBranch) {
     return { tier: "attention", kind: "fetch-all", title: p.limits.shallow ? "Fetch the full history" : "Fetch all branches",
       why: `This is a ${p.limits.shallow ? "shallow" : "single-branch"} clone, so Housekeep can't fully compare it with ${host}.`,
-      ask: `In ${path}, the clone is ${p.limits.shallow ? "shallow" : "single-branch"}. Convert it to a full clone that fetches every branch and the whole history, without changing any of my branches or files.` };
+      ask: `In ${path}, the clone is ${p.limits.shallow ? "shallow" : "single-branch"}, so it's missing part of the project. Fetch every branch and the whole history, without changing any of my branches or files.` };
   }
   if (m.ahead && m.behind) {
     return { tier: "attention", kind: "assistant", title: `Reconcile ${name} with ${ref}`,
       why: `They've diverged: ${plural(m.ahead, "commit")} only here and ${plural(m.behind, "commit")} only on ${ref}.`,
-      ask: `In ${path}, local ${name} and ${ref} have diverged: ${m.ahead} commits only here and ${m.behind} only there. Explain what's on each side in plain English and propose the safest way to reconcile them. Don't push, force-push or delete anything without asking.` };
+      ask: `In ${path}, ${name} and ${ref} have gone different ways: ${plural(m.ahead, "commit")} only here and ${plural(m.behind, "commit")} only there. Explain what's on each side in plain English and suggest the safest way to bring them back together. Don't push, force-push or delete anything without asking.` };
   }
   if (m.behind) {
     return { tier: "attention", kind: "pull", title: `Pull ${name} (fast-forward)`,
       why: `${ref} has ${plural(m.behind, "commit")} ${HERE} doesn't. A fast-forward only adds them; nothing here is lost.`,
-      ask: `In ${path}, update ${name} from ${ref} with a fast-forward only. If that isn't possible, explain why and stop.` };
+      ask: `In ${path}, bring ${name} up to date with ${ref}, only by adding the new commits on top (a fast-forward). If that isn't possible, explain why and stop.` };
   }
   if (sync.tier !== "safe") {
     return { tier: "attention", kind: "assistant", title: m.ahead ? `Get ${name}'s commits into ${ref}` : `Set up ${ref}`,
@@ -750,7 +755,7 @@ export function nextStep(p: Draft, sig: Record<Signal["key"], Signal>): NextStep
   if (risky.length) {
     return { tier: "attention", kind: "unset-upstream", title: `Unset upstream on ${plural(risky.length, "branch", "branches")}`,
       why: `${risky.slice(0, 3).join(", ")} ${risky.length === 1 ? "tracks" : "track"} ${ref}, and push.default=upstream means a plain git push from ${risky.length === 1 ? "it" : "them"} updates ${ref} directly.`,
-      ask: `In ${path}, these branches track ${ref} and push.default would push them there: ${risky.join(", ")}. Unset their upstream so they push to branches of their own. Don't push anything.` };
+      ask: `In ${path}, ${risky.join(", ")} ${risky.length === 1 ? "is" : "are"} set up so that a plain push would change ${ref} directly. Stop ${risky.length === 1 ? "it" : "them"} tracking ${ref}, so ${risky.length === 1 ? "it pushes" : "each pushes"} to a branch of ${risky.length === 1 ? "its" : "their"} own. Don't push anything.` };
   }
   if (cleanup.tier !== "safe") {
     const [kind, title]: [NextStep["kind"], string] = cleanup.mergedHere
@@ -758,9 +763,22 @@ export function nextStep(p: Draft, sig: Record<Signal["key"], Signal>): NextStep
       : cleanup.mergedOnRemote ? ["delete-remote", `Delete ${plural(cleanup.mergedOnRemote, "merged branch", "merged branches")} on ${remote}`]
       : cleanup.prunable ? ["prune-worktrees", `Prune ${plural(cleanup.prunable, "worktree")}`]
       : ["assistant", capFirst(cleanup.headline)];
+    const local = p.branches.filter((b) => b.state === "merged" && !b.worktree && !b.current).map((b) => b.name);
+    const onRemote = p.remoteBranches.filter((b) => b.deletable);
+    const gone = p.checkouts.filter((c) => c.missing && !c.locked && !c.offline);
+    const parts = [
+      local.length ? `Delete the local ${local.length === 1 ? "branch" : "branches"} ${local.join(", ")}. Before deleting, check each one again: every change on it should already be in ${ref}. ` +
+        "Some may have been squash-merged, so compare the changes, not the commits." : "",
+      onRemote.length ? `Delete ${onRemote.length === 1 ? "the branch" : "the branches"} ${onRemote.map((b) => b.name).join(", ")} on ${remote}. Fetch first and check again, and skip any that has new commits ` +
+        `(${onRemote.map((b) => `${b.name} should still be at ${b.sha.slice(0, 7)}`).join(", ")}), is protected, or has an open pull request.` : "",
+      gone.length ? `Git still lists ${plural(gone.length, "worktree")} whose ${gone.length === 1 ? "folder was" : "folders were"} deleted. Clear ${gone.length === 1 ? "it" : "them"} out, after making sure ` +
+        "each folder is really gone (not just on a drive that isn't plugged in) and didn't hold commits that aren't on any branch." : "",
+    ].filter(Boolean);
     return { tier: "attention", kind, title, why: cleanup.hint,
-      ask: `In ${path}, find branches (local and on ${remote}) and worktrees whose work is already in ${ref}, including squash-merged ones. ` +
-        `List them, then delete only those after I say yes. Never touch ${name}, protected branches, or anything with an open pull request.` };
+      ask: parts.length
+        ? `In ${path}, some things are already in ${ref} and can be cleaned up. ${parts.join(" ")} Show me the list and wait for my yes. Don't touch ${name}, and don't force-push.`
+        : `In ${path}, find branches (local and on ${remote}) and worktrees whose work is already in ${ref}, including squash-merged ones. ` +
+          `List them, then delete only those after I say yes. Never touch ${name}, protected branches, or anything with an open pull request.` };
   }
   if (push.tier !== "safe" && p.remotes.sameDisk) {
     return { tier: "attention", kind: "assistant", title: "Push to a server, not just this disk",
@@ -771,6 +789,84 @@ export function nextStep(p: Draft, sig: Record<Signal["key"], Signal>): NextStep
   return { tier: "safe", kind: null, title: "All clear",
     why: `Working tree clean, everything pushed, and ${name} is up to date with ${ref}.` + (cleanup.unmerged ? ` ${cleanup.hint}` : ""), ask: "" };
 }
+
+/**
+ * Every request beyond the next step, in plain words for your AI assistant. Each carries the checks the
+ * change needs, so the assistant makes them before it touches anything: Housekeep itself never does.
+ */
+export function requestsFor(p: Draft): Request[] {
+  const out: Request[] = [];
+  const add = (about: Request["about"], name: string | null, does: string, ask: string): void => { out.push({ about, name, does, ask }); };
+  const at = `In ${p.path},`;
+  const remote = p.remotes.push ?? "origin";
+  const main = p.main.name || "main";
+  const ref = p.main.remoteRef ?? `${remote}/${main}`;
+  const g = p.github;
+  const unchecked = g.checked ? ""
+    : ` ${p.host === "GitHub" ? `GitHub couldn't be asked about protected branches or open pull requests${g.reason ? ` (${g.reason})` : ""}` : `${p.host ?? "The remote"} can't be asked about protected branches or open pull requests`}, so check with me before deleting any of them.`;
+  const one = (n: number, a: string, b: string): string => (n === 1 ? a : b);
+
+  const m = p.main;
+  if (m.name && m.remoteMain && m.local) {
+    if (m.ahead && m.behind) {
+      add("main", main, `reconcile ${main} with ${ref}`, `${at} ${main} and ${ref} have gone different ways: ${plural(m.ahead, "commit")} only here and ${plural(m.behind, "commit")} only there. ` +
+        "Explain what's on each side in plain English and suggest the safest way to bring them back together. Don't push, force-push or delete anything without asking.");
+    } else if (m.behind) {
+      add("main", main, `fast-forward ${main} by ${plural(m.behind, "commit")}`, `${at} bring ${main} up to date with ${ref}, only by adding the new commits on top (a fast-forward). If that isn't possible, explain why and stop.`);
+    } else if (m.ahead) {
+      add("main", main, `get ${main}'s commits into ${ref} safely`, `${at} ${main} has ${plural(m.ahead, "commit")} that ${ref} doesn't. ` +
+        `${m.localOnly ? `Put them on a branch of their own and push that, not ${main}, because pushing ${main} can put the site live. ` : ""}` +
+        `Then tell me the right way to get them into ${ref}, usually a pull request. Don't push ${main}, and don't force-push.`);
+    }
+  }
+
+  const canPR = g.checked && m.remoteMain;
+  for (const b of p.branches) {
+    if (b.state === "unpushed") {
+      add("branch", b.name, `push ${b.name}`, `${at} push the branch ${b.name} to ${remote}: it has ${plural(b.localOnly, "commit")} that ${one(b.localOnly, "exists", "exist")} only on this computer. Don't push ${main} or anything else, and don't force-push.`);
+    } else if (b.pushesToMain) {
+      add("branch", b.name, `stop ${b.name} pushing to ${ref}`, `${at} ${b.name} is set up so that a plain push would change ${ref} directly. Stop it tracking ${ref}, so it pushes to a branch of its own. Don't push anything.`);
+    } else if (b.upstreamGone && !b.merged) {
+      add("branch", b.name, `find out what's on ${b.name}`, `${at} the branch ${b.name} was deleted on ${remote}, but it has ${plural(b.aheadOfMain, "commit")} whose changes aren't in ${ref}. Tell me what that work is and whether it's still needed. Don't delete anything without asking.`);
+    } else if (b.state === "merged" && !b.current && !b.worktree) {
+      add("branch", b.name, `delete ${b.name}`, deleteLocal(at, [b.name], ref, remote));
+    } else if (b.state === "unmerged" && b.aheadOfMain && !b.pr && canPR) {
+      add("branch", b.name, `open a pull request for ${b.name}`, `${at} open a pull request on GitHub to merge ${b.name} into ${main}${b.localOnly || !b.onRemote ? `, pushing the branch to ${remote} first` : ""}. Write the title and description from its commits. Don't merge it.`);
+    }
+  }
+  const merged = p.branches.filter((b) => b.state === "merged" && !b.current && !b.worktree).map((b) => b.name);
+  if (merged.length > 1) add("merged", null, `delete ${merged.length} merged`, deleteLocal(at, merged, ref, remote));
+
+  const gone = p.remoteBranches.filter((b) => b.deletable);
+  const deleteRemote = (list: typeof gone): string => `${at} delete ${one(list.length, "the branch", "the branches")} ${list.map((b) => b.name).join(", ")} on ${remote}: ${one(list.length, "its", "their")} work is already in ${ref}. ` +
+    `Fetch first and check again, and skip any that has new commits (${list.map((b) => `${b.name} should still be at ${b.sha.slice(0, 7)}`).join(", ")}), is protected, or has an open pull request. Don't force-push.${unchecked}`;
+  for (const b of gone) add("remote", b.name, `delete ${b.name} on ${remote}`, deleteRemote([b]));
+  if (gone.length > 1) add("merged-remote", null, `delete ${gone.length} merged`, deleteRemote(gone));
+
+  if (g.autoDelete === false && g.canAdmin && g.slug) {
+    add("github", null, "let GitHub delete merged branches", `On GitHub, turn on the setting for ${g.slug} that deletes a pull request's branch automatically once it's merged. Change nothing else.`);
+  }
+  if (p.limits.shallow || p.limits.singleBranch) {
+    add("clone", null, p.limits.shallow ? "fetch the full history" : "fetch all branches", `${at} the clone is ${p.limits.shallow ? "shallow" : "single-branch"}, so it's missing part of the project. ` +
+      `Fetch every branch${p.limits.shallow ? " and the whole history" : ""}, without changing any of my branches or files.`);
+  }
+
+  for (const c of p.checkouts) {
+    if (c.missing && !c.offline && !c.locked) {
+      add("worktree", c.path, "clear git's record of this deleted folder", `${at} the folder for the worktree at ${c.path} was deleted, but git still lists it. Clear it from git's list, ` +
+        "after making sure the folder is really gone (not just on a drive that isn't plugged in) and didn't hold commits that aren't on any branch.");
+    } else if (!c.missing && !c.primary && !(c.changed + c.untracked) && !c.operation && !c.unreadable && !c.detachedCommits && !c.ignoredKeep.length) {
+      add("worktree", c.path, "remove this worktree", `${at} remove the worktree at ${c.path}${c.branch ? `, keeping the branch ${c.branch}` : ""}. ` +
+        "First check it has no uncommitted or new files, no files git ignores that are worth keeping (like .env.local), and no commits that aren't on a branch. Don't touch the main working tree.");
+    }
+  }
+  return out;
+}
+
+const deleteLocal = (at: string, names: string[], ref: string, remote: string): string =>
+  `${at} delete the local ${names.length === 1 ? "branch" : "branches"} ${names.join(", ")}: ${names.length === 1 ? "its" : "their"} work is already in ${ref}. ` +
+  `Before deleting, check each one again: every change on it should be in ${ref}. Some may have been squash-merged, so compare the changes, not the commits. ` +
+  `Skip any that's checked out, and leave branches on ${remote} alone.`;
 
 // --- building a project -----------------------------------------------------------
 
@@ -797,7 +893,7 @@ export async function buildProject(repo: string, name: string, everyMs: number, 
       main: { name: "", local: false, remoteMain: false, remoteRef: null, ahead: 0, behind: 0, localOnly: 0 },
       head: { branch: null }, fetch: { hasRemote: true, at: null, error: null },
       checkouts: [], branches: [], remoteBranches: [], stashes: [], unpushed: null, pruned: [], committedSecrets: [],
-      signals: [], next: null, tier: "attention", verdict: "Couldn't read this project",
+      signals: [], next: null, requests: [], tier: "attention", verdict: "Couldn't read this project",
     };
   }
   let cached = metaFromMemo(memo.github[repo]);
@@ -814,7 +910,8 @@ export async function buildProject(repo: string, name: string, everyMs: number, 
     rem = await remotesOf(repo, cached.parent ?? null);
   }
   const meta = cached?.ok ? cached : null;
-  const fetch = await refreshRemote(repo, cdir, rem, due, memo, (names) => fetchPreserving(repo, names, [meta?.defaultBranch ?? undefined, memo.heads[repo]]));
+  const deleted = memo.deleted[repo] ?? [];
+  const fetch = await refreshRemote(repo, cdir, rem, due, memo, (names) => fetchNoting(repo, names, [meta?.defaultBranch ?? undefined, memo.heads[repo]], deleted));
 
   const truth = rem.truth;
   const main = await defaultBranch(repo, truth, [meta?.defaultBranch, memo.heads[repo]]);
@@ -865,13 +962,17 @@ export async function buildProject(repo: string, name: string, everyMs: number, 
     remoteBranches: await remoteBranches(repo, rem, main, base, meta),
     stashes: ((await git(repo, "stash", "list", "--format=%gs")) ?? "").split("\n").filter(Boolean).map((label) => ({ label })),
     unpushed: await countOrNull(repo, "--branches", "--not", "--remotes"),
-    pruned: await prunedBranches(repo),
+    pruned: await prunedBranches(repo, deleted),
     committedSecrets: await committedSecrets(repo),
   };
   const sigs = signals(draft);
+  // Stop noting a deleted branch once its work is back on a branch, or git has thrown it away.
+  const still = draft.pruned.map(({ name, sha, at }) => ({ name, sha, at }));
+  if (still.length) memo.deleted[repo] = still;
+  else delete memo.deleted[repo];
   const byKey = Object.fromEntries(sigs.map((s) => [s.key, s])) as Record<Signal["key"], Signal>;
   const tier = worst(sigs.map((s) => s.tier));
-  return { ...draft, signals: sigs, next: nextStep(draft, byKey), tier, verdict: VERDICT[tier] };
+  return { ...draft, signals: sigs, next: nextStep(draft, byKey), requests: requestsFor(draft), tier, verdict: VERDICT[tier] };
 }
 
 // --- scanning everything ------------------------------------------------------------

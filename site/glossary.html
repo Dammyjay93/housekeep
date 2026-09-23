@@ -103,7 +103,7 @@
           <div class="folder"><div><b>.env.local</b><small>ignored · exists only in this folder</small></div><span class="tag">Has .env.local</span></div>
         </div>
           <p class="def">Files git deliberately leaves out, listed in a <code>.gitignore</code> file: installed packages, build output, and files with secrets like <code>.env.local</code>. Because they're never committed, they exist only where they are.</p>
-          <p class="in"><b>In Housekeep</b>A worktree holding ignored files that can't be rebuilt is never removed for you.</p></div>
+          <p class="in"><b>In Housekeep</b>A worktree holding ignored files that can't be rebuilt, like .env.local, is flagged, and never offered for removal.</p></div>
       </article>
 
       <article class="panel word" id="stash" data-also="git stash set aside">
@@ -152,7 +152,7 @@
         <div class="panel-head"><h2>Pull request</h2><span class="end"><span class="tag">PR</span></span></div>
         <div class="panel-body"><div class="map" data-scene="pull-request"></div>
           <p class="def">A proposal, on GitHub, to merge a branch into main. Automatic checks and other people can look at it first. GitHub can delete the branch for you once it's merged.</p>
-          <p class="in"><b>In Housekeep</b>Can open one for a branch, and never deletes a branch that has one open.</p></div>
+          <p class="in"><b>In Housekeep</b>Links to a branch's pull request, and never suggests deleting a branch that has one open.</p></div>
       </article>
 
       <article class="panel word" id="worktree" data-also="git worktree prunable codex claude folder">
@@ -199,7 +199,7 @@
         <div class="panel-head"><h2>Pull and fast-forward</h2><span class="end"><span class="tag mono">git pull</span></span></div>
         <div class="panel-body"><div class="map" data-scene="pull"></div>
           <p class="def">Bringing the remote's new commits into your branch. A fast-forward pull only adds them on top of what you have, so nothing of yours can be lost or rewritten.</p>
-          <p class="in"><b>In Housekeep</b>"4 behind origin/main" comes with a Pull button that only ever fast-forwards.</p></div>
+          <p class="in"><b>In Housekeep</b>"4 behind origin/main" comes with a request to fast-forward, and to stop if that isn't possible.</p></div>
       </article>
 
       <article class="panel word" id="upstream" data-also="tracking gone follows">
@@ -221,7 +221,7 @@
           <div class="folder"><div><b>~/code/api-codex</b><small>on feat/search</small></div><span class="status" data-tier="safe"><span class="dot" data-tier="safe"></span>Clean</span></div>
         </div>
           <p class="def">A working tree that's on a specific commit instead of a branch. New commits made there belong to no branch, so switching away loses them unless they're saved to one.</p>
-          <p class="in"><b>In Housekeep</b>Counts those commits as unpushed, and saves them to a branch when you push.</p></div>
+          <p class="in"><b>In Housekeep</b>Counts those commits as unpushed, and its request has your assistant give them a branch before pushing.</p></div>
       </article>
 
       <article class="panel word" id="diverged" data-also="ahead behind conflict">

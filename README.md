@@ -8,7 +8,7 @@ Is your git work committed, pushed, in sync with main, and cleaned up? One comma
 npx git-housekeep
 ```
 
-<img src="site/housekeep.gif" width="720" alt="Housekeep on a made-up project: pushing 3 unpushed commits, then deleting 2 merged branches, each after a confirmation showing the git command, as the light goes from red to amber to green.">
+<img src="site/housekeep.gif" width="720" alt="Housekeep on a made-up project: copying a request to push 3 unpushed commits, then one to delete 2 merged branches; each time the assistant does the work, Housekeep notices, and the light goes from red to amber to green.">
 
 ```
   housekeep  ·  5 repos  ·  fetched 4 min ago
@@ -33,12 +33,14 @@ npx git-housekeep
 
   2 could lose work  ·  2 need attention  ·  1 all clear
 
+  Each fix is a request for your AI assistant: housekeep <repo> shows it, housekeep copy <repo> copies it.
+
   o open the map   q quit
 ```
 
-Press `o` for the map: every repo's branches drawn like a transit map, with buttons for the fixes.
+Press `o` for the map: every repo's branches drawn like a transit map, with a request to copy for each fix.
 
-Try it without touching anything of yours: `npx git-housekeep --demo` shows the report for five made-up projects, and `npx git-housekeep open --demo` opens the map, where every button shows what it would do.
+Try it without touching anything of yours: `npx git-housekeep --demo` shows the report for five made-up projects, and `npx git-housekeep open --demo` opens the map.
 
 ## The four checks
 
@@ -58,6 +60,7 @@ Every term in the report and the map has a "?" beside it that explains it, so yo
 ```
 housekeep               Check every repo you've worked on recently
 housekeep <path>        Check one repo in detail (e.g. housekeep .)
+housekeep copy <path>   Copy that repo's request for your AI assistant
 housekeep serve         Run the live map in this terminal
 housekeep open          Open the live map in your browser
 housekeep install       macOS: keep the live map running from login, with a menu bar light (SwiftBar)
@@ -74,55 +77,55 @@ Exit codes: `0` all clear, `1` needs attention, `2` could lose work, `3` couldn'
 
 Needs Node 20 or newer and git 2.25 or newer (2.38 or newer to recognise squash merges; older versions say so). It has no dependencies.
 
-For GitHub repos, install and log in to the [GitHub CLI](https://cli.github.com) (`gh auth login`). Housekeep then also knows which branches are protected, which have open pull requests, a fork's parent and the real default branch, and it can open pull requests for you. Without it everything still works, but branches are judged by name alone, and the map says so.
+For GitHub repos, install and log in to the [GitHub CLI](https://cli.github.com) (`gh auth login`). Housekeep then also knows which branches are protected, which have open pull requests, a fork's parent and the real default branch. Without it everything still works, but branches are judged by name alone, and the map says so.
+
+## For AI assistants
+
+Housekeep is built to be run by your assistant as much as by you: `--json` gives every repo's state, its next step, and every request (`next.ask`, and one per branch, remote branch and worktree in `requests`), in plain words with the checks each change needs.
+
+**Claude Code:** install the skill, and Claude checks with Housekeep when you ask whether your work is safe, before a deploy or a break, and before it tells you a task is done. It acts on the requests only with your OK.
+
+```bash
+npx git-housekeep skill
+```
+
+**Cursor, Codex and others:** add this to your project's `AGENTS.md`, or your assistant's rules or custom instructions:
+
+> Before telling me a task is done, and whenever I ask whether my work is safe, run `npx -y git-housekeep . --json`. If `tier` isn't `safe`, tell me `next.title` and `next.why` in plain words and offer to do what `next.ask` says, following its checks. Only act with my OK. Never force-push, and never push `main` directly.
 
 ## How it decides
 
 - **The source of truth is `main` on the remote**, not your local copy. `main` is whatever the remote calls its default branch, so `master`, `trunk` and renamed defaults work.
 - **In a fork**, `main` is compared with the project you forked from, while your branches and pushes go to your own copy.
 - **A branch is merged when all of its changes are in `main`**, including squash and rebase merges. If merging it into `main` would change nothing, it's merged.
-- **Some branches are never offered for deletion**, whatever they contain:
+- **Some branches are never suggested for deletion**, whatever they contain:
   - the default branch
   - protected branches
   - branches with an open pull request, or that pull requests are based on
   - long-lived names like `develop`, `staging`, `production`, `release/*` and `gh-pages`
 - **When it can't see everything, it says so** instead of showing green: shallow clones, single-branch clones, unreachable remotes, and folders your operating system won't let it read (like `~/Documents` on macOS, until you allow your terminal).
 
-## What it changes on its own
+## It only reads
 
-Housekeep reads your repos. Without you pressing anything, it does two things:
+Housekeep never commits, pushes, merges, deletes or changes a setting in your repos. Every fix is a **request**: plain English you copy from the map, the report's JSON or the menu bar, and paste into your AI coding assistant (Claude Code, Cursor, Codex) opened in that project. Your assistant does the work where you can see it, and Housekeep notices when it's done.
+
+Each request carries the checks the change needs, so your assistant makes them before touching anything:
+- Only delete a branch whose changes are all in `main` on the remote (squash merges count), and never one that's checked out.
+- On the remote, fetch first, and skip any branch that has moved since, is protected, or has an open pull request.
+- Commits on `main` that aren't on the remote go to a branch of their own, never to `main`, because pushing `main` can put a site live.
+- Never force-push.
+
+Two things touch git without you asking:
 
 - **It fetches.** Every `fetchEveryMinutes` (default 10) it runs `git fetch --prune` for the remotes that matter, plus `git ls-remote` to learn the default branch.
-  - That updates your remote-tracking branches and forgets ones deleted on the remote.
+  - That updates git's record of the remote, never your branches or files, and forgets branches deleted there. When one of those held work that isn't in `main`, Housekeep notes its last commit in its own state (not in your repo), so a request can bring it back while git still has it.
   - It runs without a terminal, so it can't stop to ask for an SSH passphrase. A hardware key or 1Password's SSH agent may still ask you to approve.
   - Use `--offline`, or set `fetchEveryMinutes` to `0`, to fetch only when you ask.
 - **The squash-merge check writes temporary objects** into the repo. Nothing refers to them, and git's normal cleanup removes them.
 
-Your files, branches, commits and settings only change when you press a button in the map. Nothing leaves your computer except git's own traffic with your remotes, and GitHub's API when `gh` is installed. There's no telemetry.
+The map can also open a project's folder in Finder, Terminal, VS Code or Cursor. Nothing leaves your computer except git's own traffic with your remotes, and GitHub's API when `gh` is installed. There's no telemetry.
 
-## The map's buttons
-
-**Run straight away:** Pull (fast-forward only), Fetch, Prune worktrees, and Open in Finder, Terminal, VS Code or Cursor.
-
-**Ask first, showing the exact command:**
-- Push
-- Open pull request (GitHub, needs `gh`)
-- Delete merged branches, locally or on the remote
-- Unset upstream on branches that would push into `main`
-- Fetch all branches or the full history
-- Let GitHub delete merged branches
-- Remove worktree
-- Under Advanced actions: Merge and Push main. Both skip pull request reviews and checks.
-
-**Every button re-checks the repo right before it runs, and refuses when work could be lost:**
-- A branch is only deleted if all of its changes are in `main` on the remote, and never while it's checked out.
-- A branch on the remote is only deleted after a fresh fetch shows the same commit, and not if it's protected or has open pull requests. The delete uses `--force-with-lease`, so anything pushed in the meantime makes it fail rather than be lost.
-- Unpushed commits on `main` are pushed to a separate `housekeep/backup-…` branch, never to `main` itself, because pushing `main` can put a site live.
-- Nothing is ever force-pushed.
-
-Anything that needs judgement gets a **Copy request** button: a plain-English request to paste into your AI coding assistant. That covers committing, stashes, possible secrets, and a diverged `main`.
-
-The map only listens on `127.0.0.1`, and every request needs a token from the page it served, so other websites can't send it commands.
+The map only listens on `127.0.0.1`, and every request to it needs a token from the page it served, so other websites can't use it.
 
 ## Settings
 

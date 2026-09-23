@@ -103,7 +103,18 @@ export interface Memo {
   tried: Record<string, number>;
   heads: Record<string, string>;
   github: Record<string, unknown>;
+  /** Per repo, branches deleted on the remote with unmerged work: kept here, never as refs in the repo. */
+  deleted: Record<string, DeletedBranch[]>;
 }
+
+export interface DeletedBranch {
+  name: string;
+  sha: string;
+  at: string;
+}
+
+const isDeletedList = (v: unknown): v is DeletedBranch[] =>
+  Array.isArray(v) && v.every((d) => isRecord(d) && typeof d.name === "string" && typeof d.sha === "string" && typeof d.at === "string");
 
 export function loadMemo(): Memo {
   const raw = readJson(MEMO_FILE);
@@ -117,6 +128,7 @@ export function loadMemo(): Memo {
     tried: only(part("tried"), (v): v is number => typeof v === "number"),
     heads: only(part("heads"), (v): v is string => typeof v === "string"),
     github: part("github"),
+    deleted: only(part("deleted"), isDeletedList),
   };
 }
 

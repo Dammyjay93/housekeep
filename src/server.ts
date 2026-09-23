@@ -10,7 +10,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { readdirSync, statSync, unlinkSync } from "node:fs";
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from "node:http";
 import { join } from "node:path";
-import { ACTIONS, ActionError, type ActionBody, availableOpeners } from "./actions.js";
+import { OpenError, availableOpeners, openIn } from "./open.js";
 import { MAP_FILE, SERVER_FILE, SNAPSHOT_FILE, STATE_DIR, loadConfig, readJson, secureDir, writeAtomic } from "./config.js";
 import { TIER_RANK, type Project, type Snapshot } from "./model.js";
 import { isRecord, run } from "./proc.js";
@@ -259,7 +259,6 @@ export async function startServer(opts: { port?: number } = {}): Promise<LiveSer
   const hub = new Hub(initial);
   const watcher = new Watcher(hub);
   const openers = await availableOpeners();
-  const busyProjects = new Set<string>();
   let hosts = new Set<string>();
 
   const send = (res: ServerResponse, status: number, payload: unknown): void => {
@@ -302,27 +301,11 @@ export async function startServer(opts: { port?: number } = {}): Promise<LiveSer
     req.on("error", () => resolve(null));
   });
 
-  const perform = async (body: Record<string, unknown>): Promise<unknown> => {
+  // The map's one request that does anything here: open a project's folder in another app. It never runs git.
+  const open = (body: Record<string, unknown>): { ok: true; message: string } => {
     const project = hub.project(String(body.project ?? ""));
-    if (!project) throw new ActionError("That project isn't being watched.");
-    const spec = ACTIONS[String(body.action ?? "")];
-    if (!spec) throw new ActionError("Unknown action.");
-    if (busyProjects.has(project.path)) throw new ActionError("Something is already running for this project. Try again in a moment.");
-    const args: ActionBody = {
-      branches: Array.isArray(body.branches) ? body.branches.filter((b): b is string => typeof b === "string") : undefined,
-      branch: typeof body.branch === "string" ? body.branch : undefined,
-      path: typeof body.path === "string" ? body.path : undefined,
-      app: typeof body.app === "string" ? body.app : undefined,
-    };
-    busyProjects.add(project.path);
-    let result;
-    try {
-      result = await spec.run(project, args);
-    } finally {
-      busyProjects.delete(project.path);
-    }
-    if (spec.rescan) await watcher.rescan(project.path, spec.refetch);
-    return { ok: true, message: result.message, output: result.output.slice(-4000) };
+    if (!project) throw new OpenError("That project isn't being watched.");
+    return { ok: true, message: openIn(project, typeof body.path === "string" ? body.path : project.path, String(body.app ?? "")) };
   };
 
   const server = createServer((req, res) => {
@@ -359,11 +342,11 @@ export async function startServer(opts: { port?: number } = {}): Promise<LiveSer
             await waiting;
             send(res, 200, hub.data);
           } else send(res, 202, { ok: true });
-        } else if (url.pathname === "/api/action") {
+        } else if (url.pathname === "/api/open") {
           try {
-            send(res, 200, await perform(body));
+            send(res, 200, open(body));
           } catch (err) {
-            if (err instanceof ActionError) send(res, 409, { error: err.message });
+            if (err instanceof OpenError) send(res, 409, { error: err.message });
             else throw err;
           }
         } else send(res, 404, { error: "Not found" });
