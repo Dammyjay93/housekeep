@@ -4,3 +4,4 @@ dist/
 .demo-build/
 site/demo.html
 site/fonts/
+.wrangler/

@@ -161,7 +161,7 @@ The tests build throwaway repos, each with a local bare repo standing in for the
 
 The demo (`--demo`, and the website's live map) is built from scripted throwaway repos by the real scanner: `npm run demo:build` regenerates `assets/demo.json`.
 
-The website is plain HTML in `site/`. `npm run site:build` adds the live demo page, the fonts, and the terminal report from the demo. On Cloudflare Pages, set the build command to `npm ci && npm run site:build` and the output folder to `site` (Node comes from `.nvmrc`).
+The website is plain HTML in `site/`. `npm run site:build` adds the live demo page, the fonts, and the terminal report from the demo. It's served by Cloudflare Pages at [housekeep.pages.dev](https://housekeep.pages.dev): `npm run site:build && npx wrangler pages deploy` publishes it.
 
 ## License
 
