@@ -1,0 +1,1773 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Housekeep</title>
+<link rel="icon" id="favicon" href="data:,">
+<style>
+/*__FONTS__*/
+/* Pitch black, layered in small steps. Colour is reserved for state, and even
+   then only as a dot or a line: text stays grey or white. */
+:root {
+  --black: #000;
+  --shell: #080808;
+  --layer-1: #0e0e0e;
+  --layer-2: #151515;
+  --layer-3: #1b1b1b;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-2: rgba(255, 255, 255, 0.11);
+  --text: #ededed;
+  --text-2: #9b9b9b;
+  --text-3: #5f5f5f;
+  --accent: #8a8fd9;
+  --green: #52a67c;
+  --amber: #c89b4e;
+  --red: #cf6360;
+  --track: #d9d9d9;
+  --track-soft: #3b3b3b;
+  --font: "Housekeep Sans", "Housekeep Fill", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --column: 1080px;
+  --edge: 24px;
+  --gutter: max(var(--edge), calc((100% - var(--column)) / 2));
+  --inset: 24px;
+}
+* { box-sizing: border-box; }
+html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; background: var(--black); }
+body { margin: 0; min-height: 100vh; background: var(--black); color: var(--text); font: 400 14px/1.5 var(--font); font-feature-settings: "tnum" 1; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 1.5px solid var(--text-2); outline-offset: 2px; }
+.mono { font-family: var(--mono); font-size: 12px; letter-spacing: -0.01em; }
+[hidden] { display: none !important; }
+
+[data-tier="at-risk"] { --c: var(--red); }
+[data-tier="attention"] { --c: var(--amber); }
+[data-tier="safe"] { --c: var(--green); }
+[data-tier="unknown"] { --c: var(--text-3); }
+.dot { display: inline-block; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
+.status { display: inline-flex; align-items: center; gap: 8px; color: var(--text); font-size: 13px; white-space: nowrap; }
+.status[data-tier="safe"] { color: var(--text-3); }
+.tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; background: var(--layer-2); color: var(--text-3); font-size: 11px; white-space: nowrap; }
+.tag.here { color: var(--accent); }
+.tag.warn { color: var(--amber); }
+
+/* ---------- layout ---------- */
+.app { display: grid; grid-template-columns: 248px minmax(0, 1fr); height: 100vh; overflow: hidden; }
+.side { height: 100vh; overflow-y: auto; display: flex; flex-direction: column; padding: 20px 12px 16px; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 6px 10px 26px; font-size: 15px; font-weight: 500; letter-spacing: -0.01em; }
+.brand .dot { width: 8px; height: 8px; }
+.nav { display: grid; gap: 1px; }
+.nav + .nav { margin-top: 18px; }
+.nav a { display: flex; align-items: center; gap: 11px; min-height: 36px; padding: 0 12px; border-radius: 10px; color: var(--text-2); font-size: 13.5px; transition: background-color 120ms var(--ease), color 120ms var(--ease); }
+.nav a:hover { color: var(--text); background: var(--layer-1); }
+.nav a[aria-current="page"] { color: var(--text); background: var(--layer-2); }
+.nav a .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav a .n { color: var(--text-3); font-size: 12px; }
+.nav svg { width: 16px; height: 16px; flex: none; color: var(--text-3); }
+
+/* The shell: inset from the top, right and bottom, scrolling on its own so its edges never move. */
+.main { min-width: 0; margin: 8px 8px 8px 0; height: calc(100vh - 16px); overflow-y: auto; border-radius: 22px; background: var(--shell); border: 1px solid var(--line); overscroll-behavior: contain; }
+.bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: var(--edge) var(--gutter) calc(var(--edge) / 2); background: var(--shell); box-shadow: 0 1px 0 transparent; transition: box-shadow 160ms var(--ease); }
+.bar.scrolled { box-shadow: 0 1px 0 var(--line); }
+.crumbs { display: flex; align-items: center; gap: 9px; min-width: 0; color: var(--text-3); font-size: 13.5px; }
+.crumbs a:hover { color: var(--text-2); }
+.crumbs .here { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-right { display: flex; align-items: center; gap: 16px; color: var(--text-3); font-size: 12.5px; white-space: nowrap; }
+.live { display: inline-flex; align-items: center; gap: 8px; padding: 0; border: 0; background: none; color: var(--text-3); font-size: 12.5px; }
+.live .dot { background: var(--text-3); }
+.live[data-state="live"] .dot { background: var(--green); }
+.live[data-state="reconnecting"] .dot, .live[data-state="restart"] .dot { background: var(--amber); }
+.live[data-state="restart"] { color: var(--text-2); cursor: pointer; }
+
+/* ---------- buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 18px;
+  border: 0; border-radius: 999px; background: var(--layer-2); box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--text); font-size: 13px; white-space: nowrap; cursor: pointer; text-decoration: none;
+  transition: background-color 120ms var(--ease), transform 120ms var(--ease), opacity 120ms var(--ease);
+}
+.btn:hover { background: var(--layer-3); }
+.btn:active { transform: scale(0.97); }
+.btn svg { width: 15px; height: 15px; flex: none; color: var(--text-2); stroke-width: 1.7; }
+/* Some fonts' letters sit a little low in their box; fonts/local/faces.json can set
+   labelLift so button words centre on the cap height. Geist needs none. */
+.btn > span { position: relative; top: var(--label-lift, 0px); }
+.btn.primary > span { top: 0; }
+/* Optical balance: icons carry built-in whitespace (about 2px beside the upload and copy
+   glyphs, 3.5px beside the chevron), so the icon side gets less padding to look even. */
+.btn:has(> svg.idle:first-child) { padding-left: 16px; }
+.btn:has(> svg.trail) { padding-right: 15px; gap: 6px; }
+.btn svg.trail { width: 13px; height: 13px; stroke-width: 1.8; }
+.btn.ghost { background: transparent; box-shadow: none; color: var(--text-2); }
+.btn.ghost:hover { background: var(--layer-2); color: var(--text); }
+.btn.icon, .btn.icon:has(> svg.idle:first-child) { width: 36px; padding: 0; }
+.btn.primary { background: var(--text); color: var(--black); box-shadow: none; font-weight: 500; }
+.btn.primary svg { color: var(--black); }
+.btn.primary:hover { opacity: 0.88; background: var(--text); }
+.btn.danger:hover { color: var(--red); }
+.btn.danger:hover svg { color: var(--red); }
+.btn .spin, .btn .done { display: none; }
+.btn.busy { pointer-events: none; opacity: 0.6; }
+.btn.busy .spin { display: block; animation: spin 900ms linear infinite; }
+.btn.busy .idle, .btn.copied .idle { display: none; }
+.btn.copied .done { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.menu { position: relative; }
+.menu summary { list-style: none; }
+.menu summary::-webkit-details-marker { display: none; }
+.menu-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 6; min-width: 176px; padding: 5px; border-radius: 16px; background: var(--layer-3); box-shadow: inset 0 0 0 1px var(--line-2), 0 16px 40px rgba(0, 0, 0, 0.7); display: grid; }
+.menu-list .btn { justify-content: flex-start; width: 100%; background: transparent; box-shadow: none; color: var(--text-2); }
+.menu-list .btn:hover { background: var(--layer-2); color: var(--text); }
+.menu-list .btn { border-radius: 11px; height: 34px; padding: 0 12px; }
+
+/* ---------- content ---------- */
+.view { padding: calc(var(--edge) / 2) var(--gutter) var(--edge); display: grid; gap: 16px; align-content: start; }
+.view.enter { animation: enter 220ms var(--ease) both; }
+@keyframes enter { from { opacity: 0; transform: translateY(4px); } }
+.head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; margin-bottom: 16px; }
+.head h1 { margin: 0; font-size: 34px; line-height: 1.1; font-weight: 500; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+.head .meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; color: var(--text-3); font-size: 13px; }
+.head .meta .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--text-3); }
+.head .end { display: flex; align-items: center; gap: 8px; }
+.head .end .status { margin-right: 8px; }
+
+.panel { background: transparent; border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); min-width: 0; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 0 var(--inset); }
+.panel-head h2 { margin: 0; font-size: 14px; font-weight: 500; }
+.panel-head .end { display: flex; align-items: center; gap: 10px; color: var(--text-3); font-size: 12.5px; }
+.panel-body { padding: 4px var(--inset) var(--inset); }
+
+.strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.cell { padding: 22px var(--inset) var(--inset); min-width: 0; }
+.cell + .cell { box-shadow: inset 1px 0 0 var(--line); }
+.cell .label { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; }
+.cell .value { display: block; margin-top: 18px; font-size: 38px; line-height: 1; font-weight: 400; letter-spacing: -0.035em; }
+.cell[data-tier="safe"] .value { color: var(--text-3); }
+.cell .caption { margin: 10px 0 0; color: var(--text-3); font-size: 12.5px; line-height: 1.45; overflow-wrap: anywhere; }
+
+.next { display: flex; align-items: center; justify-content: space-between; gap: 18px 32px; flex-wrap: wrap; padding: 22px var(--inset); }
+.next .kicker { display: flex; align-items: center; gap: 8px; color: var(--text-3); font-size: 12.5px; }
+.next h2 { margin: 8px 0 0; font-size: 21px; line-height: 1.25; font-weight: 500; letter-spacing: -0.02em; }
+.next p { margin: 4px 0 0; max-width: 560px; color: var(--text-2); font-size: 13.5px; line-height: 1.5; }
+.next .act { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+table { width: 100%; border-collapse: collapse; }
+.scroll { overflow-x: auto; }
+.scroll table { min-width: 720px; }
+th { padding: 0 16px 10px; color: var(--text-3); font-size: 12px; font-weight: 400; text-align: left; white-space: nowrap; }
+td { padding: 13px 16px; border-top: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
+th.end, td.end { text-align: right; }
+tr.link { cursor: pointer; }
+tr.link:hover td { background: rgba(255, 255, 255, 0.018); }
+.proj { display: flex; align-items: center; gap: 12px; }
+.proj b { font-size: 14px; font-weight: 500; }
+.proj small { display: block; color: var(--text-3); font: 11.5px/1.4 var(--mono); }
+.bname { display: flex; align-items: center; gap: 8px; max-width: 260px; }
+th:first-child, td:first-child { padding-left: var(--inset); }
+th:last-child, td:last-child { padding-right: var(--inset); }
+.bname .n { overflow: hidden; text-overflow: ellipsis; }
+.bname .n i { font-style: normal; color: var(--text-3); }
+.muted { color: var(--text-3); font-size: 12.5px; }
+.row-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.row-actions .btn { height: 34px; }
+.row-actions .btn.icon { width: 34px; }
+.chev { width: 14px; height: 14px; color: var(--text-3); }
+.more { display: flex; justify-content: center; padding: 10px 0 14px; border-top: 1px solid var(--line); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 14px 0 0; padding: 0; list-style: none; color: var(--text-3); font-size: 12px; }
+.legend li { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.legend svg { flex: none; overflow: visible; }
+.map svg { display: block; overflow: visible; }
+
+.folder { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 16px; min-height: 54px; padding: 0 var(--inset); border-top: 1px solid var(--line); }
+.folder b { display: block; font-size: 13.5px; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder small { display: block; color: var(--text-3); font: 11.5px/1.4 var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.empty { display: grid; place-items: center; min-height: 60vh; text-align: center; }
+.empty h1 { margin: 0; font-size: 28px; font-weight: 500; letter-spacing: -0.02em; }
+.empty p { margin: 10px auto 0; max-width: 420px; color: var(--text-2); }
+
+dialog.confirm { border: 0; padding: 0; width: min(500px, calc(100vw - 32px)); background: var(--layer-2); color: var(--text); border-radius: 22px; box-shadow: inset 0 0 0 1px var(--line-2), 0 32px 80px rgba(0, 0, 0, 0.8); }
+dialog.confirm[open] { animation: pop 180ms var(--ease) both; }
+dialog.confirm::backdrop { background: rgba(0, 0, 0, 0.72); }
+@keyframes pop { from { opacity: 0; transform: scale(0.97); } }
+.confirm-body { display: grid; gap: 12px; padding: 22px 22px 18px; }
+.confirm-body h3 { margin: 0; font-size: 18px; line-height: 1.3; font-weight: 500; letter-spacing: -0.015em; }
+.confirm-body p { margin: 0; color: var(--text-2); font-size: 13.5px; line-height: 1.55; }
+.confirm-body ul { margin: 4px 0 0; padding: 4px 0; list-style: none; max-height: 180px; overflow-y: auto; border-radius: 14px; background: var(--layer-1); box-shadow: inset 0 0 0 1px var(--line); }
+.confirm-body li { display: flex; justify-content: space-between; gap: 16px; padding: 7px 12px; font-size: 13px; }
+.confirm-body li span:last-child { color: var(--text-3); }
+.confirm-body pre { margin: 0; padding: 10px 14px; border-radius: 14px; background: var(--black); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); font: 11.5px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 120px; overflow-y: auto; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 0 22px 20px; }
+
+.toasts { position: fixed; right: 20px; bottom: 20px; z-index: 20; display: grid; gap: 8px; width: min(380px, calc(100vw - 32px)); }
+.toast { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 12px; align-items: start; padding: 13px 10px 13px 15px; border-radius: 18px; background: var(--layer-3); box-shadow: inset 0 0 0 1px var(--line-2), 0 16px 40px rgba(0, 0, 0, 0.7); animation: toast-in 220ms var(--ease) both; }
+.toast .dot { margin-top: 7px; }
+.toast b { display: block; font-size: 13.5px; font-weight: 400; overflow-wrap: anywhere; }
+.toast pre { margin: 4px 0 0; color: var(--text-3); font: 11px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 66px; overflow: hidden; }
+.toast .btn { width: 24px; height: 24px; }
+.toast.leaving { animation: toast-out 160ms var(--ease) both; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(6px); } }
+@keyframes toast-out { to { opacity: 0; } }
+
+@media (max-width: 1100px) {
+  .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cell:nth-child(3) { box-shadow: inset 0 1px 0 var(--line); }
+  .cell:nth-child(4) { box-shadow: inset 1px 0 0 var(--line), inset 0 1px 0 var(--line); }
+}
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); height: auto; overflow: visible; }
+  .side { height: auto; overflow: visible; padding: 14px 16px 10px; }
+  .main { margin: 0 6px 6px; height: auto; overflow: visible; }
+  .bar { border-radius: 22px 22px 0 0; }
+  .brand { padding: 2px 0 12px; }
+  .nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav + .nav { margin-top: 4px; }
+  .nav a { flex: none; min-height: 32px; }
+  .nav a .name { overflow: visible; }
+  .bar .when { display: none; }
+  :root { --edge: 16px; --gutter: 16px; --inset: 16px; }
+  .head h1 { font-size: 28px; }
+  .cell .value { font-size: 32px; margin-top: 12px; }
+  .cell { padding-top: 16px; padding-bottom: 16px; }
+  .next { padding-top: 18px; padding-bottom: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .view.enter, dialog.confirm[open], .toast, .toast.leaving { animation: none; }
+  .btn.busy .spin { animation-duration: 2400ms; }
+}
+
+/* Shape as well as colour, so the lights still read for colour-blind eyes:
+   red is a filled dot, amber a ring, green a small quiet dot. */
+.dot[data-tier="attention"] { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
+.dot[data-tier="safe"] { width: 5px; height: 5px; opacity: 0.85; }
+
+/* "What's this?" definitions */
+.q { display: inline-grid; place-items: center; flex: none; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: var(--layer-2); color: var(--text-3); font: 500 10.5px/1 var(--font); cursor: help; transition: color 120ms var(--ease), background-color 120ms var(--ease); }
+.q:hover, .q:focus-visible { color: var(--text); background: var(--layer-3); }
+.gloss[popover] { position: fixed; inset: auto; margin: 0; width: 290px; padding: 14px 16px; border: 0; border-radius: 16px; background: var(--layer-3); color: var(--text-2); box-shadow: inset 0 0 0 1px var(--line-2), 0 16px 40px rgba(0, 0, 0, 0.75); font-size: 13px; line-height: 1.55; }
+.gloss b { display: block; margin-bottom: 4px; color: var(--text); font-weight: 500; }
+.term { display: inline-flex; align-items: center; gap: 7px; }
+
+/* ---------- onboarding: a modal with the drawing in one panel and the words in the next ---------- */
+dialog.ob { width: min(720px, calc(100vw - 32px)); max-width: none; max-height: calc(100vh - 32px); margin: auto; padding: 8px; border: 0; border-radius: 28px; background: var(--layer-1); color: var(--text); overflow: hidden; box-shadow: inset 0 0 0 1px var(--line-2), 0 40px 120px rgba(0, 0, 0, 0.85); }
+dialog.ob::backdrop { background: rgba(0, 0, 0, 0.74); backdrop-filter: blur(8px); }
+dialog.ob:focus { outline: none; }
+dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; animation: ob-open 420ms var(--ease) both; }
+@keyframes ob-open { from { opacity: 0; transform: translateY(10px) scale(0.985); } }
+.ob-stage { position: relative; height: 316px; border-radius: 20px; background: var(--shell); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.ob-skip { position: absolute; top: 12px; right: 12px; z-index: 1; }
+.ob-art { display: grid; place-items: center; width: 100%; height: 100%; padding: 28px 24px; }
+.ob-text { display: grid; align-content: start; padding: 26px 26px 22px; border-radius: 20px; box-shadow: inset 0 0 0 1px var(--line); overflow-y: auto; }
+.ob-copy { min-height: 96px; }
+.ob-copy h1 { margin: 0; font-size: 26px; line-height: 1.15; font-weight: 500; letter-spacing: -0.025em; text-wrap: balance; }
+.ob-copy p { margin: 8px 0 0; max-width: 560px; color: var(--text-2); font-size: 15px; line-height: 1.55; text-wrap: pretty; }
+.ob-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 26px; }
+.ob-progress { display: flex; gap: 6px; }
+.ob-progress i { position: relative; width: 28px; height: 3px; border-radius: 3px; background: var(--layer-3); overflow: hidden; }
+.ob-progress i::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--text-2); transform: scaleX(0); transform-origin: left; transition: transform 520ms var(--ease); }
+.ob-progress i.done::after { transform: scaleX(1); }
+.ob-actions { display: flex; align-items: center; gap: 8px; min-height: 40px; }
+.ob-actions .btn { height: 40px; padding: 0 20px; font-size: 13.5px; }
+.ob-actions .btn.primary:has(> svg.idle:first-child) { padding-left: 18px; }
+.ob-hint { margin-top: 12px; color: var(--text-3); font-size: 12.5px; }
+.ob-hint button { padding: 0; border: 0; background: none; color: var(--text-2); font: inherit; text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; cursor: pointer; }
+.ob-hint pre { margin: 10px 0 0; width: max-content; max-width: 100%; padding: 10px 14px; border-radius: 12px; background: var(--shell); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); font: 11.5px/1.6 var(--mono); white-space: pre-wrap; }
+
+/* staggered entrance: every step's pieces arrive in reading order */
+.ob-in > * { animation: ob-rise 560ms var(--ease) both; }
+.ob-in > *:nth-child(2) { animation-delay: 70ms; }
+.ob-in > *:nth-child(3) { animation-delay: 140ms; }
+.ob-in > *:nth-child(4) { animation-delay: 210ms; }
+.ob-out > * { animation: ob-leave 200ms var(--ease) both; }
+@keyframes ob-rise { from { opacity: 0; transform: translateY(10px); } }
+@keyframes ob-leave { to { opacity: 0; transform: translateY(-6px); } }
+.ob-swap { animation: ob-swap 420ms var(--ease) both; }
+@keyframes ob-swap { from { opacity: 0; filter: blur(4px); } }
+
+/* 1 · the light */
+.orb { overflow: visible; }
+.orb .glow { transform-box: fill-box; transform-origin: center; animation: orb-breathe 4.8s ease-in-out infinite; }
+.orb .pulse { transform-box: fill-box; transform-origin: center; animation: orb-pulse 3.6s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+.orb .pulse.two { animation-delay: 1.2s; }
+.orb .pulse.three { animation-delay: 2.4s; }
+.orb .orbit { transform-origin: 0 0; animation: orb-spin 36s linear infinite; }
+.orb .orbit.slow { animation-duration: 60s; animation-direction: reverse; }
+@keyframes orb-breathe { 50% { transform: scale(0.92); opacity: 0.8; } }
+@keyframes orb-pulse { 0% { transform: scale(1); opacity: 0.55; } 100% { transform: scale(3.4); opacity: 0; } }
+@keyframes orb-spin { to { transform: rotate(360deg); } }
+
+/* 2 · the check */
+.scan { width: min(440px, 100%); display: grid; text-align: left; }
+.scan-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 14px; height: 40px; border-top: 1px solid var(--line); opacity: 0; transform: translateY(6px); transition: opacity 360ms var(--ease), transform 360ms var(--ease); }
+.scan-row:first-child { border-top: 0; }
+.scan-row.shown { opacity: 1; transform: none; }
+.scan-row b { font-size: 14px; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scan-row .v { color: var(--text-3); font-size: 13px; white-space: nowrap; opacity: 0; transition: opacity 320ms var(--ease); }
+.scan-row.done .v { opacity: 1; color: var(--text-2); }
+.scan-row .ind { position: relative; display: grid; place-items: center; width: 18px; height: 18px; }
+.scan-row .spinner { width: 14px; height: 14px; animation: spin 800ms linear infinite; color: var(--text-3); }
+.scan-row.done .spinner { display: none; }
+.scan-row .dot { transform: scale(0); transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.scan-row.done .dot { transform: scale(1); }
+.scan-more { height: 34px; display: flex; align-items: center; padding-left: 32px; border-top: 1px solid var(--line); color: var(--text-3); font-size: 13px; opacity: 0; transition: opacity 360ms var(--ease); }
+.scan-more.shown { opacity: 1; }
+
+/* 3 · the menu bar */
+.mb { position: relative; width: min(460px, 100%); height: 216px; }
+.mb-bar { display: flex; align-items: center; gap: 18px; height: 30px; padding: 0 14px; border-radius: 9px; background: #1b1b1d; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); color: var(--text-2); font-size: 12.5px; text-align: left; }
+.mb-bar b { color: var(--text); font-weight: 500; }
+.mb-right { display: flex; align-items: center; gap: 14px; margin-left: auto; color: var(--text-2); }
+.mb-right svg { width: 15px; height: 15px; }
+.mb-gl { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); color: var(--text); }
+.mb-gl i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px color-mix(in srgb, var(--c) 60%, transparent); transition: background-color 500ms var(--ease), box-shadow 500ms var(--ease); }
+.mb-menu { position: absolute; top: 38px; right: 70px; width: 236px; padding: 6px; border-radius: 12px; background: #1f1f22; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.6); text-align: left; transform-origin: top right; animation: mb-open 520ms var(--ease) 320ms both; }
+@keyframes mb-open { from { opacity: 0; transform: scale(0.96) translateY(-4px); } }
+.mb-menu .h { padding: 6px 10px 8px; color: var(--text); font-size: 12.5px; font-weight: 500; border-bottom: 1px solid rgba(255, 255, 255, 0.06); margin-bottom: 4px; }
+.mb-menu .r { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 10px; border-radius: 6px; color: var(--text-2); font-size: 12.5px; }
+.mb-menu .r:first-of-type { background: rgba(255, 255, 255, 0.05); color: var(--text); }
+.mb-caption { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; }
+.mb-caption > span { display: inline-flex; align-items: center; gap: 9px; height: 32px; padding: 0 14px; border-radius: 999px; background: var(--layer-1); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); font-size: 13px; }
+
+/* 4 · the first fix */
+.fix { overflow: visible; }
+.fix .commit { transform-box: fill-box; transform-origin: center; animation: bob 2.4s ease-in-out infinite; }
+.fix .commit:nth-of-type(2) { animation-delay: 0.3s; }
+.fix .commit:nth-of-type(3) { animation-delay: 0.6s; }
+@keyframes bob { 50% { transform: translateY(-3px); } }
+.fix .arrived { transform-box: fill-box; transform-origin: center; opacity: 0; }
+.fix.done .arrived { animation: pop-in 520ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.fix.done .arrived:nth-of-type(2) { animation-delay: 150ms; }
+.fix.done .arrived:nth-of-type(3) { animation-delay: 300ms; }
+.fix.launch .commit { animation: fade-out 300ms var(--ease) forwards; }
+@keyframes pop-in { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: none; } }
+@keyframes fade-out { to { opacity: 0; } }
+.fix .tick { stroke-dasharray: 24; stroke-dashoffset: 24; }
+.fix.done .tick { transition: stroke-dashoffset 520ms var(--ease) 420ms; stroke-dashoffset: 0; }
+.fix .badge { opacity: 0; transform-box: fill-box; transform-origin: center; }
+.fix.done .badge { animation: pop-in 480ms cubic-bezier(0.34, 1.56, 0.64, 1) 260ms forwards; }
+.fix .route { stroke-dasharray: 3 6; animation: march 1.2s linear infinite; }
+@keyframes march { to { stroke-dashoffset: -18; } }
+
+.tour-shield { position: fixed; inset: 0; z-index: 38; }
+.tour-spot { position: fixed; z-index: 39; border-radius: 16px; pointer-events: none; box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.28), 0 0 0 200vmax rgba(0, 0, 0, 0.74); transition: top 300ms var(--ease), left 300ms var(--ease), width 300ms var(--ease), height 300ms var(--ease); }
+.tour-card { position: fixed; z-index: 40; width: 316px; padding: 18px 18px 14px; border-radius: 18px; background: var(--layer-3); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2), 0 24px 60px rgba(0, 0, 0, 0.7); transition: top 300ms var(--ease), left 300ms var(--ease); }
+.tour-card h3 { margin: 0; font-size: 15px; font-weight: 500; }
+.tour-card p { margin: 6px 0 0; color: var(--text-2); font-size: 13.5px; line-height: 1.5; }
+.tour-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; }
+.tour-foot > span { color: var(--text-3); font-size: 12px; }
+.tour-foot .row { display: flex; gap: 8px; }
+@media (max-width: 860px) {
+  .ob-stage { height: 250px; }
+  .ob-text { padding: 20px 18px 18px; }
+  .ob-copy h1 { font-size: 22px; }
+  .ob-copy p { font-size: 14.5px; }
+  .ob-progress i { width: 20px; }
+  .mb-bar .menu-name { display: none; }
+  .mb-menu { right: 8px; }
+  dialog.ob { width: calc(100vw - 20px); max-height: calc(100vh - 20px); border-radius: 26px; }
+  .tour-card { width: calc(100vw - 32px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.ob[open], .ob-in > *, .ob-out > *, .ob-swap, .mb-menu { animation: none; }
+  .orb .glow, .orb .pulse, .orb .orbit, .fix .commit, .fix .route, .scan-row .spinner { animation: none; }
+  .orb .pulse { opacity: 0; }
+  .scan-row, .scan-row .v, .scan-row .dot, .scan-more, .ob-progress i::after, .mb-gl i { transition: none; }
+  .fix.done .arrived, .fix.done .badge { animation: none; opacity: 1; }
+  .fix.done .tick { transition: none; }
+  .tour-spot, .tour-card { transition: none; }
+}
+
+/* overview plan */
+.plan-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; min-height: 64px; padding: 10px var(--inset); border-top: 1px solid var(--line); }
+.plan-row b { display: block; font-size: 14px; font-weight: 500; }
+.plan-row small { display: block; color: var(--text-3); font-size: 12.5px; }
+
+/* numbers with a verdict */
+.cell .unit { display: block; margin-top: 8px; color: var(--text-2); font-size: 12.5px; }
+
+/* help for steps that need an AI assistant */
+.guide { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 12px 0 0; padding: 0; list-style: none; color: var(--text-3); font-size: 12.5px; counter-reset: g; }
+.guide li { counter-increment: g; }
+.guide li::before { content: counter(g) ". "; }
+.map-note { margin: -8px 0 14px; color: var(--text-3); font-size: 12.5px; display: flex; align-items: center; gap: 7px; }
+
+/* sidebar extras */
+.side-tools { margin-top: auto; display: grid; gap: 2px; padding-top: 14px; }
+.side-tools .link { display: flex; align-items: center; gap: 11px; min-height: 36px; padding: 0 12px; border: 0; border-radius: 10px; background: none; color: var(--text-2); font-size: 13px; text-align: left; cursor: pointer; }
+.side-tools .link:hover { color: var(--text); background: var(--layer-1); }
+.side-tools .link svg { width: 16px; height: 16px; color: var(--text-3); }
+.switch { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 36px; padding: 0 12px; border-radius: 10px; color: var(--text-2); font-size: 13px; cursor: pointer; }
+.switch:hover { color: var(--text); background: var(--layer-1); }
+.switch input { appearance: none; position: relative; flex: none; width: 30px; height: 18px; margin: 0; border-radius: 999px; background: var(--layer-3); box-shadow: inset 0 0 0 1px var(--line-2); cursor: pointer; transition: background-color 160ms var(--ease); }
+.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--text-3); transition: transform 160ms var(--ease), background-color 160ms var(--ease); }
+.switch input:checked { background: var(--text-2); }
+.switch input:checked::after { transform: translateX(12px); background: var(--black); }
+.side-note { padding: 8px 12px 0; color: var(--text-3); font-size: 12px; line-height: 1.5; }
+.warn { color: var(--amber); }
+.panel-note { margin: -6px 0 0; padding: 0 var(--inset) 14px; color: var(--text-3); font-size: 12.5px; }
+
+@media (max-width: 860px) {
+  .side-tools, .side-note { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" aria-label="Projects">
+    <div class="brand"><span class="dot" id="brand-dot" data-tier="unknown"></span>Housekeep</div>
+    <nav class="nav" id="nav-top"></nav>
+    <nav class="nav" id="nav-projects"></nav>
+    <div class="side-tools" id="side-tools"></div>
+    <div class="side-note" id="side-foot"></div>
+  </aside>
+  <div class="main">
+    <header class="bar">
+      <div class="crumbs" id="crumbs"></div>
+      <div class="bar-right">
+        <span class="when" id="checked" aria-live="polite"></span>
+        <button class="live" id="live" type="button" data-state="snapshot"><span class="dot"></span><span class="word">Snapshot</span></button>
+        <a class="btn" id="check-now" href="#">
+          <svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.61-3.89"/><path d="M13.5 2.5v3h-3"/></svg>
+          <svg class="spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 1-5.5 5.5"/></svg>
+          <span class="label">Check now</span>
+        </a>
+      </div>
+    </header>
+    <main class="view" id="view" aria-live="polite"></main>
+  </div>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div id="glossary"></div>
+
+<script id="housekeep-live" type="application/json">/*__HOUSEKEEP_LIVE__*/null</script>
+<script id="housekeep-data" type="application/json">/*__HOUSEKEEP_DATA__*/null</script>
+<script>
+(() => {
+  "use strict";
+  // LIVE is set when the page comes from the Housekeep server: updates stream in and buttons work.
+  // Without it (the file in state/), the page is a read-only snapshot.
+  const LIVE = JSON.parse(document.getElementById("housekeep-live").textContent);
+  let data = JSON.parse(document.getElementById("housekeep-data").textContent) || { projects: [], error: { title: "No data yet", detail: "Run housekeep in a terminal to fill this page." } };
+  const SVG = "http://www.w3.org/2000/svg";
+  const KEYS = ["commit", "push", "sync", "cleanup"];
+  const TERM_FOR = { commit: "commit", push: "push", sync: "main", cleanup: "cleanup" };
+  const SAY = { "at-risk": "Could lose work", attention: "Needs attention", safe: "All clear" };
+  const OPENER_LABEL = { files: /Mac/.test(navigator.userAgent) ? "Finder" : "Files", terminal: "Terminal", vscode: "VS Code", cursor: "Cursor" };
+  // The browser runs on the machine being checked, so it knows what to call it.
+  const HERE = /Mac/.test(navigator.userAgent) ? "this Mac" : "this computer";
+  const HERE_CAP = HERE.charAt(0).toUpperCase() + HERE.slice(1);
+  const DEPLOY = "If this project goes live whenever main changes (Vercel, Netlify and similar hosts do this), this can put it live.";
+  // Where work lives online: a project's own server, or across all projects the one they share.
+  const hostAll = () => {
+    const hosts = [...new Set((data.projects || []).map((p) => p.host).filter(Boolean))];
+    return hosts.length === 1 ? hosts[0] : hosts.length ? "the server" : "GitHub";
+  };
+  const H = (p) => (p && p.host) || hostAll();
+  const pushRemote = (p) => (p.remotes && p.remotes.push) || "origin";
+  const GLOSSARY = {
+    commit: ["Commit", "A saved snapshot in git's history. Saving a file in your editor isn't a commit: you (or your AI assistant) commit once something works, and that's the version you can always get back. Changes you haven't committed yet are uncommitted."],
+    push: ["Push", `Copying your commits to the remote (usually GitHub), so they survive if ${HERE} is lost, stolen or wiped. Commits that exist only here are unpushed.`],
+    main: ["main", "The default branch: the main version of your project, usually the one that goes live. origin/main is the remote's copy, and it's the source of truth. Up to date means yours matches it."],
+    branch: ["Branch", "A separate line of work that starts from main, so you can try things without touching main. When it's done, it's merged back into main."],
+    merge: ["Merge", "Folding a branch's commits into main. A branch whose work is already in main is merged, and safe to delete. If your project deploys from main, merging and pushing main ships the change."],
+    pr: ["Pull request", "A proposal, on GitHub, to merge a branch into main. Automatic checks and other people can look at it first, and GitHub can delete the branch once it's merged."],
+    pull: ["Pull", "Bringing the remote's new commits into your branch. A fast-forward pull only adds them on top, so nothing you have is lost."],
+    upstream: ["Upstream", "The remote branch a local branch follows; git push and git pull use it by default. Upstream gone means that remote branch was deleted."],
+    worktree: ["Worktree", "An extra working folder for the same repo, checked out on a different branch. Tools like Codex and Claude Code make these, and they're easy to forget. A prunable worktree is one whose folder was deleted."],
+    stash: ["Stash", "Changes set aside with git stash to clear your working tree, without committing them. They sit out of sight until someone applies or drops them."],
+    cleanup: ["Cleanup", "Merged branches and worktrees left behind after the work is done, locally or on the remote. Unmerged branches are work in progress, not mess."],
+    squash: ["Squash-merged", "A branch can be merged by folding all its commits into one new commit on main. The branch's own commits never land in main, but every change on it does, so it's merged."],
+    detached: ["Detached HEAD", "A working tree that's on a specific commit instead of a branch. New commits made there belong to no branch, so switching away loses them unless they're saved to one. Push does that for you."],
+    diverged: ["Diverged", "Your main and the remote's main each have commits the other doesn't, so neither can simply fast-forward. It needs a careful fix."],
+  };
+  const busy = new Set();
+  const expanded = new Set();
+  let route = null;
+  let checking = false;
+
+  const pref = (key, value) => {
+    try {
+      if (value === undefined) return localStorage.getItem(key);
+      localStorage.setItem(key, value);
+    } catch (err) {
+      // Private windows can refuse storage; the page still works, it just won't remember.
+      return null;
+    }
+    return value;
+  };
+  let advanced = pref("housekeep.advanced") === "1";
+
+  /* ---------- helpers ---------- */
+
+  const el = (tag, attrs = {}, ...kids) => {
+    const node = tag.startsWith("svg:") ? document.createElementNS(SVG, tag.slice(4)) : document.createElement(tag);
+    let style = "";
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v === null || v === undefined || v === false) continue;
+      if (k === "text") node.textContent = v;
+      // Presentation attributes don't resolve custom properties; theme colours go through style.
+      else if (typeof v === "string" && v.startsWith("var(")) style += `${k}:${v};`;
+      else node.setAttribute(k, v);
+    }
+    if (style) node.setAttribute("style", `${node.getAttribute("style") || ""};${style}`.replace(/^;/, ""));
+    for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) node.append(kid);
+    return node;
+  };
+  const ICONS = {
+    grid: ["M3 3h4v4H3z", "M9 3h4v4H9z", "M3 9h4v4H3z", "M9 9h4v4H9z"],
+    copy: ["M6 6h6a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 12 15H6a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 6 6z", "M11 3.5V3A1.5 1.5 0 0 0 9.5 1.5h-6A1.5 1.5 0 0 0 2 3v6a1.5 1.5 0 0 0 1.5 1.5H4"],
+    check: ["M3 8.5l3.2 3L13 4.5"],
+    folder: ["M2 4.5A1.5 1.5 0 0 1 3.5 3h3l1.5 2h4.5A1.5 1.5 0 0 1 14 6.5v5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"],
+    upload: ["M8 10.5V2.5", "M4.5 6L8 2.5 11.5 6", "M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2"],
+    download: ["M8 2.5v8", "M4.5 7L8 10.5 11.5 7", "M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2"],
+    merge: ["M4.5 2.5v11", "M4.5 5.5c0 3.5 7 2.5 7 7", "M9.5 11l2 2 2-2"],
+    pr: ["M4.5 2.5v11", "M11.5 13.5V7a2.5 2.5 0 0 0-2.5-2.5H6.5", "M8.5 2.5l-2 2 2 2"],
+    trash: ["M2.5 4.5h11", "M6 4.5V3a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1.5", "M4 4.5l.7 9h6.6l.7-9"],
+    terminal: ["M2 3.5h12v9H2z", "M4.5 6.5L6.5 8l-2 1.5", "M8 10h3.5"],
+    code: ["M5.5 4.5L2 8l3.5 3.5", "M10.5 4.5L14 8l-3.5 3.5"],
+    close: ["M4 4l8 8", "M12 4l-8 8"],
+    eraser: ["M9.5 3l3.5 3.5L7 12.5H3.5L2.5 11.5z", "M6 12.5h7.5"],
+    chevron: ["M6 4l4 4-4 4"],
+    down: ["M4 6l4 4 4-4"],
+    help: ["M8 14.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13z", "M6.2 6.2a1.9 1.9 0 0 1 3.6.8c0 1.3-1.8 1.6-1.8 2.8", "M8 11.6v.1"],
+  };
+  const icon = (name, cls) => el("svg:svg", { class: cls || null, viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", "stroke-width": 1.5, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" },
+    ...ICONS[name].map((d) => el("svg:path", { d })));
+  const spinner = () => el("svg:svg", { class: "spin", viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", "stroke-width": 1.5, "stroke-linecap": "round", "aria-hidden": "true" }, el("svg:path", { d: "M8 2.5a5.5 5.5 0 1 1-5.5 5.5" }));
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + "s")}`;
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const shortPath = (full) => { const parts = full.replace(/^\/Users\/[^/]+/, "~").split("/"); return parts.length > 4 ? "…/" + parts.slice(-3).join("/") : parts.join("/"); };
+  const since = (seconds) => {
+    if (seconds < 60) return "just now";
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} h ago`;
+    const d = Math.floor(seconds / 86400);
+    return d < 60 ? `${d} day${d === 1 ? "" : "s"} ago` : `${Math.floor(d / 30)} months ago`;
+  };
+  const ago = (iso) => iso ? since(Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000))) : "never";
+  const agoUnix = (unix) => unix ? since(Math.max(0, Math.round(Date.now() / 1000 - unix))) : "";
+  const sig = (p, key) => (p.signals || []).find((s) => s.key === key) || { tier: "unknown", value: null, unit: "", cell: "", headline: "", hint: "", details: [] };
+  const dot = (tier) => el("span", { class: "dot", "data-tier": tier });
+  const status = (tier, text) => el("span", { class: "status", "data-tier": tier }, dot(tier), text);
+  const branchName = (name) => {
+    const slash = name.lastIndexOf("/");
+    return el("span", { class: "n", title: name }, slash > 0 ? [el("i", { text: name.slice(0, slash + 1) }), name.slice(slash + 1)] : name);
+  };
+
+  /* ---------- "What's this?" ---------- */
+
+  const glossary = document.getElementById("glossary");
+  let lastQuestion = null;
+  for (const [key, [title, body]] of Object.entries(GLOSSARY)) {
+    const pop = el("div", { class: "gloss", id: `g-${key}`, popover: "auto", role: "tooltip" }, el("b", { text: title }), body);
+    pop.addEventListener("toggle", (e) => {
+      if (e.newState !== "open" || !lastQuestion) return;
+      const r = lastQuestion.getBoundingClientRect();
+      const w = pop.offsetWidth, h = pop.offsetHeight;
+      const left = Math.max(12, Math.min(window.innerWidth - w - 12, r.left + r.width / 2 - w / 2));
+      const below = r.bottom + 8 + h < window.innerHeight;
+      pop.style.left = `${left}px`;
+      pop.style.top = `${below ? r.bottom + 8 : r.top - h - 8}px`;
+    });
+    glossary.append(pop);
+  }
+  document.addEventListener("click", (e) => { const q = e.target.closest(".q"); if (q) lastQuestion = q; }, true);
+  const q = (key, label) => el("button", { class: "q", type: "button", popovertarget: `g-${key}`, "aria-label": `What does ${label || GLOSSARY[key][0]} mean?` }, "?");
+  const term = (text, key) => el("span", { class: "term" }, text, q(key, text));
+
+  /* ---------- talking to the server ---------- */
+
+  async function api(path, body) {
+    const response = await fetch(path, {
+      method: body ? "POST" : "GET",
+      headers: { "Content-Type": "application/json", "X-Housekeep-Token": LIVE.token },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `Housekeep answered ${response.status}.`);
+    return payload;
+  }
+
+  const liveButton = document.getElementById("live");
+  function setLive(state) {
+    liveButton.dataset.state = state;
+    liveButton.querySelector(".word").textContent = { live: "Live", reconnecting: "Reconnecting", restart: "Reload", snapshot: "Snapshot" }[state];
+    liveButton.title = { live: "Updates arrive as your projects change", reconnecting: "Lost the connection to Housekeep. Trying again.", restart: "Housekeep restarted. Reload to reconnect.", snapshot: "A saved copy. Run housekeep open for live updates and buttons." }[state];
+  }
+  liveButton.addEventListener("click", () => { if (liveButton.dataset.state === "restart") location.reload(); });
+
+  function connect() {
+    let failures = 0;
+    const events = new EventSource(`/api/events?token=${encodeURIComponent(LIVE.token)}`);
+    events.addEventListener("state", (e) => {
+      failures = 0;
+      data = JSON.parse(e.data);
+      setLive("live");
+      render();
+    });
+    events.onopen = () => { failures = 0; setLive("live"); };
+    events.onerror = () => {
+      failures += 1;
+      // A token mismatch never recovers on its own: the server restarted with a new one.
+      setLive(failures > 3 ? "restart" : "reconnecting");
+    };
+  }
+
+  function toast(tier, message, output) {
+    const close = el("button", { class: "btn ghost icon", type: "button", "aria-label": "Dismiss" }, icon("close"));
+    const node = el("div", { class: "toast", role: tier === "at-risk" ? "alert" : "status" },
+      dot(tier),
+      el("div", {}, el("b", { text: message }), output ? el("pre", { text: output.split("\n").filter(Boolean).slice(-3).join("\n") }) : null),
+      close);
+    const dismiss = () => { node.classList.add("leaving"); setTimeout(() => node.remove(), 160); };
+    close.addEventListener("click", dismiss);
+    document.getElementById("toasts").append(node);
+    setTimeout(dismiss, tier === "at-risk" ? 12000 : 6000);
+  }
+
+  function ask({ title, body, warning, items = [], command, confirmText, danger }) {
+    return new Promise((resolve) => {
+      const cancel = el("button", { class: "btn ghost", type: "button" }, el("span", { text: "Cancel" }));
+      const ok = el("button", { class: "btn primary", type: "button" }, el("span", { text: confirmText }));
+      const dialog = el("dialog", { class: "confirm", "aria-label": title },
+        el("div", { class: "confirm-body" },
+          el("h3", { text: title }),
+          body ? el("p", { text: body }) : null,
+          warning ? el("p", { class: "warn", text: warning }) : null,
+          items.length ? el("ul", {}, items.map(([a, b]) => el("li", {}, el("span", { text: a }), el("span", { text: b || "" })))) : null,
+          command ? el("pre", { text: command }) : null),
+        el("div", { class: "confirm-actions" }, cancel, ok));
+      cancel.addEventListener("click", () => dialog.close("cancel"));
+      ok.addEventListener("click", () => dialog.close("ok"));
+      dialog.addEventListener("close", () => { resolve(dialog.returnValue === "ok"); dialog.remove(); });
+      document.body.append(dialog);
+      dialog.showModal();
+      (danger || warning ? cancel : ok).focus();
+    });
+  }
+
+  async function run(p, action, payload, key) {
+    busy.add(key);
+    render();
+    try {
+      const result = await api("/api/action", { project: p.path, action, ...payload });
+      toast("safe", result.message, action === "open" ? "" : result.output);
+    } catch (err) {
+      toast("at-risk", err.message);
+    } finally {
+      busy.delete(key);
+      render();
+    }
+  }
+
+  // A button that runs one allow-listed action, optionally behind a confirm dialog.
+  function actionButton(p, action, { payload = {}, text, iconName, tone = "", title, confirm } = {}) {
+    if (!LIVE) return null;
+    const key = `${p.path}|${action}|${JSON.stringify(payload)}`;
+    const working = busy.has(key);
+    const button = el("button", { class: `btn${tone ? " " + tone : ""}${text ? "" : " icon"}${working ? " busy" : ""}`, type: "button", title: title || null, "aria-label": title || text },
+      iconName ? icon(iconName, "idle") : null, spinner(), text ? el("span", { text: working ? "Working" : text }) : null);
+    button.addEventListener("click", async () => {
+      if (confirm && !(await ask(confirm))) return;
+      run(p, action, payload, key);
+    });
+    return button;
+  }
+
+  function copyButton(text, { label = "Copy request", tone = "" } = {}) {
+    const button = el("button", { class: `btn${tone ? " " + tone : ""}`, type: "button" }, icon("copy", "idle"), icon("check", "done"), el("span", { text: label }));
+    button.addEventListener("click", () => {
+      const done = (ok) => {
+        button.classList.toggle("copied", ok);
+        button.querySelector("span").textContent = ok ? "Copied" : label;
+        toast(ok ? "safe" : "at-risk", ok ? "Copied. Paste it into your AI coding assistant, opened in this project's folder." : "Couldn't reach the clipboard.");
+        setTimeout(() => { button.classList.remove("copied"); button.querySelector("span").textContent = label; }, 1800);
+      };
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(() => done(true), () => done(false));
+      else {
+        const area = el("textarea", { style: "position:absolute;left:-9999px", "aria-hidden": "true" });
+        area.value = text;
+        document.body.append(area);
+        area.select();
+        const ok = document.execCommand("copy");
+        area.remove();
+        done(ok);
+      }
+    });
+    return button;
+  }
+
+  function openMenu(p) {
+    if (!LIVE || !(LIVE.openers || []).length) return null;
+    const menu = el("details", { class: "menu" },
+      el("summary", { class: "btn", "aria-label": "Open this project in another app" }, el("span", { text: "Open in" }), icon("down", "trail")),
+      el("div", { class: "menu-list" }, LIVE.openers.map((k) => actionButton(p, "open", { payload: { app: k, path: p.path }, text: OPENER_LABEL[k], iconName: k === "terminal" ? "terminal" : k === "files" ? "folder" : "code" }))));
+    menu.addEventListener("click", (e) => { if (e.target.closest(".menu-list")) menu.open = false; });
+    return menu;
+  }
+  document.addEventListener("click", (e) => {
+    document.querySelectorAll("details.menu[open]").forEach((m) => { if (!m.contains(e.target)) m.open = false; });
+  });
+
+  /* ---------- what each button means ---------- */
+
+  const deletable = (p) => p.branches.filter((b) => b.state === "merged" && !b.worktree && !b.current);
+  const remoteName = (p) => (p.remotes && p.remotes.push) || "origin";
+  const mainRef = (p) => (p.main && p.main.remoteRef) || `${remoteName(p)}/${(p.main && p.main.name) || "main"}`;
+  const how = (b) => b.merged === "squashed" ? "squash-merged" : "merged";
+  const pushAllConfirm = (p) => {
+    const m = p.main || {};
+    const remote = remoteName(p);
+    const items = p.branches.filter((b) => b.localOnly).map((b) => [b.name, plural(b.localOnly, "unpushed commit")]);
+    const lines = p.branches.filter((b) => b.localOnly).map((b) => `git push -u ${remote} ${b.name}`);
+    if (m.localOnly) {
+      items.unshift([`${m.name}, pushed as a backup branch`, plural(m.localOnly, "unpushed commit")]);
+      lines.unshift(`git push ${remote} ${m.name}:housekeep/backup-${m.name}-<date>`);
+    }
+    return {
+      title: `Push to ${remote}`,
+      body: `Copies these commits to ${H(p)} so they're safe if ${HERE} is lost. ${m.localOnly ? `Commits on ${m.name} go to a separate backup branch, so ${mainRef(p)}, and your live site, stay exactly as they are.` : "Nothing is merged, rewritten or deleted."}`,
+      items, command: lines.join("\n"), confirmText: "Push",
+    };
+  };
+  const pushBranchConfirm = (p, b) => ({
+    title: `Push ${b.name}`,
+    body: `Copies this branch to ${H(p)} so its commits are safe if ${HERE} is lost. Nothing is merged or deleted, and nothing goes live.`,
+    items: [[b.name, plural(b.localOnly, "unpushed commit")]], command: `git push -u ${remoteName(p)} ${b.name}`, confirmText: "Push",
+  });
+  const pushMainConfirm = (p) => ({
+    title: `Push ${p.main.name} to ${remoteName(p)}`,
+    body: `Updates ${mainRef(p)} with ${plural(p.main.ahead, "commit")} from ${HERE}. This skips pull request reviews and checks.`,
+    warning: DEPLOY, command: `git push ${remoteName(p)} ${p.main.name}`, confirmText: `Push ${p.main.name}`, danger: true,
+  });
+  const deleteConfirm = (p, names) => ({
+    title: names.length === 1 ? `Delete ${names[0]}` : `Delete ${plural(names.length, "merged branch", "merged branches")}`,
+    body: `Everything on ${names.length === 1 ? "it" : "these"} is already in ${mainRef(p)}, so no work is lost. Branches on ${remoteName(p)} aren't touched. Each one is checked again right before it's deleted.`,
+    items: names.map((n) => [n, how(p.branches.find((b) => b.name === n) || {})]), command: names.map((n) => `git branch -D ${n}`).join("\n"),
+    confirmText: "Delete", danger: true,
+  });
+  const remoteClearable = (p) => (p.remoteBranches || []).filter((b) => b.deletable);
+  const unchecked = (p) => {
+    const g = p.github || {};
+    if (g.checked) return null;
+    return p.host === "GitHub"
+      ? `GitHub couldn't be asked about protected branches or open pull requests (${g.reason || "unknown reason"}), so they're judged by name only.`
+      : `${H(p)} can't be asked about protected branches or open pull requests, so they're judged by name only.`;
+  };
+  const remoteConfirm = (p, names) => ({
+    title: names.length === 1 ? `Delete ${names[0]} on ${remoteName(p)}` : `Delete ${plural(names.length, "merged branch", "merged branches")} on ${remoteName(p)}`,
+    body: `Every change on ${names.length === 1 ? "it" : "these"} is already in ${mainRef(p)}, so no work is lost. ${mainRef(p)} and your live site aren't touched. Each one is checked against ${H(p)} again right before it's deleted, and left alone if anyone has pushed to it since.`,
+    warning: unchecked(p) ? `${unchecked(p)} Make sure nobody is still using these.` : null,
+    items: names.map((n) => [n, how(p.remoteBranches.find((g) => g.name === n) || {})]),
+    command: names.map((n) => `git push ${remoteName(p)} --delete ${n}`).join("\n"),
+    confirmText: `Delete on ${remoteName(p)}`, danger: true,
+  });
+  const canPR = (p) => Boolean(LIVE && p.github && p.github.checked && p.main && p.main.remoteMain);
+  const prConfirm = (p, b) => ({
+    title: `Open a pull request for ${b.name}`,
+    body: `Proposes merging ${plural(b.aheadOfMain, "commit")} into ${mainRef(p)} on GitHub, so checks and reviews can run first. ${b.localOnly || !b.onRemote ? "The branch is pushed first. " : ""}Nothing is merged yet, and nothing goes live.`,
+    command: [b.localOnly || !b.onRemote ? `git push -u ${remoteName(p)} ${b.name}` : "", `gh pr create --base ${p.main.name} --head ${b.name} --fill`].filter(Boolean).join("\n"),
+    confirmText: "Open pull request",
+  });
+  const mergeConfirm = (p, b) => ({
+    title: `Merge ${b.name} into ${p.main.name}`,
+    body: `Adds ${plural(b.aheadOfMain, "commit")} to your local ${p.main.name}. Nothing is pushed yet. If it conflicts, the merge is aborted and nothing changes. This skips pull request reviews and checks, and leaves the branch on ${remoteName(p)} to delete afterwards.`,
+    warning: `Once you push ${p.main.name} afterwards: ${DEPLOY}`, command: `git merge --no-ff ${b.name}`, confirmText: "Merge", danger: true,
+  });
+  const unsetConfirm = (p, names) => ({
+    title: names.length === 1 ? `Unset upstream on ${names[0]}` : `Unset upstream on ${plural(names.length, "branch", "branches")}`,
+    body: `${names.length === 1 ? "This branch tracks" : "These branches track"} ${mainRef(p)}. With some git settings (push.default=upstream), a plain git push would then update ${mainRef(p)} directly. This only changes that setting: no commits or files change, and the next push gives ${names.length === 1 ? "it" : "each one"} an upstream of its own.`,
+    command: names.map((n) => `git branch --unset-upstream ${n}`).join("\n"), confirmText: "Unset upstream",
+  });
+  const fetchAllConfirm = (p) => ({
+    title: p.limits && p.limits.shallow ? "Fetch the full history" : "Fetch all branches",
+    body: `This is a ${p.limits && p.limits.shallow ? "shallow" : "single-branch"} clone, so some checks can't see everything. This fetches the rest from ${H(p)}. It can take a while for big repos. Your files and branches don't change.`,
+    command: [p.limits && p.limits.singleBranch ? `git config --replace-all remote.${remoteName(p)}.fetch "+refs/heads/*:refs/remotes/${remoteName(p)}/*"` : "",
+      p.limits && p.limits.shallow ? `git fetch --unshallow ${(p.remotes || {}).truth || "origin"}` : "", "git fetch --prune"].filter(Boolean).join("\n"),
+    confirmText: "Fetch",
+  });
+  const autoDeleteConfirm = (p) => ({
+    title: "Let GitHub delete merged branches",
+    body: "Turns on GitHub's \"Automatically delete head branches\" setting for this repo, so each pull request's branch is deleted once it's merged. Protected branches, and branches merged any other way, aren't affected.",
+    command: `gh api -X PATCH repos/${(p.github || {}).slug} -F delete_branch_on_merge=true`, confirmText: "Turn on",
+  });
+  const divergedAsk = (p) => `In ${p.path}, local ${p.main.name} and ${mainRef(p)} have diverged: ${p.main.ahead} commits only here and ${p.main.behind} only there. Explain what's on each side in plain English and propose the safest way to reconcile them. Don't push, force-push or delete anything without asking.`;
+
+  // The button that carries out a project's Start here step, when it's safe enough for one click.
+  function primaryAction(p, tone = "primary") {
+    if (!LIVE || !p.next) return null;
+    const m = p.main || {};
+    switch (p.next.kind) {
+      case "push-all": return actionButton(p, "push-all", { text: `Push to ${remoteName(p)}`, iconName: "upload", tone, confirm: pushAllConfirm(p) });
+      case "pull": return actionButton(p, "pull", { text: `Pull ${m.name}`, iconName: "download", tone, title: "Fast-forward only: nothing here is lost" });
+      case "delete-merged": {
+        const names = deletable(p).map((b) => b.name);
+        return names.length ? actionButton(p, "delete-merged", { payload: { branches: names }, text: `Delete ${plural(names.length, "merged branch", "merged branches")}`, iconName: "trash", tone, confirm: deleteConfirm(p, names) }) : null;
+      }
+      case "delete-remote": {
+        const names = remoteClearable(p).map((b) => b.name);
+        return names.length ? actionButton(p, "delete-remote", { payload: { branches: names }, text: `Delete ${plural(names.length, "merged branch", "merged branches")} on ${remoteName(p)}`, iconName: "trash", tone, confirm: remoteConfirm(p, names) }) : null;
+      }
+      case "unset-upstream": {
+        const names = p.branches.filter((b) => b.pushesToMain).map((b) => b.name);
+        return names.length ? actionButton(p, "unset-upstream", { payload: { branches: names }, text: "Unset upstream", tone, confirm: unsetConfirm(p, names) }) : null;
+      }
+      case "fetch-all": return actionButton(p, "fetch-all", { text: p.limits && p.limits.shallow ? "Fetch full history" : "Fetch all branches", iconName: "download", tone, confirm: fetchAllConfirm(p) });
+      case "prune-worktrees": return actionButton(p, "prune-worktrees", { text: "Prune worktrees", iconName: "eraser", tone });
+      case "restore-pruned": {
+        const names = (p.pruned || []).map((b) => b.name);
+        return names.length ? actionButton(p, "restore-pruned", { payload: { branches: names }, text: `Restore ${plural(names.length, "branch", "branches")}`, iconName: "download", tone,
+          confirm: { title: `Restore ${plural(names.length, "deleted branch", "deleted branches")}`,
+            body: `${names.length === 1 ? "This branch was" : "These branches were"} deleted on ${remoteName(p)} while holding work that isn't in ${mainRef(p)}. Housekeep kept the commits; this turns them back into local branches so you can look at them, push them or delete them.`,
+            items: p.pruned.map((b) => [b.name, plural(b.commits, "commit")]), command: p.pruned.map((b) => `git branch ${b.name.split("/").slice(1).join("/")} ${b.ref}`).join("\n"), confirmText: "Restore" } }) : null;
+      }
+      default: return null;
+    }
+  }
+
+  /* ---------- chrome ---------- */
+
+  const checkNow = document.getElementById("check-now");
+  if (LIVE) {
+    checkNow.removeAttribute("href");
+    checkNow.setAttribute("role", "button");
+    checkNow.tabIndex = 0;
+    checkNow.title = "Re-check every project and its server now";
+    checkNow.addEventListener("click", async () => {
+      if (checking) return;
+      checking = true;
+      checkNow.classList.add("busy");
+      checkNow.querySelector(".label").textContent = "Checking";
+      try {
+        // Waits for the full re-check, servers included; the new state also arrives on the stream.
+        await api("/api/check?wait=1", {});
+      } catch (err) {
+        toast("at-risk", err.message);
+      }
+      checking = false;
+      checkNow.classList.remove("busy");
+      checkNow.querySelector(".label").textContent = "Check now";
+    });
+  } else {
+    // A saved snapshot can't re-check; `housekeep open` starts the live map.
+    checkNow.hidden = true;
+  }
+
+  function renderChrome(projects, need) {
+    const worst = data.error ? "unknown" : (projects[0] ? projects[0].tier : "safe");
+    document.getElementById("brand-dot").dataset.tier = worst;
+    document.title = data.error ? "Housekeep · couldn't check" : need.length ? `Housekeep · ${need.length} need${need.length === 1 ? "s" : ""} you` : "Housekeep · all clear";
+    const color = css({ "at-risk": "--red", attention: "--amber", safe: "--green" }[worst] || "--text-3");
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#000"/><circle cx="16" cy="16" r="6" fill="${color}"/></svg>`;
+    document.getElementById("favicon").href = "data:image/svg+xml," + encodeURIComponent(svg);
+    renderChecked();
+    document.getElementById("nav-top").replaceChildren(
+      el("a", { href: "#all", "aria-current": route === "all" ? "page" : "false" }, icon("grid"), el("span", { class: "name", text: "Overview" }), need.length ? el("span", { class: "n", title: `${need.length} need you`, text: need.length }) : null));
+    document.getElementById("nav-projects").replaceChildren(...projects.map((p) =>
+      el("a", { href: `#${p.slug}`, title: `${p.name}: ${SAY[p.tier]}`, "aria-label": `${p.name}, ${SAY[p.tier]}`, "aria-current": route === p.slug ? "page" : "false" },
+        el("span", { style: "display:grid;place-items:center;width:16px" }, dot(p.tier)), el("span", { class: "name", text: p.name }))));
+
+    const help = el("button", { class: "link", type: "button" }, icon("help"), "How this works");
+    help.addEventListener("click", () => startOnboarding());
+    const toggle = el("input", { type: "checkbox", role: "switch", "aria-describedby": "advanced-note" });
+    toggle.checked = advanced;
+    toggle.addEventListener("change", () => { advanced = toggle.checked; pref("housekeep.advanced", advanced ? "1" : "0"); render(); });
+    document.getElementById("side-tools").replaceChildren(help, LIVE ? el("label", { class: "switch" }, "Advanced actions", toggle) : null);
+    document.getElementById("side-foot").replaceChildren(el("span", { id: "advanced-note",
+      text: advanced ? "Merge and push to main are on. Pushing main can put a site live." : `Watching projects you've worked on in the last ${data.activeDays || 45} days.` }));
+  }
+
+  function renderChecked() {
+    const projects = data.projects || [];
+    const fetched = projects.map((p) => p.fetch && p.fetch.at).filter(Boolean).sort();
+    const node = document.getElementById("checked");
+    node.textContent = `Updated ${ago(data.generatedAt)}`;
+    node.title = fetched.length ? `Last checked with ${hostAll()} ${ago(fetched[0])}` : "";
+  }
+  setInterval(renderChecked, 20000);
+
+  /* ---------- overview ---------- */
+
+  function strip(cells) {
+    return el("section", { class: "panel strip" }, cells.map(({ tier, label, termKey, value, unit, hint }) =>
+      el("div", { class: "cell", "data-tier": tier },
+        el("div", { class: "label" }, dot(tier), termKey ? term(label, termKey) : label),
+        el("span", { class: "value", text: value }),
+        unit ? el("span", { class: "unit", text: unit }) : null,
+        el("p", { class: "caption", text: hint }))));
+  }
+
+  function planPanel(projects) {
+    const todo = projects.filter((p) => p.next && p.next.tier !== "safe");
+    if (!todo.length) return null;
+    const rows = todo.slice(0, 3).map((p) => {
+      const open = el("a", { class: "btn", href: `#${p.slug}` }, el("span", { text: "Open" }));
+      return el("div", { class: "plan-row" },
+        dot(p.next.tier),
+        el("div", { style: "min-width:0" }, el("b", { text: p.next.title }), el("small", { text: `${p.name} · ${p.next.why}` })),
+        el("div", { class: "row-actions" }, primaryAction(p, "") || open));
+    });
+    return el("section", { class: "panel", "data-tour": "next-steps" },
+      el("div", { class: "panel-head" }, el("h2", { text: "Your next steps" }), el("div", { class: "end", text: todo.length > 3 ? `Most urgent first · ${todo.length - 3} more below` : "Most urgent first" })),
+      rows);
+  }
+
+  function overview(projects, need) {
+    const n = projects.length;
+    const sum = (key) => projects.reduce((t, p) => t + (sig(p, key).value || 0), 0);
+    const affected = (key) => projects.filter((p) => sig(p, key).tier !== "safe").length;
+    const inSync = projects.filter((p) => sig(p, "sync").tier === "safe").length;
+    const loose = projects.reduce((t, p) => t + (sig(p, "commit").unit.startsWith("uncommitted") ? (sig(p, "commit").value || 0) : 0), 0);
+    const atRisk = projects.filter((p) => p.tier === "at-risk").length;
+    const unpushed = sum("push");
+    const where = (k) => `${affected(k)} of ${n} projects`;
+
+    const rows = projects.map((p) => {
+      const tr = el("tr", { class: "link", tabindex: "0", "aria-label": `Open ${p.name}` },
+        el("td", {}, el("div", { class: "proj" }, dot(p.tier), el("div", {}, el("b", { text: p.name }), el("small", { text: SAY[p.tier] })))),
+        ...KEYS.map((k) => { const s = sig(p, k); return el("td", { title: `${s.headline}. ${s.hint}` }, status(s.tier, s.cell)); }),
+        el("td", { class: "end" }, icon("chevron", "chev")));
+      const open = () => { location.hash = p.slug; };
+      tr.addEventListener("click", open);
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter") open(); });
+      return tr;
+    });
+
+    const sub = !need.length ? `Every working tree is clean, everything is pushed, and main is up to date with ${hostAll()} everywhere.`
+      : [atRisk ? `${atRisk} could lose work` : "", need.length - atRisk ? `${need.length - atRisk} need${need.length - atRisk === 1 ? "s" : ""} attention` : ""].filter(Boolean).join(" · ");
+    return [
+      el("section", { class: "head" }, el("div", {},
+        el("h1", { text: !need.length ? (n === 1 ? "Your project is safe" : `All ${n} projects are safe`) : need.length === n ? `All ${n} projects need you` : `${need.length} of ${n} projects need you` }),
+        el("div", { class: "meta", text: sub }),
+        (data.notices || []).length ? el("div", { class: "meta warn", text: data.notices.join(" ") }) : null)),
+      planPanel(projects),
+      strip([
+        { tier: affected("push") ? "at-risk" : "safe", label: "Unpushed", termKey: "push", value: unpushed, unit: unpushed === 1 ? "unpushed commit" : "unpushed commits", hint: affected("push") ? `In ${where("push")}. Push these first.` : `Everything is pushed to ${hostAll()}.` },
+        { tier: affected("commit") ? "attention" : "safe", label: "Uncommitted", termKey: "commit", value: loose, unit: loose === 1 ? "uncommitted change" : "uncommitted changes", hint: loose ? `In ${where("commit")}. Normal while you work.` : "Every working tree is clean." },
+        { tier: inSync === n ? "safe" : "attention", label: "main up to date", termKey: "main", value: `${inSync}/${n}`, unit: `projects up to date with ${hostAll() === "GitHub" ? "origin/main" : "the remote"}`, hint: inSync === n ? "One source of truth everywhere." : "The rest need a pull or a careful fix." },
+        { tier: affected("cleanup") ? "attention" : "safe", label: "Cleanup", termKey: "cleanup", value: sum("cleanup"), unit: "merged branches and worktrees", hint: affected("cleanup") ? `In ${where("cleanup")}. Safe to delete.` : "Nothing to clean up." },
+      ]),
+      el("section", { class: "panel" },
+        el("div", { class: "panel-head" }, el("h2", { text: "All projects" }), el("div", { class: "end", text: "Select one to see what to do" })),
+        el("div", { class: "scroll" }, el("table", {},
+          el("thead", {}, el("tr", {}, el("th", { text: "Project" }),
+            el("th", {}, term("Working tree", "commit")), el("th", {}, term("Push", "push")), el("th", {}, term("Sync", "main")), el("th", {}, term("Cleanup", "cleanup")), el("th", { class: "end" }))),
+          el("tbody", {}, rows)))),
+    ];
+  }
+
+  /* ---------- the map ---------- */
+
+  const FONT = { name: `400 14px ${css("--font")}`, tag: `500 9.5px ${css("--font")}`, note: `400 12.5px ${css("--font")}` };
+  const ruler = document.createElement("canvas").getContext("2d");
+  const measure = (text, font, tracking = 0) => { ruler.font = font; return ruler.measureText(text).width + text.length * tracking; };
+  // Names lose their middle so both ends stay readable (codex/…-20260918); sentences lose their end.
+  const fitText = (text, maxPx, font, middle = true) => {
+    if (measure(text, font) <= maxPx) return text;
+    const cut = middle
+      ? (k) => text.slice(0, Math.ceil(k * 0.55)) + "…" + text.slice(text.length - Math.floor(k * 0.45))
+      : (k) => text.slice(0, k).trimEnd() + "…";
+    let lo = 1, hi = text.length - 1;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (measure(cut(mid), font) <= maxPx) lo = mid; else hi = mid - 1;
+    }
+    return cut(lo);
+  };
+  const path = (d, stroke, width, dash) => el("svg:path", { d, stroke, "stroke-width": width, "stroke-linecap": "round", "stroke-linejoin": "round", fill: "none", "stroke-dasharray": dash || null });
+  const station = (cx, cy, stroke) => el("svg:circle", { cx, cy, r: 5, fill: "var(--shell)", stroke, "stroke-width": 3 });
+  const depot = (cx, cy, stroke) => el("svg:rect", { x: cx - 5.5, y: cy - 5.5, width: 11, height: 11, rx: 3, fill: "var(--shell)", stroke, "stroke-width": 3 });
+  const interchange = (cx, cy) => el("svg:rect", { x: cx - 13, y: cy - 7.5, width: 26, height: 15, rx: 7.5, fill: "var(--shell)", stroke: "var(--track)", "stroke-width": 3 });
+  const youAreHere = (cx, cy) => el("svg:g", {},
+    el("svg:circle", { cx, cy, r: 11, fill: "var(--accent)", opacity: 0.14 }),
+    el("svg:circle", { cx, cy, r: 5.5, fill: "var(--accent)", stroke: "var(--shell)", "stroke-width": 2 }));
+  const counter = (cx, cy, n, stroke, dashed) => {
+    const text = String(n);
+    const w = Math.max(20, measure(text, `500 11px ${css("--font")}`) + 12);
+    return el("svg:g", {},
+      el("svg:rect", { x: cx - w / 2, y: cy - 9, width: w, height: 18, rx: 9, fill: "var(--shell)", stroke, "stroke-width": 2.5, "stroke-dasharray": dashed ? "0.5 4" : null, "stroke-linecap": "round" }),
+      el("svg:text", { x: cx, y: cy + 4, "text-anchor": "middle", "font-size": 11, "font-weight": 500, "font-family": "var(--font)", fill: "var(--text-2)", text }));
+  };
+  const badge = (cx, cy, text, fill, ink) => {
+    const w = measure(text, `500 11px ${css("--font")}`) + 14;
+    return el("svg:g", {},
+      el("svg:rect", { x: cx - w / 2, y: cy - 9, width: w, height: 18, rx: 9, fill }),
+      el("svg:text", { x: cx, y: cy + 4, "text-anchor": "middle", "font-size": 11, "font-weight": 500, "font-family": "var(--font)", fill: ink, text }));
+  };
+  function label(spot, title, note, noteColor, tags = []) {
+    const { x, y, w } = spot;
+    const g = el("svg:g", {});
+    const tagW = tags.map(([t]) => measure(t.toUpperCase(), FONT.tag, 0.8));
+    const shown = fitText(title, w - tagW.reduce((a, b) => a + b + 10, 0), FONT.name);
+    const name = el("svg:text", { x, y: y - 3, "font-size": 14, "font-family": "var(--font)", fill: "var(--text)" });
+    const slash = shown === title ? title.lastIndexOf("/") : -1;
+    // Quiet the namespace (codex/, fix/) so the part that names the work leads.
+    if (slash > 0) name.append(el("svg:tspan", { fill: "var(--text-3)", text: title.slice(0, slash + 1) }), el("svg:tspan", { text: title.slice(slash + 1) }));
+    else name.textContent = shown;
+    if (shown !== title) name.append(el("svg:title", { text: title }));
+    g.append(name);
+    let tx = x + measure(shown, FONT.name) + 10;
+    tags.forEach(([t, color], i) => {
+      g.append(el("svg:text", { x: tx, y: y - 4, "font-size": 9.5, "font-weight": 500, "font-family": "var(--font)", "letter-spacing": "0.08em", fill: color, text: t.toUpperCase() }));
+      tx += tagW[i] + 10;
+    });
+    const shownNote = fitText(note, w, FONT.note, false);
+    const sub = el("svg:text", { x, y: y + 14, "font-size": 12.5, "font-family": "var(--font)", fill: noteColor || "var(--text-3)", text: shownNote });
+    if (shownNote !== note) sub.append(el("svg:title", { text: note }));
+    g.append(sub);
+    return g;
+  }
+  // Own lines for where you are, work that exists only here, and work in an extra
+  // copy of the folder. Everything else folds into two sidings so the map stays calm.
+  function mapRows(p) {
+    const rank = (b) => b.current ? 0 : b.state === "unpushed" ? 1 : (b.worktree && b.state !== "merged") ? 2 : b.state === "unmerged" ? 3 : b.worktree ? 4 : 9;
+    const own = p.branches.filter((b) => rank(b) < 9).sort((a, b) => rank(a) - rank(b) || (b.lastCommit || 0) - (a.lastCommit || 0)).slice(0, 5);
+    const rest = p.branches.filter((b) => !own.includes(b));
+    const rows = own.map((b) => ({ kind: "branch", b }));
+    const waiting = rest.filter((b) => b.state === "unmerged" || b.state === "unpushed");
+    const done = rest.filter((b) => b.state === "merged");
+    const names = (list) => list.slice(0, 2).map((b) => b.name.split("/").pop()).join(", ") + (list.length > 2 ? ` and ${list.length - 2} more` : "");
+    if (waiting.length) rows.push({ kind: "group", state: "unmerged", n: waiting.length, title: plural(waiting.length, "more branch", "more branches"), note: `Unmerged: ${names(waiting)}` });
+    if (done.length) rows.push({ kind: "group", state: "merged", n: done.length, title: plural(done.length, "merged branch", "merged branches"), note: `Safe to delete: ${names(done)}` });
+    return rows;
+  }
+  function drawMap(p, width) {
+    const m = p.main || {};
+    const primary = (p.checkouts || [])[0] || {};
+    const unsaved = (primary.changed || 0) + (primary.untracked || 0);
+    const unsavedNote = unsaved ? ` · ${plural(unsaved, "uncommitted change")}` : "";
+    const onMain = p.head && p.head.branch === m.name;
+    const split = m.remoteMain && (m.ahead || m.behind);
+    const rows = mapRows(p);
+    const compact = width < 540;
+    const row = compact ? 66 : 54;
+    const termX = compact ? width - 14 : Math.min(width - 320, 500);
+    const junction = compact ? 30 : termX - 150;
+    const top = compact ? 42 : 22;
+    const githubY = split ? top : null;
+    const mainY = split ? top + row : top;
+    const height = mainY + rows.length * row + 20;
+    const place = (y, lineStart) => compact ? { x: lineStart + 2, y: y - 24, w: termX - lineStart - 14 } : { x: termX + 22, y, w: width - termX - 24 };
+    const svg = el("svg:svg", { width, height, viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `Map of ${p.name}` });
+    const lines = el("svg:g", {}), marks = el("svg:g", {}), labels = el("svg:g", {});
+    svg.append(lines, marks, labels);
+
+    const forkRoom = split ? junction - 40 : termX - 150;
+    const gap = rows.length > 1 ? Math.max(14, Math.min(26, (forkRoom - 30) / (rows.length - 1))) : 0;
+    const firstFork = compact ? 20 + (rows.length - 1) * 12 : forkRoom;
+    rows.forEach((r, i) => {
+      const y = mainY + (i + 1) * row;
+      const fx = firstFork - i * (compact ? 12 : gap);
+      const state = r.kind === "branch" ? r.b.state : r.state;
+      const [stroke, w, dash] = { unpushed: ["var(--amber)", 3.5, null], unmerged: ["var(--track-soft)", 3.5, null], merged: ["var(--track-soft)", 3, "0.5 6"], kept: ["var(--track-soft)", 3, null] }[state];
+      lines.append(path(`M${fx} ${mainY}l10 10V${y - 10}l10 10H${termX}`, stroke, w, dash));
+      const spot = place(y, fx + 20);
+      if (r.kind === "group") {
+        marks.append(counter(termX, y, r.n, stroke, state === "merged"));
+        if (!compact) { spot.x += 5; spot.w -= 5; }
+        labels.append(label(spot, r.title, r.note));
+        return;
+      }
+      const b = r.b;
+      marks.append(b.current ? youAreHere(termX, y) : b.worktree ? depot(termX, y, stroke) : station(termX, y, stroke));
+      const tags = b.current ? [["you are here", "var(--accent)"]] : b.worktree ? [["worktree", "var(--text-3)"]] : [];
+      let note = b.state === "unpushed" ? plural(b.localOnly, "unpushed commit")
+        : b.state === "kept" ? b.note
+        : b.state === "merged" ? `${how(b) === "merged" ? "Merged" : "Squash-merged"} into ${mainRef(p)}`
+        : b.upstreamGone ? "Upstream gone, work not in main"
+        : b.behindUpstream ? `Behind its upstream by ${plural(b.behindUpstream, "commit")}`
+        : `Unmerged · ${plural(b.aheadOfMain, "commit")} not in ${mainRef(p)}`;
+      if (b.current) note += unsavedNote;
+      const lab = label(spot, b.name, note, b.state === "unpushed" || (b.current && unsaved) ? "var(--amber)" : "var(--text-3)", tags);
+      if (b.worktree) lab.prepend(el("svg:title", { text: `Checked out in the worktree at ${b.worktree}` }));
+      labels.append(lab);
+    });
+
+    const hereTag = onMain ? [["you are here", "var(--accent)"]] : [];
+    if (m.name && m.remoteMain && !m.local) {
+      lines.append(path(`M6 ${mainY}H${termX}`, "var(--track)", 4.5));
+      marks.append(station(termX, mainY, "var(--track)"));
+      labels.append(label(place(mainY, 6), mainRef(p), `No local ${m.name} on ${HERE}`));
+    } else if (!m.name || !m.remoteMain) {
+      const stroke = !m.name ? "var(--track)" : "var(--amber)";
+      lines.append(path(`M6 ${mainY}H${termX}`, stroke, 4.5));
+      marks.append(onMain ? youAreHere(termX, mainY) : station(termX, mainY, stroke));
+      const why = !m.name ? "No main branch in this project" : p.fetch && p.fetch.hasRemote ? `${H(p)} has no ${m.name} to compare with` : "No remote: this repo isn't pushed anywhere";
+      labels.append(label(place(mainY, 6), m.name || "history", why + (onMain ? unsavedNote : ""), "var(--amber)", hereTag));
+    } else if (!split) {
+      // The interchange: this Mac's main and the server's main are one station.
+      lines.append(path(`M6 ${mainY}H${termX - 13}`, "var(--track)", 4.5));
+      marks.append(interchange(termX, mainY));
+      if (onMain) marks.append(youAreHere(termX, mainY));
+      const spot = place(mainY, 6);
+      if (!compact) { spot.x += 6; spot.w -= 6; }
+      labels.append(label(spot, m.name, `Up to date with ${mainRef(p)}` + (onMain ? unsavedNote : ""), onMain && unsaved ? "var(--amber)" : "var(--text-3)", hereTag));
+    } else {
+      // Shared history to the junction, then the server's main peels off above and this Mac's runs on below.
+      lines.append(path(`M6 ${mainY}H${junction}`, "var(--track)", 4.5));
+      lines.append(path(`M${junction} ${mainY}l${row} -${row}H${termX}`, "var(--track)", 4.5));
+      lines.append(path(`M${junction} ${mainY}H${termX}`, m.ahead ? "var(--amber)" : "var(--track)", 4.5));
+      const mid = (junction + row + termX) / 2;
+      if (m.behind) marks.append(badge(mid, githubY, `+${m.behind}`, "var(--track)", "var(--black)"));
+      if (m.ahead) marks.append(badge(mid, mainY, `+${m.ahead}`, "var(--amber)", "var(--black)"));
+      marks.append(el("svg:circle", { cx: junction, cy: mainY, r: 4, fill: "var(--track)" }));
+      marks.append(station(termX, githubY, "var(--track)"));
+      marks.append(onMain ? youAreHere(termX, mainY) : station(termX, mainY, m.ahead ? "var(--amber)" : "var(--track)"));
+      labels.append(label(place(githubY, junction + row), mainRef(p), m.behind ? `${plural(m.behind, "commit")} to pull` : "Nothing new"));
+      const mine = m.ahead ? `${plural(m.ahead, "commit")} ${mainRef(p)} doesn't have` : `Behind ${mainRef(p)}`;
+      labels.append(label(place(mainY, junction + row), `${m.name} (local)`, mine + (onMain ? unsavedNote : ""), m.ahead || (onMain && unsaved) ? "var(--amber)" : "var(--text-3)", hereTag));
+    }
+    return svg;
+  }
+  const legend = (p) => {
+    const g = (draw) => { const s = el("svg:svg", { width: 22, height: 12, viewBox: "0 0 22 12", "aria-hidden": "true" }); draw(s); return s; };
+    const items = [
+      [`main, up to date with ${mainRef(p)}`, (s) => s.append(path("M1 6H8", "var(--track)", 3), el("svg:rect", { x: 8, y: 1.5, width: 13, height: 9, rx: 4.5, fill: "var(--shell)", stroke: "var(--track)", "stroke-width": 2 }))],
+      ["Unpushed", (s) => s.append(path("M1 6H21", "var(--amber)", 3))],
+      ["Unmerged", (s) => s.append(path("M1 6H21", "var(--track-soft)", 3))],
+      ["Merged", (s) => s.append(path("M2 6H21", "var(--track-soft)", 2.5, "0.5 5"))],
+      ["Worktree", (s) => s.append(path("M1 6H11", "var(--track-soft)", 3), el("svg:rect", { x: 12, y: 1.5, width: 9, height: 9, rx: 2.5, fill: "var(--shell)", stroke: "var(--track-soft)", "stroke-width": 2 }))],
+      ["You are here", (s) => s.append(el("svg:circle", { cx: 11, cy: 6, r: 3.5, fill: "var(--accent)" }))],
+    ];
+    return el("ul", { class: "legend" }, items.map(([t, d]) => el("li", {}, g(d), t)));
+  };
+
+  /* ---------- project view ---------- */
+
+  let mapBox = null;
+  let mapProject = null;
+
+  function toggleRow(key, count, noun) {
+    const open = expanded.has(key);
+    const button = el("button", { class: "btn ghost", type: "button" }, el("span", { text: open ? "Show fewer" : `Show all ${count} ${noun}` }));
+    button.addEventListener("click", () => { if (open) expanded.delete(key); else expanded.add(key); render(); });
+    return el("div", { class: "more" }, button);
+  }
+
+  function branchesPanel(p) {
+    const m = p.main || {};
+    const host = H(p);
+    const order = { unpushed: 0, unmerged: 1, merged: 2, kept: 3 };
+    const list = [...p.branches].sort((a, b) => (b.current - a.current) || order[a.state] - order[b.state] || (b.lastCommit || 0) - (a.lastCommit || 0));
+    const key = `${p.slug}:branches`;
+    const shown = expanded.has(key) ? list : list.slice(0, 7);
+
+    let mainStatus, mainActions = [];
+    if (!m.name) mainStatus = status("attention", "No main branch");
+    else if (!m.remoteMain) mainStatus = status("attention", `No ${mainRef(p)}`);
+    else if (!m.local) mainStatus = status("safe", "No local copy");
+    else if (m.ahead && m.behind) {
+      mainStatus = el("span", { class: "term" }, status("attention", `Diverged from ${mainRef(p)}`), q("diverged"));
+      mainActions = [copyButton(divergedAsk(p), { label: "Copy request" })];
+    } else if (m.behind) {
+      mainStatus = el("span", { class: "term" }, status("attention", `${m.behind} behind ${mainRef(p)}`), q("pull"));
+      mainActions = [actionButton(p, "pull", { text: "Pull", iconName: "download", title: `Fast-forward ${plural(m.behind, "commit")} from ${mainRef(p)}. Nothing here is lost.` })];
+    } else if (m.ahead) {
+      mainStatus = status(m.localOnly ? "at-risk" : "attention", `${m.ahead} ahead of ${mainRef(p)}`);
+      mainActions = advanced
+        ? [actionButton(p, "push", { payload: { branches: [m.name] }, text: `Push ${m.name}`, iconName: "upload", confirm: pushMainConfirm(p) })]
+        : m.localOnly ? [actionButton(p, "push-all", { text: "Push", iconName: "upload", confirm: pushAllConfirm(p) })] : [];
+    } else mainStatus = status("safe", `Up to date with ${mainRef(p)}`);
+
+    const mainRow = m.name ? el("tr", {},
+      el("td", {}, el("div", { class: "bname" }, el("span", { class: "n", text: m.name }), q("main"), p.head && p.head.branch === m.name ? el("span", { class: "tag here", text: "HEAD" }) : null)),
+      el("td", {}, mainStatus), el("td", { class: "muted", text: p.remotes && p.remotes.fork ? `Default branch, from ${p.remotes.truth}` : "Default branch" }), el("td", {}),
+      el("td", { class: "end" }, el("div", { class: "row-actions" }, mainActions))) : null;
+
+    const rows = shown.map((b) => {
+      const st = b.state === "unpushed" ? el("span", { class: "term" }, status("at-risk", "Unpushed"), q("push"))
+        : b.state === "kept" ? status("safe", b.note)
+        : b.state === "merged" ? el("span", { class: "term" }, status("attention", b.merged === "squashed" ? "Squash-merged" : "Merged"), q(b.merged === "squashed" ? "squash" : "merge"))
+        : b.upstreamGone ? el("span", { class: "term" }, status("attention", "Upstream gone"), q("upstream"))
+        : b.behindUpstream ? el("span", { class: "term" }, status("attention", "Behind upstream"), q("upstream"))
+        : status("safe", "Unmerged");
+      const work = b.state === "unpushed" ? `${b.localOnly} unpushed`
+        : b.state === "kept" ? "Kept"
+        : b.state === "merged" ? "In main"
+        : b.behindUpstream ? `${b.behindUpstream} to pull`
+        : `${b.aheadOfMain} ahead`;
+      const actions = [];
+      if (b.state === "unpushed") actions.push(actionButton(p, "push", { payload: { branches: [b.name] }, text: "Push", iconName: "upload", confirm: pushBranchConfirm(p, b) }));
+      if ((b.state === "unmerged" || b.state === "unpushed") && b.aheadOfMain && !b.upstreamGone) {
+        if (b.pr) actions.push(el("a", { class: "btn ghost", href: b.pr.url, target: "_blank", rel: "noopener", title: "Open the pull request on GitHub" }, icon("pr", "idle"), el("span", { text: `#${b.pr.number}` })));
+        else if (canPR(p)) actions.push(actionButton(p, "open-pr", { payload: { branch: b.name }, text: "Open PR", iconName: "pr", confirm: prConfirm(p, b) }));
+      }
+      if (advanced && (b.state === "unpushed" || b.state === "unmerged") && b.aheadOfMain) actions.push(actionButton(p, "merge", { payload: { branch: b.name }, text: "Merge", iconName: "merge", confirm: mergeConfirm(p, b) }));
+      if (b.pushesToMain) actions.push(actionButton(p, "unset-upstream", { payload: { branches: [b.name] }, text: "Unset upstream", tone: "ghost", confirm: unsetConfirm(p, [b.name]) }));
+      if (b.upstreamGone && !b.merged) actions.push(copyButton(`In ${p.path}, the branch ${b.name}'s upstream was deleted on ${remoteName(p)}, but it has ${plural(b.aheadOfMain, "commit")} whose changes aren't in ${mainRef(p)}. Tell me what that work is and whether it's still needed. Don't delete anything without asking.`, { label: "Copy request" }));
+      if (b.state === "merged") {
+        if (b.current) actions.push(el("span", { class: "muted", text: "Checked out" }));
+        else if (b.worktree) actions.push(el("span", { class: "muted", text: "In a worktree" }));
+        else actions.push(actionButton(p, "delete-merged", { payload: { branches: [b.name] }, title: `Delete ${b.name}`, iconName: "trash", tone: "ghost danger", confirm: deleteConfirm(p, [b.name]) }));
+      }
+      // Tracking main is only dangerous when push.default=upstream sends a plain git push there.
+      const upstream = b.pushesToMain ? el("span", { class: "tag warn", title: `Its upstream is ${mainRef(p)} and push.default=upstream, so a plain git push from it would update ${mainRef(p)}`, text: `Pushes to ${p.main.name}` }) : null;
+      return el("tr", {},
+        el("td", {}, el("div", { class: "bname" }, branchName(b.name), b.current ? el("span", { class: "tag here", text: "HEAD" }) : b.worktree ? el("span", { class: "tag", title: b.worktree, text: "Worktree" }) : null, upstream)),
+        el("td", {}, st), el("td", { class: "muted", text: work }), el("td", { class: "muted", text: agoUnix(b.lastCommit) }),
+        el("td", { class: "end" }, el("div", { class: "row-actions" }, actions)));
+    });
+
+    const merged = deletable(p).map((b) => b.name);
+    const note = advanced || canPR(p) ? null : el("span", { text: "Merge is under Advanced actions" });
+    return el("section", { class: "panel" },
+      el("div", { class: "panel-head" }, el("h2", {}, term("Local branches", "branch")),
+        el("div", { class: "end" }, note, merged.length > 1 ? actionButton(p, "delete-merged", { payload: { branches: merged }, text: `Delete ${merged.length} merged`, tone: "ghost danger", iconName: "trash", confirm: deleteConfirm(p, merged) }) : null)),
+      el("div", { class: "scroll" }, el("table", {},
+        el("thead", {}, el("tr", {}, ["Branch", "Status", "vs main", "Last commit", ""].map((h, i) => el("th", { class: i === 4 ? "end" : null, text: h })))),
+        el("tbody", {}, mainRow, rows))),
+      list.length > 7 ? toggleRow(key, list.length, "branches") : null);
+  }
+
+  function remotePanel(p) {
+    const list = p.remoteBranches || [];
+    const blind = p.limits && p.limits.singleBranch;
+    if (!list.length && !blind) return null;
+    const m = p.main || {};
+    const remote = remoteName(p);
+    const key = `${p.slug}:remote`;
+    const shown = expanded.has(key) ? list : list.slice(0, 7);
+    const rows = shown.map((b) => {
+      const st = b.deletable ? el("span", { class: "term" }, status("attention", b.merged === "squashed" ? "Squash-merged" : "Merged"), q(b.merged === "squashed" ? "squash" : "merge"))
+        : b.kept ? status("safe", b.kept)
+        : b.pr ? el("span", { class: "term" }, status("safe", "Open pull request"), q("pr"))
+        : b.blockedBy ? status("safe", "In use")
+        : status("safe", "Unmerged");
+      const work = b.kept ? (b.merged ? "Kept" : `Kept · ${b.aheadOfMain} ahead`)
+        : b.merged && b.blockedBy ? `In main · ${b.blockedBy}`
+        : b.merged ? "In main" : `${b.aheadOfMain} ahead`;
+      const actions = [];
+      if (b.pr) actions.push(el("a", { class: "btn ghost", href: b.pr.url, target: "_blank", rel: "noopener", title: "Open the pull request on GitHub" }, icon("pr", "idle"), el("span", { text: `#${b.pr.number}` })));
+      if (b.deletable) actions.push(actionButton(p, "delete-remote", { payload: { branches: [b.name] }, title: `Delete ${b.name} on ${remote}`, iconName: "trash", tone: "ghost danger", confirm: remoteConfirm(p, [b.name]) }));
+      return el("tr", {},
+        el("td", {}, el("div", { class: "bname" }, branchName(b.name), b.backup ? el("span", { class: "tag", title: "Pushed by Housekeep to keep commits from main safe", text: "Backup" }) : b.local ? el("span", { class: "tag", text: "Also local" }) : null)),
+        el("td", {}, st), el("td", { class: "muted", text: work }), el("td", { class: "muted", text: agoUnix(b.lastCommit) }),
+        el("td", { class: "end" }, el("div", { class: "row-actions" }, actions)));
+    });
+    const deletableNames = remoteClearable(p).map((b) => b.name);
+    const g = p.github || {};
+    const notes = [blind ? `This clone only fetches ${m.name || "main"}, so other branches on ${remote} can't be seen.` : null, unchecked(p)].filter(Boolean);
+    const autoRow = LIVE && g.autoDelete === false && g.canAdmin ? el("div", { class: "plan-row" }, dot("attention"),
+      el("div", { style: "min-width:0" }, el("b", { text: "Let GitHub delete merged branches" }), el("small", { text: "Merged pull requests are leaving branches behind on this repo. GitHub can delete them automatically." })),
+      el("div", { class: "row-actions" }, actionButton(p, "auto-delete", { text: "Turn on", confirm: autoDeleteConfirm(p) }))) : null;
+    return el("section", { class: "panel" },
+      el("div", { class: "panel-head" }, el("h2", { text: `Branches on ${remote}` }),
+        el("div", { class: "end" },
+          blind ? actionButton(p, "fetch-all", { text: "Fetch all branches", iconName: "download", tone: "ghost", confirm: fetchAllConfirm(p) }) : null,
+          deletableNames.length > 1 ? actionButton(p, "delete-remote", { payload: { branches: deletableNames }, text: `Delete ${deletableNames.length} merged`, tone: "ghost danger", iconName: "trash", confirm: remoteConfirm(p, deletableNames) })
+            : deletableNames.length || blind ? null : el("span", { text: "No merged branches left behind" }))),
+      notes.length ? el("p", { class: "panel-note", text: notes.join(" ") }) : null,
+      list.length ? el("div", { class: "scroll" }, el("table", {},
+        el("thead", {}, el("tr", {}, ["Branch", "Status", "vs main", "Last commit", ""].map((h, i) => el("th", { class: i === 4 ? "end" : null, text: h })))),
+        el("tbody", {}, rows))) : null,
+      list.length > 7 ? toggleRow(key, list.length, "branches") : null,
+      autoRow);
+  }
+
+  function worktreesPanel(p) {
+    const checkouts = p.checkouts || [];
+    const notable = (c) => c.changed + c.untracked || c.missing || c.unreadable || c.detachedCommits || c.operation;
+    if (checkouts.length < 2 && !checkouts.some(notable)) return null;
+    const key = `${p.slug}:worktrees`;
+    const shown = expanded.has(key) ? checkouts : checkouts.slice(0, 5);
+    const rows = shown.map((c) => {
+      const n = c.changed + c.untracked;
+      const [tier, st] = c.offline ? ["attention", "Drive not connected"]
+        : c.missing && c.locked ? ["safe", "Locked"]
+        : c.missing ? ["attention", "Prunable"]
+        : c.unreadable ? ["attention", "Couldn't read"]
+        : c.detachedCommits ? ["at-risk", `${plural(c.detachedCommits, "commit")} on no branch`]
+        : c.operation ? ["attention", c.operation]
+        : n ? ["attention", `${n} uncommitted`]
+        : ["safe", "Clean"];
+      const actions = [];
+      if (c.missing && !c.offline && !c.locked) actions.push(actionButton(p, "prune-worktrees", { text: "Prune", tone: "ghost", title: "The folder was deleted; this only clears git's record of it" }));
+      else if (!c.missing) {
+        actions.push(actionButton(p, "open", { payload: { app: "files", path: c.path }, iconName: "folder", tone: "ghost", title: `Show in ${OPENER_LABEL.files}` }));
+        if (((LIVE && LIVE.openers) || []).includes("terminal")) actions.push(actionButton(p, "open", { payload: { app: "terminal", path: c.path }, iconName: "terminal", tone: "ghost", title: "Open in Terminal" }));
+        const removable = !c.primary && !n && !c.operation && !c.unreadable && !c.detachedCommits;
+        if (removable && c.ignoredKeep.length) {
+          actions.push(el("span", { class: "muted", title: `Removing this worktree would delete: ${c.ignoredKeep.join(", ")}`, text: `Has ${c.ignoredKeep[0].replace(/\/$/, "").split("/").pop()}${c.ignoredKeep.length > 1 ? ` +${c.ignoredKeep.length - 1}` : ""}` }));
+        } else if (removable) {
+          actions.push(actionButton(p, "remove-worktree", { payload: { path: c.path }, iconName: "trash", tone: "ghost danger", title: "Remove worktree",
+            confirm: { title: "Remove this worktree", body: `Deletes the folder ${shortPath(c.path)}. Its working tree is clean and it has no ignored files worth keeping${c.branch ? `, and the branch ${c.branch} is kept` : ""}, so no work is lost. Your main working tree isn't touched.`, command: `git worktree remove ${c.path}`, confirmText: "Remove worktree", danger: true } }));
+        }
+      }
+      const where = c.branch ? `on ${c.branch}` : c.detachedCommits ? "detached HEAD, commits on no branch" : "detached HEAD";
+      return el("div", { class: "folder", title: c.path },
+        el("div", { style: "min-width:0" }, el("b", { text: c.primary ? "Main working tree" : shortPath(c.path) },
+          c.temporary ? el("span", { class: "tag warn", style: "margin-left:8px", title: "The system empties this folder on its own. Move the worktree somewhere permanent.", text: "Temporary folder" }) : null),
+          el("small", {}, where, !c.branch ? q("detached") : null)),
+        status(tier, st),
+        el("div", { class: "row-actions" }, actions));
+    });
+    return el("section", { class: "panel" },
+      el("div", { class: "panel-head" }, el("h2", {}, term("Worktrees", "worktree")), el("div", { class: "end", text: checkouts.length > 1 ? plural(checkouts.length - 1, "linked worktree") : "" })),
+      el("div", {}, rows),
+      checkouts.length > 5 ? toggleRow(key, checkouts.length, "worktrees") : null);
+  }
+
+  function project(p) {
+    const primary = (p.checkouts || [])[0] || {};
+    const f = p.fetch || {};
+    const head = el("section", { class: "head" },
+      el("div", { style: "min-width:0" },
+        el("h1", { text: p.name }),
+        el("div", { class: "meta" },
+          el("span", { class: "mono", text: p.displayPath }),
+          primary.branch ? [el("span", { class: "sep" }), el("span", {}, "on ", el("span", { class: "mono", text: primary.branch }))] : null,
+          f.error ? [el("span", { class: "sep" }), el("span", { class: "warn", text: f.error })] : null)),
+      el("div", { class: "end" }, status(p.tier, SAY[p.tier]), openMenu(p)));
+    if (p.error) return [head, el("section", { class: "panel panel-body", text: p.error })];
+
+    const cells = KEYS.map((k) => {
+      const s = sig(p, k);
+      return { tier: s.tier, label: s.label, termKey: TERM_FOR[k], value: s.value === null || s.value === undefined ? "–" : s.value, unit: s.unit, hint: s.hint };
+    });
+
+    const step = p.next || { tier: "safe", kind: null, title: "You're all set", why: "", ask: "" };
+    const button = step.tier === "safe" ? null : primaryAction(p);
+    const needsAssistant = step.tier !== "safe" && !button;
+    const next = el("section", { class: "panel next", "data-tier": step.tier },
+      el("div", { style: "min-width:0" },
+        el("div", { class: "kicker" }, dot(step.tier), step.tier === "safe" ? "All clear" : "Start here"),
+        el("h2", { text: step.title }),
+        step.why ? el("p", { text: step.why }) : null,
+        needsAssistant ? el("ol", { class: "guide" }, el("li", { text: "Copy the request" }), el("li", { text: "Open your AI coding assistant (Claude Code, Codex, Cursor) in this project's folder" }), el("li", { text: "Paste it and send" })) : null),
+      step.tier === "safe" ? null : el("div", { class: "act" }, button, step.ask ? copyButton(step.ask, { tone: needsAssistant ? "primary" : "" }) : null));
+
+    mapBox = el("div", { class: "map" });
+    mapProject = p;
+    const map = el("section", { class: "panel" },
+      el("div", { class: "panel-head" }, el("h2", { text: "Map" })),
+      el("div", { class: "panel-body" }, el("p", { class: "map-note" }, "Each line is a branch that starts from main.", q("branch")), mapBox, legend(p)));
+    return [head, strip(cells), next, map, branchesPanel(p), remotePanel(p), worktreesPanel(p)];
+  }
+
+  /* ---------- onboarding: four full-screen moments, then a short tour ---------- */
+
+  const ONBOARDED = "housekeep.onboarded";
+  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, calm ? 0 : ms));
+  const replay = (node, cls) => { node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls); };
+  const verdictOf = (p) => {
+    for (const k of ["push", "commit", "sync", "cleanup"]) { const s = sig(p, k); if (s.tier !== "safe") return s.headline; }
+    return "All clear";
+  };
+  const svgIcon = (paths, attrs = {}) => el("svg:svg", { viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", "stroke-width": 1.5, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", ...attrs },
+    ...paths.map((d) => el("svg:path", { d })));
+
+  // 1 · The light: a glowing core, pulses leaving it, and commits orbiting slowly.
+  function orb(tier) {
+    const ring = (r, angles, cls, colored) => el("svg:g", { class: cls }, angles.map((deg, i) => {
+      const a = (deg * Math.PI) / 180;
+      return el("svg:circle", { cx: +(r * Math.cos(a)).toFixed(2), cy: +(r * Math.sin(a)).toFixed(2), r: 3.5, fill: "var(--shell)", stroke: i === colored ? "var(--c)" : "var(--track-soft)", "stroke-width": 2 });
+    }));
+    return el("svg:svg", { class: "orb", viewBox: "-118 -118 236 236", width: 236, height: 236, "data-tier": tier, "aria-hidden": "true" },
+      el("svg:defs", {}, el("svg:radialGradient", { id: "orb-glow" },
+        el("svg:stop", { offset: "0", style: "stop-color:var(--c);stop-opacity:0.38" }),
+        el("svg:stop", { offset: "0.42", style: "stop-color:var(--c);stop-opacity:0.09" }),
+        el("svg:stop", { offset: "1", style: "stop-color:var(--c);stop-opacity:0" }))),
+      el("svg:circle", { class: "glow", r: 114, fill: "url(#orb-glow)" }),
+      el("svg:circle", { r: 90, fill: "none", stroke: "rgba(255,255,255,0.05)" }),
+      el("svg:circle", { r: 58, fill: "none", stroke: "rgba(255,255,255,0.07)" }),
+      ring(90, [-40, 95, 210], "orbit", 0),
+      ring(58, [30, 190], "orbit slow", -1),
+      ...["", "two", "three"].map((c) => el("svg:circle", { class: `pulse ${c}`, r: 16, fill: "none", stroke: "var(--c)", "stroke-width": 1 })),
+      el("svg:circle", { r: 16, fill: "var(--c)" }),
+      el("svg:circle", { r: 15.5, fill: "none", stroke: "rgba(255,255,255,0.22)", "stroke-width": 1 }));
+  }
+
+  // 3 · The menu bar: the real place the light lives, cycling through what each colour means.
+  function menuBarArt(onTimer) {
+    const states = [
+      { tier: "at-risk", count: "2", head: "2 projects need you", rows: [["at-risk", "shop-app"], ["attention", "portfolio"], ["safe", "api"]], caption: "Red means work could be lost" },
+      { tier: "attention", count: "1", head: "1 project needs you", rows: [["attention", "portfolio"], ["safe", "shop-app"], ["safe", "api"]], caption: "Amber means something needs attention" },
+      { tier: "safe", count: "", head: "Everything is safe", rows: [["safe", "shop-app"], ["safe", "portfolio"], ["safe", "api"]], caption: "Green means you're all set" },
+    ];
+    const light = el("span", { class: "mb-gl" }, el("i"), el("span", { class: "n" }));
+    const head = el("div", { class: "h" });
+    const rows = el("div");
+    const caption = el("span");
+    const wifi = svgIcon(["M2 6.2a8.5 8.5 0 0 1 12 0", "M4.3 8.8a5.2 5.2 0 0 1 7.4 0", "M6.7 11.3a1.9 1.9 0 0 1 2.6 0"]);
+    const battery = el("svg:svg", { viewBox: "0 0 20 16", fill: "none", stroke: "currentColor", "stroke-width": 1.3, "aria-hidden": "true", style: "width:20px" },
+      el("svg:rect", { x: 1.5, y: 4.5, width: 15, height: 7, rx: 2 }), el("svg:path", { d: "M18.5 7v2", "stroke-linecap": "round" }),
+      el("svg:rect", { x: 3, y: 6, width: 9, height: 4, rx: 1, fill: "currentColor", stroke: "none" }));
+    const art = el("div", { class: "mb" },
+      el("div", { class: "mb-bar" }, el("b", { text: "Cursor" }), ...["File", "Edit", "View"].map((t) => el("span", { class: "menu-name", text: t })),
+        el("div", { class: "mb-right" }, light, wifi, battery, el("span", { text: "9:41" }))),
+      el("div", { class: "mb-menu" }, head, rows),
+      el("div", { class: "mb-caption" }, caption));
+    let k = 0;
+    const paint = () => {
+      const s = states[k % states.length];
+      light.dataset.tier = s.tier;
+      light.querySelector(".n").textContent = s.count;
+      head.textContent = s.head;
+      rows.replaceChildren(...s.rows.map(([t, name]) => el("div", { class: "r" }, dot(t), name)));
+      caption.replaceChildren(dot(s.tier), s.caption);
+      replay(rows, "ob-swap");
+      replay(caption, "ob-swap");
+      k += 1;
+    };
+    paint();
+    onTimer(setInterval(paint, calm ? 4200 : 2800));
+    return art;
+  }
+
+  // 4 · The first fix: commits waiting on the Mac, flying to the server when you back them up.
+  const ROUTE = "M178 70 C 226 10, 282 10, 322 66";
+  function fixArt(count, host) {
+    const n = Math.max(1, Math.min(3, count));
+    const xs = [[112], [100, 124], [88, 112, 136]][n - 1];
+    const flyer = (i) => el("svg:circle", { class: "flyer", r: 6, fill: "var(--shell)", stroke: "var(--amber)", "stroke-width": 3, style: "opacity:0" },
+      el("svg:animateMotion", { dur: "0.95s", begin: "indefinite", fill: "freeze", path: ROUTE, calcMode: "spline", keyTimes: "0;1", keySplines: "0.45 0 0.15 1", id: `flight-${i}` }));
+    return el("svg:svg", { class: "fix", viewBox: "0 0 460 200", width: 460, height: 200, "aria-hidden": "true" },
+      el("svg:path", { class: "route", d: ROUTE, fill: "none", stroke: "var(--text-3)", "stroke-width": 1.5, "stroke-linecap": "round" }),
+      // This Mac
+      el("svg:rect", { x: 46, y: 40, width: 132, height: 86, rx: 10, fill: "var(--layer-2)", stroke: "var(--line-2)", "stroke-width": 1.5 }),
+      el("svg:rect", { x: 54, y: 48, width: 116, height: 70, rx: 5, fill: "var(--black)" }),
+      el("svg:path", { d: "M30 134H194a2 2 0 0 1-2 6H32a2 2 0 0 1-2-6z", fill: "var(--layer-2)", stroke: "var(--line-2)", "stroke-width": 1.5, "stroke-linejoin": "round" }),
+      el("svg:g", {}, xs.map((x) => el("svg:circle", { class: "commit", cx: x, cy: 83, r: 6, fill: "var(--shell)", stroke: "var(--amber)", "stroke-width": 3 }))),
+      el("svg:text", { x: 112, y: 172, "text-anchor": "middle", "font-size": 13, "font-family": "var(--font)", fill: "var(--text-2)", text: HERE_CAP }),
+      // The server
+      el("svg:rect", { x: 314, y: 44, width: 124, height: 38, rx: 11, fill: "var(--layer-2)", stroke: "var(--line-2)", "stroke-width": 1.5 }),
+      el("svg:rect", { x: 314, y: 90, width: 124, height: 38, rx: 11, fill: "var(--layer-2)", stroke: "var(--line-2)", "stroke-width": 1.5 }),
+      el("svg:circle", { cx: 332, cy: 109, r: 2.5, fill: "var(--text-3)" }),
+      el("svg:rect", { x: 346, y: 106, width: 56, height: 6, rx: 3, fill: "var(--layer-3)" }),
+      el("svg:circle", { cx: 332, cy: 63, r: 2.5, fill: "var(--text-3)" }),
+      el("svg:g", {}, [360, 384, 408].slice(0, n).map((x) => el("svg:circle", { class: "arrived", cx: x, cy: 63, r: 6, fill: "var(--shell)", stroke: "var(--green)", "stroke-width": 3 }))),
+      el("svg:text", { x: 376, y: 172, "text-anchor": "middle", "font-size": 13, "font-family": "var(--font)", fill: "var(--text-2)", text: cap(host) }),
+      el("svg:circle", { class: "badge", cx: 438, cy: 44, r: 11, fill: "var(--green)" }),
+      el("svg:path", { class: "tick", d: "M433 44.5l3.4 3.4 6-7", fill: "none", stroke: "var(--black)", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round" }),
+      ...xs.map((_, i) => flyer(i)));
+  }
+  async function launch(svg) {
+    svg.classList.add("launch");
+    const flyers = [...svg.querySelectorAll(".flyer")];
+    for (const f of flyers) {
+      if (!calm) {
+        f.style.opacity = "1";
+        f.querySelector("animateMotion").beginElement();
+      }
+      await wait(170);
+    }
+    await wait(820);
+    flyers.forEach((f) => { f.style.opacity = "0"; });
+    svg.classList.add("done");
+  }
+
+  function startOnboarding() {
+    document.querySelectorAll("dialog.ob").forEach((d) => d.remove());
+    const projects = data.projects || [];
+    const risky = projects.filter((p) => p.tier === "at-risk");
+    const attention = projects.filter((p) => p.tier === "attention" || p.tier === "behind");
+    const worst = risky.length ? "at-risk" : attention.length ? "attention" : "safe";
+    const target = risky.find((p) => p.next && p.next.kind === "push-all");
+    let at = -1;
+    let timer = null;
+
+    const art = el("div", { class: "ob-art" });
+    const skip = el("button", { class: "btn ghost ob-skip", type: "button" }, el("span", { text: "Skip" }));
+    const copy = el("div", { class: "ob-copy" });
+    const progress = el("div", { class: "ob-progress", "aria-hidden": "true" });
+    const actions = el("div", { class: "ob-actions" });
+    const dialog = el("dialog", { class: "ob", "aria-label": "Welcome to Housekeep", tabindex: "-1" },
+      el("div", { class: "ob-stage" }, skip, art),
+      el("div", { class: "ob-text" }, copy, el("div", { class: "ob-foot" }, progress, actions)));
+    const primary = (label, iconName) => el("button", { class: "btn primary", type: "button" }, iconName ? icon(iconName, "idle") : null, spinner(), el("span", { text: label }));
+    const secondary = (label) => el("button", { class: "btn ghost", type: "button" }, el("span", { text: label }));
+    const onClick = (button, fn) => { button.addEventListener("click", fn); return button; };
+    const words = (title, body, ...extra) => copy.replaceChildren(title, body, ...extra);
+
+    const finish = (tour) => {
+      clearInterval(timer);
+      pref(ONBOARDED, "done");
+      dialog.close();
+      render();
+      if (tour) startTour();
+    };
+    const endButtons = () => [onClick(secondary("Done"), () => finish(false)), onClick(primary("Show me around"), () => finish(true))];
+
+    const screens = [
+      () => {
+        art.replaceChildren(orb(worst));
+        words(el("h1", { text: "Know if your work is safe" }),
+          el("p", { text: "Housekeep watches your projects and tells you, in plain English, when something could be lost and how to fix it." }));
+        actions.replaceChildren(onClick(primary("Check my projects"), () => go(1)));
+      },
+      () => {
+        const shown = projects.slice(0, 5);
+        const rows = shown.map((p) => el("div", { class: "scan-row" },
+          el("span", { class: "ind" }, el("svg:svg", { class: "spinner", viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", "stroke-width": 1.6, "stroke-linecap": "round", "aria-hidden": "true" }, el("svg:path", { d: "M8 2.5a5.5 5.5 0 1 1-5.5 5.5" })), dot(p.tier)),
+          el("b", { text: p.name }), el("span", { class: "v", text: verdictOf(p) })));
+        const more = projects.length > shown.length ? el("div", { class: "scan-more", text: `and ${plural(projects.length - shown.length, "more project")}` }) : null;
+        const title = el("h1", { text: "Checking your projects" });
+        const body = el("p", { text: `Looking at the ${plural(projects.length, "project")} you've worked on in the last ${data.activeDays || 45} days.` });
+        art.replaceChildren(el("div", { class: "scan" }, rows, more));
+        words(title, body);
+        actions.replaceChildren();
+        const mine = at;
+        (async () => {
+          for (const [i, row] of rows.entries()) { await wait(i ? 90 : 380); row.classList.add("shown"); }
+          for (const row of rows) { await wait(300); if (at !== mine) return; row.classList.add("done"); }
+          if (more) more.classList.add("shown");
+          await wait(380);
+          if (at !== mine) return;
+          title.textContent = risky.length ? `${risky.length === 1 ? "One project has" : `${risky.length} projects have`} unpushed commits`
+            : attention.length ? "Nothing is at risk" : "Everything is safe";
+          body.textContent = risky.length ? `That work isn't on ${hostAll()} yet, so it would be lost with ${HERE}. Everything else can wait.`
+            : attention.length ? `${plural(attention.length, "project")} could use some attention when you have a minute.`
+            : "Everything is committed, backed up and in sync.";
+          replay(title, "ob-swap");
+          replay(body, "ob-swap");
+          actions.replaceChildren(onClick(primary("Continue"), () => go(at + 1)));
+          replay(actions, "ob-in");
+        })();
+      },
+      LIVE && LIVE.menuBar && (() => {
+        art.replaceChildren(menuBarArt((t) => { timer = t; }));
+        words(el("h1", { text: "Keep an eye on the menu bar" }),
+          el("p", { text: "The light at the top of your screen changes as you work, so you'll know the moment something needs you." }));
+        actions.replaceChildren(onClick(primary("Continue"), () => go(at + 1)));
+      }),
+      () => {
+        if (!target || !LIVE) {
+          art.replaceChildren(orb(worst));
+          words(el("h1", { text: risky.length ? "Start with the red ones" : "You're all set" }),
+            el("p", { text: risky.length ? "Push them from Your next steps on the overview." : attention.length ? "Nothing is at risk. Your next steps are waiting on the overview whenever you're ready." : "Housekeep will let you know the moment that changes." }));
+          actions.replaceChildren(...endButtons());
+          return;
+        }
+        const pushed = sig(target, "push");
+        const drawing = fixArt(parseInt(pushed.count, 10) || 1, H(target));
+        const title = el("h1", { text: `Push ${target.name}` });
+        const body = el("p", { text: `${cap(pushed.count)} exist only on ${HERE}. Pushing copies them to ${H(target)} and leaves your live site alone.` });
+        const detail = el("div", { class: "ob-hint" });
+        const explain = el("button", { type: "button", text: "What happens?" });
+        explain.addEventListener("click", () => detail.replaceChildren("Nothing is merged or deleted.", el("pre", { text: pushAllConfirm(target).command })));
+        detail.append("Nothing is merged or deleted. ", explain);
+        art.replaceChildren(drawing);
+        words(title, body, detail);
+        const doIt = primary("Push now", "upload");
+        // It appears exactly where Continue was: ignore the tail of a double-click, which would push for real.
+        const armed = Date.now() + 900;
+        doIt.addEventListener("click", async () => {
+          if (Date.now() < armed || doIt.classList.contains("busy")) return;
+          doIt.classList.add("busy");
+          doIt.querySelector("span").textContent = "Pushing";
+          try {
+            await api("/api/action", { project: target.path, action: "push-all" });
+          } catch (err) {
+            doIt.classList.remove("busy");
+            doIt.querySelector("span").textContent = "Try again";
+            detail.replaceChildren(el("span", { class: "warn", text: err.message }));
+            return;
+          }
+          actions.replaceChildren();
+          detail.remove();
+          await launch(drawing);
+          await wait(500);
+          title.textContent = "Pushed";
+          body.textContent = `${target.name}'s work is safe on ${H(target)} now.${risky.length > 1 ? ` ${plural(risky.length - 1, "other project")} still ${risky.length === 2 ? "needs" : "need"} the same. You'll find ${risky.length === 2 ? "it" : "them"} under Your next steps.` : ""}`;
+          replay(title, "ob-swap");
+          replay(body, "ob-swap");
+          actions.replaceChildren(...endButtons());
+          replay(actions, "ob-in");
+        });
+        actions.replaceChildren(onClick(secondary("Not now"), () => finish(false)), doIt);
+      },
+    ].filter(Boolean);
+    progress.replaceChildren(...screens.map(() => el("i")));
+
+    let moving = false;
+    async function go(i) {
+      if (moving) return;
+      moving = true;
+      clearInterval(timer);
+      if (at >= 0) {
+        for (const node of [art, copy, actions]) node.classList.replace("ob-in", "ob-out") || node.classList.add("ob-out");
+        await wait(200);
+      }
+      at = i;
+      [...progress.children].forEach((bar, j) => bar.classList.toggle("done", j <= at));
+      screens[at]();
+      for (const node of [art, copy, actions]) { node.classList.remove("ob-out"); replay(node, "ob-in"); }
+      moving = false;
+    }
+
+    skip.addEventListener("click", () => finish(false));
+    dialog.addEventListener("keydown", (e) => {
+      // Arrows and Enter only move through the explanation; they never start a backup.
+      const next = actions.querySelector(".btn.primary");
+      if ((e.key === "ArrowRight" || (e.key === "Enter" && e.target === dialog)) && at < screens.length - 1 && next) { e.preventDefault(); next.click(); }
+      if (e.key === "ArrowLeft" && at > 0 && at < screens.length - 1) { e.preventDefault(); go(at - 1); }
+    });
+    dialog.addEventListener("cancel", () => { clearInterval(timer); pref(ONBOARDED, "done"); });
+    dialog.addEventListener("close", () => { clearInterval(timer); dialog.remove(); });
+    document.body.append(dialog);
+    dialog.showModal();
+    dialog.focus();
+    go(0);
+  }
+
+  // A spotlight over the real page, so the welcome connects to what's on screen.
+  const TOUR = [
+    { sel: "#nav-projects", title: "Your projects", body: "Each one has its own light. Click a project to see what's going on and how to fix it." },
+    { sel: "[data-tour='next-steps']", title: "Most urgent first", body: "Your next steps across every project. When a fix is safe to do for you there's a button, and you'll see exactly what it does before it runs." },
+    { sel: ".strip .q", title: "Unfamiliar word?", body: "Click the ? beside it for a plain-English explanation." },
+    { sel: "#side-tools", title: "Here whenever you need it", body: "Replay this from How this works. Turn on Advanced actions when you're ready to merge branches yourself." },
+  ];
+
+  function startTour() {
+    if (location.hash.slice(1) && location.hash.slice(1) !== "all") location.hash = "all";
+    const steps = TOUR.filter((s) => document.querySelector(s.sel));
+    if (!steps.length) return;
+    let at = 0;
+    const shield = el("div", { class: "tour-shield" });
+    const spot = el("div", { class: "tour-spot", "aria-hidden": "true" });
+    const title = el("h3", { id: "tour-title" });
+    const body = el("p");
+    const count = el("span");
+    const back = el("button", { class: "btn ghost", type: "button" }, el("span", { text: "Back" }));
+    const next = el("button", { class: "btn primary", type: "button" }, el("span"));
+    const card = el("div", { class: "tour-card", role: "dialog", "aria-modal": "true", "aria-labelledby": "tour-title" },
+      title, body, el("div", { class: "tour-foot" }, count, el("div", { class: "row" }, back, next)));
+
+    const place = () => {
+      const target = document.querySelector(steps[at].sel);
+      if (!target) return;
+      const r = target.getBoundingClientRect();
+      const pad = 8;
+      Object.assign(spot.style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px` });
+      const cw = card.offsetWidth, ch = card.offsetHeight;
+      const room = { right: window.innerWidth - r.right, below: window.innerHeight - r.bottom };
+      let left, top;
+      if (room.right > cw + 32) { left = r.right + 20; top = r.top; }
+      else if (room.below > ch + 32) { left = r.left; top = r.bottom + 20; }
+      else { left = r.left; top = r.top - ch - 20; }
+      card.style.left = `${Math.max(16, Math.min(window.innerWidth - cw - 16, left))}px`;
+      card.style.top = `${Math.max(16, Math.min(window.innerHeight - ch - 16, top))}px`;
+    };
+    const show = (i) => {
+      at = Math.max(0, Math.min(steps.length - 1, i));
+      title.textContent = steps[at].title;
+      body.textContent = steps[at].body;
+      count.textContent = `${at + 1} of ${steps.length}`;
+      back.hidden = at === 0;
+      next.querySelector("span").textContent = at === steps.length - 1 ? "Done" : "Next";
+      const target = document.querySelector(steps[at].sel);
+      if (target) target.scrollIntoView({ block: "center", behavior: "instant" });
+      requestAnimationFrame(place);
+      next.focus();
+    };
+    const end = () => {
+      shield.remove(); spot.remove(); card.remove();
+      window.removeEventListener("resize", place);
+      shell.removeEventListener("scroll", place);
+      document.removeEventListener("keydown", keys, true);
+    };
+    const keys = (e) => {
+      if (e.key === "Escape") { e.preventDefault(); end(); }
+      if (e.key === "ArrowRight") { e.preventDefault(); at === steps.length - 1 ? end() : show(at + 1); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); show(at - 1); }
+    };
+    next.addEventListener("click", () => (at === steps.length - 1 ? end() : show(at + 1)));
+    back.addEventListener("click", () => show(at - 1));
+    shield.addEventListener("click", () => next.focus());
+    window.addEventListener("resize", place);
+    shell.addEventListener("scroll", place, { passive: true });
+    document.addEventListener("keydown", keys, true);
+    document.body.append(shield, spot, card);
+    show(0);
+  }
+
+  /* ---------- routing and rendering ---------- */
+
+  const view = document.getElementById("view");
+  const crumbs = document.getElementById("crumbs");
+  const shell = document.querySelector(".main");
+  // On wide screens the shell scrolls; on phones the page does.
+  const scroller = () => getComputedStyle(shell).overflowY === "auto" ? shell : document.scrollingElement;
+  const bar = document.querySelector(".bar");
+  const markScrolled = () => bar.classList.toggle("scrolled", scroller().scrollTop > 4);
+  shell.addEventListener("scroll", markScrolled, { passive: true });
+  window.addEventListener("scroll", markScrolled, { passive: true });
+
+  function paintMap() {
+    if (mapBox && mapProject && mapBox.isConnected) mapBox.replaceChildren(drawMap(mapProject, Math.floor(mapBox.clientWidth)));
+  }
+  let frame = 0;
+  new ResizeObserver(() => { cancelAnimationFrame(frame); frame = requestAnimationFrame(paintMap); }).observe(view);
+
+  // Re-renders keep your place: live updates never jump the page or replay the entrance.
+  function render() {
+    const projects = data.projects || [];
+    const need = projects.filter((p) => p.tier !== "safe");
+    const p = projects.find((x) => x.slug === location.hash.slice(1));
+    const target = p ? p.slug : "all";
+    const moved = target !== route;
+    route = target;
+    renderChrome(projects, need);
+    const y = scroller().scrollTop;
+    mapBox = null;
+    if (data.error) {
+      crumbs.replaceChildren(el("span", { class: "here", text: "Housekeep" }));
+      view.replaceChildren(el("div", { class: "empty" }, el("div", {}, el("h1", { text: "Couldn't check your projects" }), el("p", { text: `${data.error.title}. ${data.error.detail}` }))));
+    } else if (!projects.length) {
+      crumbs.replaceChildren(el("span", { class: "here", text: "Overview" }));
+      view.replaceChildren(el("div", { class: "empty" }, el("div", {}, el("h1", { text: "Nothing active to watch" }), el("p", { text: `No git projects have changed in the last ${data.activeDays} days. Add folders to "watch" in ${data.configPath} to keep an eye on them anyway.` }))));
+    } else if (p) {
+      crumbs.replaceChildren(el("a", { href: "#all", text: "Overview" }), el("span", { text: "/" }), el("span", { class: "here", text: p.name }));
+      view.replaceChildren(...project(p).filter(Boolean));
+      paintMap();
+    } else {
+      crumbs.replaceChildren(el("span", { class: "here", text: "Overview" }));
+      view.replaceChildren(...overview(projects, need).filter(Boolean));
+    }
+    if (moved) {
+      view.classList.remove("enter");
+      void view.offsetWidth;
+      view.classList.add("enter");
+      scroller().scrollTop = 0;
+    } else {
+      scroller().scrollTop = y;
+    }
+    markScrolled();
+  }
+  window.addEventListener("hashchange", render);
+  render();
+  // First visit: welcome them properly before anything else.
+  if (pref(ONBOARDED) !== "done" && !data.error) startOnboarding();
+  if (document.fonts) document.fonts.ready.then(paintMap);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey || document.querySelector("dialog[open]") || /input|textarea|select/i.test(e.target.tagName)) return;
+    const projects = data.projects || [];
+    if (e.key === "0") location.hash = "all";
+    const i = Number(e.key) - 1;
+    if (i >= 0 && i < Math.min(9, projects.length)) location.hash = projects[i].slug;
+  });
+
+  if (LIVE) {
+    connect();
+  } else {
+    setLive("snapshot");
+    // A snapshot can't be pushed to, so it refreshes itself instead.
+    const loadedAt = Date.now();
+    const reloadIfOld = () => { if (document.visibilityState === "visible" && Date.now() - loadedAt > 60000) location.reload(); };
+    document.addEventListener("visibilitychange", reloadIfOld);
+    setInterval(reloadIfOld, 120000);
+  }
+})();
+</script>
+</body>
+</html>
