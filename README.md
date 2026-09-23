@@ -83,13 +83,15 @@ For GitHub repos, install and log in to the [GitHub CLI](https://cli.github.com)
 
 Housekeep is built to be run by your assistant as much as by you: `--json` gives every repo's state, its next step, and every request (`next.ask`, and one per branch, remote branch and worktree in `requests`), in plain words with the checks each change needs.
 
-**Claude Code:** install the skill, and Claude checks with Housekeep when you ask whether your work is safe, before a deploy or a break, and before it tells you a task is done. It acts on the requests only with your OK.
+**Any assistant:** install the Housekeep skill with [skills.sh](https://skills.sh). It works with Claude Code, Cursor, Codex, GitHub Copilot and others, and your assistant then checks with Housekeep when you ask whether your work is safe, before a deploy or a break, and before it tells you a task is done. It acts on the requests only with your OK.
 
 ```bash
-npx git-housekeep skill
+npx skills add Dammyjay93/housekeep
 ```
 
-**Cursor, Codex and others:** add this to your project's `AGENTS.md`, or your assistant's rules or custom instructions:
+**Claude Code, without skills.sh:** `npx git-housekeep skill` installs the same skill.
+
+**Or, in any assistant's instructions:** add this to your project's `AGENTS.md`, or your assistant's rules or custom instructions:
 
 > Before telling me a task is done, and whenever I ask whether my work is safe, run `npx -y git-housekeep . --json`. If `tier` isn't `safe`, tell me `next.title` and `next.why` in plain words and offer to do what `next.ask` says, following its checks. Only act with my OK. Never force-push, and never push `main` directly.
 

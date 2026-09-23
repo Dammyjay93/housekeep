@@ -168,7 +168,7 @@ function skillCommand(): number {
   copyFileSync(source, target);
   out(`${had ? "Updated" : "Installed"} the Housekeep skill for Claude Code in ${tilde(dir)}.` +
     `${existsSync(`${target}.previous`) ? " Your previous version is next to it as SKILL.md.previous." : ""}\n` +
-    "For Cursor, Codex and other assistants, see For AI assistants in the README.");
+    "For Cursor, Codex and other assistants: npx skills add Dammyjay93/housekeep");
   return 0;
 }
 
