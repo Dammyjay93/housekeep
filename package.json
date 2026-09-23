@@ -8,10 +8,21 @@
     "branches",
     "cleanup",
     "doctor",
-    "vibe coding"
+    "vibe coding",
+    "ai",
+    "claude code",
+    "cursor",
+    "codex"
   ],
   "license": "MIT",
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dammyjay93/housekeep.git"
+  },
+  "homepage": "https://github.com/Dammyjay93/housekeep#readme",
+  "bugs": {
+    "url": "https://github.com/Dammyjay93/housekeep/issues"
+  },
   "type": "module",
   "bin": {
     "housekeep": "dist/src/cli.js",

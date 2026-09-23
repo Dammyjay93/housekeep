@@ -8,6 +8,8 @@ Is your git work committed, pushed, in sync with main, and cleaned up? One comma
 npx git-housekeep
 ```
 
+<img src="site/housekeep.gif" width="720" alt="Housekeep on a made-up project: pushing 3 unpushed commits, then deleting 2 merged branches, each after a confirmation showing the git command, as the light goes from red to amber to green.">
+
 ```
   housekeep  ·  5 repos  ·  fetched 4 min ago
 
