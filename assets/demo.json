@@ -1,0 +1,937 @@
+{
+  "version": "0.1.0",
+  "generatedAt": "2026-09-23T11:56:41.330Z",
+  "watching": 5,
+  "quiet": 12,
+  "activeDays": 45,
+  "configPath": "~/.config/housekeep/config.json",
+  "blocked": [],
+  "notices": [],
+  "error": null,
+  "projects": [
+    {
+      "name": "portfolio",
+      "slug": "p-portfolio",
+      "path": "/Users/you/code/portfolio",
+      "displayPath": "~/code/portfolio",
+      "error": null,
+      "host": "GitHub",
+      "remotes": {
+        "truth": "origin",
+        "push": "origin",
+        "fork": false,
+        "localPath": null,
+        "sameDisk": false
+      },
+      "github": {
+        "checked": true,
+        "reason": null,
+        "host": "github.com",
+        "slug": "you/portfolio",
+        "prRepo": "you/portfolio",
+        "autoDelete": true,
+        "canAdmin": true
+      },
+      "limits": {
+        "shallow": false,
+        "singleBranch": false
+      },
+      "main": {
+        "name": "main",
+        "local": true,
+        "remoteMain": true,
+        "remoteRef": "origin/main",
+        "ahead": 1,
+        "behind": 0,
+        "localOnly": 1
+      },
+      "head": {
+        "branch": "main"
+      },
+      "fetch": {
+        "hasRemote": true,
+        "at": "2026-09-23T11:52:41.330Z",
+        "error": null
+      },
+      "checkouts": [
+        {
+          "path": "/Users/you/code/portfolio",
+          "label": "main working tree",
+          "branch": "main",
+          "primary": true,
+          "missing": false,
+          "changed": 0,
+          "untracked": 0,
+          "secrets": [],
+          "operation": null,
+          "head": null,
+          "detachedCommits": 0,
+          "unreadable": false,
+          "ignoredKeep": [],
+          "offline": false,
+          "locked": false,
+          "temporary": false,
+          "tier": "safe"
+        }
+      ],
+      "branches": [],
+      "remoteBranches": [],
+      "stashes": [],
+      "unpushed": 1,
+      "pruned": [],
+      "committedSecrets": [
+        {
+          "path": ".env",
+          "pushed": false
+        }
+      ],
+      "signals": [
+        {
+          "key": "commit",
+          "label": "Working tree",
+          "tier": "at-risk",
+          "headline": "Secret committed: .env",
+          "hint": "It's in git's history but not pushed yet. Remove it from git before you push.",
+          "details": [],
+          "cell": "Secret committed",
+          "value": 0,
+          "unit": "uncommitted changes"
+        },
+        {
+          "key": "push",
+          "label": "Push",
+          "tier": "at-risk",
+          "headline": "1 unpushed commit",
+          "hint": "They exist only on this Mac. Push them so they're safe if this Mac is lost.",
+          "details": [
+            "main: 1 unpushed commit"
+          ],
+          "cell": "1 unpushed",
+          "count": "1 unpushed commit",
+          "value": 1,
+          "unit": "unpushed commit"
+        },
+        {
+          "key": "sync",
+          "label": "Sync",
+          "tier": "attention",
+          "headline": "main is ahead of origin/main by 1 commit",
+          "hint": "origin/main doesn't have these yet, so it isn't the source of truth right now.",
+          "details": [],
+          "cell": "1 ahead",
+          "value": 1,
+          "unit": "ahead of origin/main"
+        },
+        {
+          "key": "cleanup",
+          "label": "Cleanup",
+          "tier": "safe",
+          "headline": "Nothing to clean up",
+          "hint": "No merged branches or stale worktrees.",
+          "details": [],
+          "cell": "Clean",
+          "value": 0,
+          "unit": "to clean up",
+          "mergedHere": 0,
+          "mergedOnRemote": 0,
+          "prunable": 0,
+          "unmerged": 0
+        }
+      ],
+      "next": {
+        "tier": "at-risk",
+        "kind": "assistant",
+        "title": "Remove a committed secret: .env",
+        "why": "It's in git's history but not pushed yet. Take it out of git before you push.",
+        "ask": "In /Users/you/code/portfolio, the file .env is committed, and it looks like it holds secrets. Check whether it has real keys. If it does, tell me which services I need to rotate them with, then remove it from git (git rm --cached), add it to .gitignore and commit that. Don't rewrite history or force-push without asking me first."
+      },
+      "tier": "at-risk",
+      "verdict": "Could lose work"
+    },
+    {
+      "name": "shop-app",
+      "slug": "p-shop-app",
+      "path": "/Users/you/code/shop-app",
+      "displayPath": "~/code/shop-app",
+      "error": null,
+      "host": "GitHub",
+      "remotes": {
+        "truth": "origin",
+        "push": "origin",
+        "fork": false,
+        "localPath": null,
+        "sameDisk": false
+      },
+      "github": {
+        "checked": true,
+        "reason": null,
+        "host": "github.com",
+        "slug": "you/shop-app",
+        "prRepo": "you/shop-app",
+        "autoDelete": true,
+        "canAdmin": true
+      },
+      "limits": {
+        "shallow": false,
+        "singleBranch": false
+      },
+      "main": {
+        "name": "main",
+        "local": true,
+        "remoteMain": true,
+        "remoteRef": "origin/main",
+        "ahead": 0,
+        "behind": 0,
+        "localOnly": 0
+      },
+      "head": {
+        "branch": "feat/checkout-redesign"
+      },
+      "fetch": {
+        "hasRemote": true,
+        "at": "2026-09-23T11:52:41.330Z",
+        "error": null
+      },
+      "checkouts": [
+        {
+          "path": "/Users/you/code/shop-app",
+          "label": "main working tree",
+          "branch": "feat/checkout-redesign",
+          "primary": true,
+          "missing": false,
+          "changed": 2,
+          "untracked": 1,
+          "secrets": [],
+          "operation": null,
+          "head": null,
+          "detachedCommits": 0,
+          "unreadable": false,
+          "ignoredKeep": [],
+          "offline": false,
+          "locked": false,
+          "temporary": false,
+          "tier": "attention"
+        }
+      ],
+      "branches": [
+        {
+          "name": "feat/checkout-redesign",
+          "state": "unpushed",
+          "note": "3 unpushed commits",
+          "merged": null,
+          "aheadOfMain": 4,
+          "localOnly": 3,
+          "behindUpstream": 0,
+          "upstreamGone": false,
+          "onRemote": true,
+          "upstreamIsMain": false,
+          "pushesToMain": false,
+          "pr": null,
+          "lastCommit": 1790162659,
+          "worktree": "~/code/shop-app",
+          "current": true
+        }
+      ],
+      "remoteBranches": [
+        {
+          "name": "fix/cart-total",
+          "sha": "f053083c9e4b911ef5138115026188b2f46a7990",
+          "merged": "merged",
+          "kept": null,
+          "blockedBy": null,
+          "deletable": true,
+          "backup": false,
+          "local": false,
+          "pr": null,
+          "aheadOfMain": 0,
+          "lastCommit": 1789123655
+        },
+        {
+          "name": "feat/checkout-redesign",
+          "sha": "0f98219af4ed113efee4b69f4a349c6549f6157d",
+          "merged": null,
+          "kept": null,
+          "blockedBy": null,
+          "deletable": false,
+          "backup": false,
+          "local": true,
+          "pr": null,
+          "aheadOfMain": 1,
+          "lastCommit": 1789728557
+        }
+      ],
+      "stashes": [],
+      "unpushed": 3,
+      "pruned": [],
+      "committedSecrets": [],
+      "signals": [
+        {
+          "key": "commit",
+          "label": "Working tree",
+          "tier": "attention",
+          "headline": "3 uncommitted changes",
+          "hint": "Normal while you work. Commit once something works, so you can always get back to it.",
+          "details": [
+            "3 changes in the main working tree"
+          ],
+          "cell": "3 uncommitted",
+          "value": 3,
+          "unit": "uncommitted changes"
+        },
+        {
+          "key": "push",
+          "label": "Push",
+          "tier": "at-risk",
+          "headline": "3 unpushed commits",
+          "hint": "They exist only on this Mac. Push them so they're safe if this Mac is lost.",
+          "details": [
+            "feat/checkout-redesign: 3 unpushed commits"
+          ],
+          "cell": "3 unpushed",
+          "count": "3 unpushed commits",
+          "value": 3,
+          "unit": "unpushed commits"
+        },
+        {
+          "key": "sync",
+          "label": "Sync",
+          "tier": "safe",
+          "headline": "main is up to date with origin/main",
+          "hint": "This Mac and GitHub agree.",
+          "details": [],
+          "cell": "Up to date",
+          "value": 0,
+          "unit": "commits apart"
+        },
+        {
+          "key": "cleanup",
+          "label": "Cleanup",
+          "tier": "attention",
+          "headline": "1 merged branch on origin",
+          "hint": "Their work is already in origin/main. Safe to delete.",
+          "details": [
+            "1 unmerged branch still in progress"
+          ],
+          "cell": "1 to clean up",
+          "value": 1,
+          "unit": "to clean up",
+          "mergedHere": 0,
+          "mergedOnRemote": 1,
+          "prunable": 0,
+          "unmerged": 1
+        }
+      ],
+      "next": {
+        "tier": "at-risk",
+        "kind": "push-all",
+        "title": "Push 3 unpushed commits",
+        "why": "They exist only on this Mac. Pushing copies them to GitHub; origin/main itself isn't changed.",
+        "ask": "In /Users/you/code/shop-app, some commits exist only on this machine. Push every branch with unpushed commits to origin, without changing origin/main or anything that could deploy. Show me the plan first."
+      },
+      "tier": "at-risk",
+      "verdict": "Could lose work"
+    },
+    {
+      "name": "api",
+      "slug": "p-api",
+      "path": "/Users/you/code/api",
+      "displayPath": "~/code/api",
+      "error": null,
+      "host": "GitHub",
+      "remotes": {
+        "truth": "origin",
+        "push": "origin",
+        "fork": false,
+        "localPath": null,
+        "sameDisk": false
+      },
+      "github": {
+        "checked": true,
+        "reason": null,
+        "host": "github.com",
+        "slug": "you/api",
+        "prRepo": "you/api",
+        "autoDelete": false,
+        "canAdmin": true
+      },
+      "limits": {
+        "shallow": false,
+        "singleBranch": false
+      },
+      "main": {
+        "name": "main",
+        "local": true,
+        "remoteMain": true,
+        "remoteRef": "origin/main",
+        "ahead": 0,
+        "behind": 4,
+        "localOnly": 0
+      },
+      "head": {
+        "branch": "main"
+      },
+      "fetch": {
+        "hasRemote": true,
+        "at": "2026-09-23T11:52:41.330Z",
+        "error": null
+      },
+      "checkouts": [
+        {
+          "path": "/Users/you/code/api",
+          "label": "main working tree",
+          "branch": "main",
+          "primary": true,
+          "missing": false,
+          "changed": 0,
+          "untracked": 0,
+          "secrets": [],
+          "operation": null,
+          "head": null,
+          "detachedCommits": 0,
+          "unreadable": false,
+          "ignoredKeep": [],
+          "offline": false,
+          "locked": false,
+          "temporary": false,
+          "tier": "safe"
+        },
+        {
+          "path": "/Users/you/code/.worktrees/api-codex",
+          "label": ".worktrees/api-codex",
+          "branch": "codex/add-logging",
+          "primary": false,
+          "missing": false,
+          "changed": 0,
+          "untracked": 0,
+          "secrets": [],
+          "operation": null,
+          "head": null,
+          "detachedCommits": 0,
+          "unreadable": false,
+          "ignoredKeep": [
+            ".env.local"
+          ],
+          "offline": false,
+          "locked": false,
+          "temporary": false,
+          "tier": "safe"
+        }
+      ],
+      "branches": [
+        {
+          "name": "codex/add-logging",
+          "state": "unmerged",
+          "note": "Not merged into origin/main yet",
+          "merged": null,
+          "aheadOfMain": 1,
+          "localOnly": 0,
+          "behindUpstream": 0,
+          "upstreamGone": false,
+          "onRemote": true,
+          "upstreamIsMain": false,
+          "pushesToMain": false,
+          "pr": {
+            "number": 14,
+            "url": "https://github.com/you/api/pull/14"
+          },
+          "lastCommit": 1790157907,
+          "worktree": "~/code/.worktrees/api-codex",
+          "current": false
+        },
+        {
+          "name": "feat/webhooks",
+          "state": "unmerged",
+          "note": "Not merged into origin/main yet",
+          "merged": null,
+          "aheadOfMain": 1,
+          "localOnly": 0,
+          "behindUpstream": 0,
+          "upstreamGone": false,
+          "onRemote": true,
+          "upstreamIsMain": false,
+          "pushesToMain": false,
+          "pr": null,
+          "lastCommit": 1789986852,
+          "worktree": null,
+          "current": false
+        },
+        {
+          "name": "fix/auth-timeout",
+          "state": "merged",
+          "note": "Squash-merged into origin/main",
+          "merged": "squashed",
+          "aheadOfMain": 0,
+          "localOnly": 0,
+          "behindUpstream": 0,
+          "upstreamGone": false,
+          "onRemote": true,
+          "upstreamIsMain": false,
+          "pushesToMain": false,
+          "pr": null,
+          "lastCommit": 1789640673,
+          "worktree": null,
+          "current": false
+        },
+        {
+          "name": "feat/rate-limit",
+          "state": "merged",
+          "note": "Squash-merged into origin/main",
+          "merged": "squashed",
+          "aheadOfMain": 0,
+          "localOnly": 0,
+          "behindUpstream": 0,
+          "upstreamGone": false,
+          "onRemote": true,
+          "upstreamIsMain": false,
+          "pushesToMain": false,
+          "pr": null,
+          "lastCommit": 1789469536,
+          "worktree": null,
+          "current": false
+        }
+      ],
+      "remoteBranches": [
+        {
+          "name": "fix/auth-timeout",
+          "sha": "f1400194099cd716508100a540f775867a5ce14b",
+          "merged": "squashed",
+          "kept": null,
+          "blockedBy": null,
+          "deletable": true,
+          "backup": false,
+          "local": true,
+          "pr": null,
+          "aheadOfMain": 0,
+          "lastCommit": 1789640673
+        },
+        {
+          "name": "feat/rate-limit",
+          "sha": "f6227cdbe71ec2fb19daa500b4be0f4c130e11ad",
+          "merged": "squashed",
+          "kept": null,
+          "blockedBy": null,
+          "deletable": true,
+          "backup": false,
+          "local": true,
+          "pr": null,
+          "aheadOfMain": 0,
+          "lastCommit": 1789469536
+        },
+        {
+          "name": "codex/add-logging",
+          "sha": "c3b2d53d80cfed894046712195a13f27c5593521",
+          "merged": null,
+          "kept": null,
+          "blockedBy": null,
+          "deletable": false,
+          "backup": false,
+          "local": true,
+          "pr": {
+            "number": 14,
+            "url": "https://github.com/you/api/pull/14"
+          },
+          "aheadOfMain": 1,
+          "lastCommit": 1790157907
+        },
+        {
+          "name": "feat/webhooks",
+          "sha": "84f3e8deb68129782f430282abb7203d9f3b0c92",
+          "merged": null,
+          "kept": null,
+          "blockedBy": null,
+          "deletable": false,
+          "backup": false,
+          "local": true,
+          "pr": null,
+          "aheadOfMain": 1,
+          "lastCommit": 1789986852
+        }
+      ],
+      "stashes": [],
+      "unpushed": 0,
+      "pruned": [],
+      "committedSecrets": [],
+      "signals": [
+        {
+          "key": "commit",
+          "label": "Working tree",
+          "tier": "safe",
+          "headline": "Working tree clean",
+          "hint": "Nothing waiting to be committed.",
+          "details": [],
+          "cell": "Clean",
+          "value": 0,
+          "unit": "uncommitted changes"
+        },
+        {
+          "key": "push",
+          "label": "Push",
+          "tier": "safe",
+          "headline": "Everything pushed",
+          "hint": "Every commit is on GitHub.",
+          "details": [],
+          "cell": "Pushed",
+          "count": "0 unpushed commits",
+          "value": 0,
+          "unit": "unpushed commits"
+        },
+        {
+          "key": "sync",
+          "label": "Sync",
+          "tier": "attention",
+          "headline": "main is behind origin/main by 4 commits",
+          "hint": "Nothing is lost. Pull before you start new work.",
+          "details": [],
+          "cell": "4 behind",
+          "value": 4,
+          "unit": "behind origin/main"
+        },
+        {
+          "key": "cleanup",
+          "label": "Cleanup",
+          "tier": "attention",
+          "headline": "2 merged branches (2 local, 2 on origin)",
+          "hint": "Their work is already in origin/main. Safe to delete.",
+          "details": [
+            "2 unmerged branches still in progress"
+          ],
+          "cell": "2 to clean up",
+          "value": 2,
+          "unit": "to clean up",
+          "mergedHere": 2,
+          "mergedOnRemote": 2,
+          "prunable": 0,
+          "unmerged": 2
+        }
+      ],
+      "next": {
+        "tier": "attention",
+        "kind": "pull",
+        "title": "Pull main (fast-forward)",
+        "why": "origin/main has 4 commits this Mac doesn't. A fast-forward only adds them; nothing here is lost.",
+        "ask": "In /Users/you/code/api, update main from origin/main with a fast-forward only. If that isn't possible, explain why and stop."
+      },
+      "tier": "attention",
+      "verdict": "Needs attention"
+    },
+    {
+      "name": "mobile-app",
+      "slug": "p-mobile-app",
+      "path": "/Users/you/code/mobile-app",
+      "displayPath": "~/code/mobile-app",
+      "error": null,
+      "host": "GitHub",
+      "remotes": {
+        "truth": "origin",
+        "push": "origin",
+        "fork": false,
+        "localPath": null,
+        "sameDisk": false
+      },
+      "github": {
+        "checked": true,
+        "reason": null,
+        "host": "github.com",
+        "slug": "you/mobile-app",
+        "prRepo": "you/mobile-app",
+        "autoDelete": true,
+        "canAdmin": true
+      },
+      "limits": {
+        "shallow": false,
+        "singleBranch": false
+      },
+      "main": {
+        "name": "main",
+        "local": true,
+        "remoteMain": true,
+        "remoteRef": "origin/main",
+        "ahead": 0,
+        "behind": 0,
+        "localOnly": 0
+      },
+      "head": {
+        "branch": "main"
+      },
+      "fetch": {
+        "hasRemote": true,
+        "at": "2026-09-23T11:52:41.330Z",
+        "error": null
+      },
+      "checkouts": [
+        {
+          "path": "/Users/you/code/mobile-app",
+          "label": "main working tree",
+          "branch": "main",
+          "primary": true,
+          "missing": false,
+          "changed": 0,
+          "untracked": 0,
+          "secrets": [],
+          "operation": null,
+          "head": null,
+          "detachedCommits": 0,
+          "unreadable": false,
+          "ignoredKeep": [],
+          "offline": false,
+          "locked": false,
+          "temporary": false,
+          "tier": "safe"
+        },
+        {
+          "path": "/Users/you/code/mobile-app-release",
+          "label": "code/mobile-app-release",
+          "branch": "release/1.2",
+          "primary": false,
+          "missing": true,
+          "changed": 0,
+          "untracked": 0,
+          "secrets": [],
+          "operation": null,
+          "head": null,
+          "detachedCommits": 0,
+          "unreadable": false,
+          "ignoredKeep": [],
+          "offline": false,
+          "locked": false,
+          "temporary": false,
+          "tier": "attention"
+        }
+      ],
+      "branches": [
+        {
+          "name": "release/1.2",
+          "state": "kept",
+          "note": "Long-lived branch",
+          "merged": "merged",
+          "aheadOfMain": 0,
+          "localOnly": 0,
+          "behindUpstream": 0,
+          "upstreamGone": false,
+          "onRemote": true,
+          "upstreamIsMain": false,
+          "pushesToMain": false,
+          "pr": null,
+          "lastCommit": 1786707434,
+          "worktree": "~/code/mobile-app-release",
+          "current": false
+        }
+      ],
+      "remoteBranches": [
+        {
+          "name": "release/1.2",
+          "sha": "fe0f6ef92f938d917c3b6b7a48f3f308a3c80e6c",
+          "merged": "merged",
+          "kept": "Long-lived branch",
+          "blockedBy": "Long-lived branch",
+          "deletable": false,
+          "backup": false,
+          "local": true,
+          "pr": null,
+          "aheadOfMain": 0,
+          "lastCommit": 1786707434
+        }
+      ],
+      "stashes": [
+        {
+          "label": "On main: try new onboarding"
+        }
+      ],
+      "unpushed": 0,
+      "pruned": [],
+      "committedSecrets": [],
+      "signals": [
+        {
+          "key": "commit",
+          "label": "Working tree",
+          "tier": "attention",
+          "headline": "1 stash",
+          "hint": "Changes set aside with git stash are easy to forget. Apply what matters and drop the rest.",
+          "details": [],
+          "cell": "1 stashed",
+          "value": 1,
+          "unit": "stashed"
+        },
+        {
+          "key": "push",
+          "label": "Push",
+          "tier": "safe",
+          "headline": "Everything pushed",
+          "hint": "Every commit is on GitHub.",
+          "details": [],
+          "cell": "Pushed",
+          "count": "0 unpushed commits",
+          "value": 0,
+          "unit": "unpushed commits"
+        },
+        {
+          "key": "sync",
+          "label": "Sync",
+          "tier": "safe",
+          "headline": "main is up to date with origin/main",
+          "hint": "This Mac and GitHub agree.",
+          "details": [],
+          "cell": "Up to date",
+          "value": 0,
+          "unit": "commits apart"
+        },
+        {
+          "key": "cleanup",
+          "label": "Cleanup",
+          "tier": "attention",
+          "headline": "1 prunable worktree (folder deleted)",
+          "hint": "Their work is already in origin/main. Safe to delete.",
+          "details": [],
+          "cell": "1 to clean up",
+          "value": 1,
+          "unit": "to clean up",
+          "mergedHere": 0,
+          "mergedOnRemote": 0,
+          "prunable": 1,
+          "unmerged": 0
+        }
+      ],
+      "next": {
+        "tier": "attention",
+        "kind": "assistant",
+        "title": "Review 1 stash",
+        "why": "Stashed changes are easy to forget. Apply what matters and drop the rest.",
+        "ask": "In /Users/you/code/mobile-app there are 1 stash. For each, tell me in plain English what it contains and whether it's already committed. Recommend apply or drop, and don't drop anything without asking."
+      },
+      "tier": "attention",
+      "verdict": "Needs attention"
+    },
+    {
+      "name": "blog",
+      "slug": "p-blog",
+      "path": "/Users/you/code/blog",
+      "displayPath": "~/code/blog",
+      "error": null,
+      "host": "GitHub",
+      "remotes": {
+        "truth": "origin",
+        "push": "origin",
+        "fork": false,
+        "localPath": null,
+        "sameDisk": false
+      },
+      "github": {
+        "checked": true,
+        "reason": null,
+        "host": "github.com",
+        "slug": "you/blog",
+        "prRepo": "you/blog",
+        "autoDelete": true,
+        "canAdmin": true
+      },
+      "limits": {
+        "shallow": false,
+        "singleBranch": false
+      },
+      "main": {
+        "name": "main",
+        "local": true,
+        "remoteMain": true,
+        "remoteRef": "origin/main",
+        "ahead": 0,
+        "behind": 0,
+        "localOnly": 0
+      },
+      "head": {
+        "branch": "main"
+      },
+      "fetch": {
+        "hasRemote": true,
+        "at": "2026-09-23T11:52:41.330Z",
+        "error": null
+      },
+      "checkouts": [
+        {
+          "path": "/Users/you/code/blog",
+          "label": "main working tree",
+          "branch": "main",
+          "primary": true,
+          "missing": false,
+          "changed": 0,
+          "untracked": 0,
+          "secrets": [],
+          "operation": null,
+          "head": null,
+          "detachedCommits": 0,
+          "unreadable": false,
+          "ignoredKeep": [],
+          "offline": false,
+          "locked": false,
+          "temporary": false,
+          "tier": "safe"
+        }
+      ],
+      "branches": [],
+      "remoteBranches": [],
+      "stashes": [],
+      "unpushed": 0,
+      "pruned": [],
+      "committedSecrets": [],
+      "signals": [
+        {
+          "key": "commit",
+          "label": "Working tree",
+          "tier": "safe",
+          "headline": "Working tree clean",
+          "hint": "Nothing waiting to be committed.",
+          "details": [],
+          "cell": "Clean",
+          "value": 0,
+          "unit": "uncommitted changes"
+        },
+        {
+          "key": "push",
+          "label": "Push",
+          "tier": "safe",
+          "headline": "Everything pushed",
+          "hint": "Every commit is on GitHub.",
+          "details": [],
+          "cell": "Pushed",
+          "count": "0 unpushed commits",
+          "value": 0,
+          "unit": "unpushed commits"
+        },
+        {
+          "key": "sync",
+          "label": "Sync",
+          "tier": "safe",
+          "headline": "main is up to date with origin/main",
+          "hint": "This Mac and GitHub agree.",
+          "details": [],
+          "cell": "Up to date",
+          "value": 0,
+          "unit": "commits apart"
+        },
+        {
+          "key": "cleanup",
+          "label": "Cleanup",
+          "tier": "safe",
+          "headline": "Nothing to clean up",
+          "hint": "No merged branches or stale worktrees.",
+          "details": [],
+          "cell": "Clean",
+          "value": 0,
+          "unit": "to clean up",
+          "mergedHere": 0,
+          "mergedOnRemote": 0,
+          "prunable": 0,
+          "unmerged": 0
+        }
+      ],
+      "next": {
+        "tier": "safe",
+        "kind": null,
+        "title": "All clear",
+        "why": "Working tree clean, everything pushed, and main is up to date with origin/main.",
+        "ask": ""
+      },
+      "tier": "safe",
+      "verdict": "All clear"
+    }
+  ]
+}

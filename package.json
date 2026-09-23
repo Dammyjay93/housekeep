@@ -1,5 +1,5 @@
 {
-  "name": "housekeep",
+  "name": "git-housekeep",
   "version": "0.1.0",
   "description": "See whether your git work is safe: committed, pushed, in sync with main, and cleaned up. A terminal report and a live visual map.",
   "keywords": [
@@ -14,7 +14,8 @@
   "private": true,
   "type": "module",
   "bin": {
-    "housekeep": "dist/src/cli.js"
+    "housekeep": "dist/src/cli.js",
+    "git-housekeep": "dist/src/cli.js"
   },
   "files": [
     "dist/src",
@@ -28,7 +29,9 @@
   "scripts": {
     "build": "tsc -p .",
     "test": "npm run build && node --test --test-concurrency=4 dist/test/housekeep.test.js",
-    "prepublishOnly": "npm test"
+    "prepublishOnly": "npm test",
+    "demo:build": "npm run build && node dist/scripts/make-demo.js",
+    "site:build": "npm run build && node dist/scripts/build-site.js"
   },
   "devDependencies": {
     "@types/node": "20.19.43",

@@ -1,28 +1,42 @@
+<img src="assets/logo.svg" width="56" height="56" alt="">
+
 # Housekeep
 
 Is your git work committed, pushed, in sync with main, and cleaned up? One command tells you, for every repo you've worked on recently, in git's own words with a plain-English explanation of each. A live visual map shows why, and fixes what's safe to fix.
 
 ```bash
-npx housekeep
+npx git-housekeep
 ```
 
 ```
-  housekeep  ·  7 repos  ·  fetched 4 min ago
+  housekeep  ·  5 repos  ·  fetched 4 min ago
 
-  ● outbound-backend        Could lose work
-    4 unpushed  ·  2 merged branches on origin
-    → Push 4 unpushed commits
+  ● portfolio    Could lose work
+    → Remove a committed secret: .env
+      secret committed  ·  1 unpushed  ·  1 ahead of origin/main
 
-  ● collabsprint-platform   Needs attention
-    136 uncommitted  ·  5 behind origin/main  ·  15 merged branches (15 local, 5 on origin)
-    → Commit 136 uncommitted changes
+  ● shop-app     Could lose work
+    → Push 3 unpushed commits
+      3 uncommitted  ·  3 unpushed  ·  1 merged branch on origin
 
-  3 could lose work  ·  4 need attention
+  ● api          Needs attention
+    → Pull main (fast-forward)
+      4 behind origin/main  ·  2 merged branches (2 local, 2 on origin)
+
+  ● mobile-app   Needs attention
+    → Review 1 stash
+      1 stashed  ·  1 prunable worktree (folder deleted)
+
+  ✓ blog         All clear
+
+  2 could lose work  ·  2 need attention  ·  1 all clear
 
   o open the map   q quit
 ```
 
 Press `o` for the map: every repo's branches drawn like a transit map, with buttons for the fixes.
+
+Try it without touching anything of yours: `npx git-housekeep --demo` shows the report for five made-up projects, and `npx git-housekeep open --demo` opens the map, where every button shows what it would do.
 
 ## The four checks
 
@@ -37,21 +51,26 @@ Every term in the report and the map has a "?" beside it that explains it, so yo
 
 ## Usage
 
+`npx git-housekeep` runs it once. To keep it, `npm install -g git-housekeep` gives you the `housekeep` command (and `git housekeep`, since git runs any `git-*` command on your path).
+
 ```
 housekeep               Check every repo you've worked on recently
 housekeep <path>        Check one repo in detail (e.g. housekeep .)
 housekeep serve         Run the live map in this terminal
 housekeep open          Open the live map in your browser
+housekeep install       macOS: keep the live map running from login, with a menu bar light (SwiftBar)
+housekeep uninstall     macOS: undo housekeep install
 
 --json                  The full result as JSON, for scripts and AI assistants
 --fetch                 Fetch from every remote now, whatever the schedule
 --offline               Don't touch the network
 --port <n>              Port for the live map (default 47219)
+--demo                  Try it on made-up projects: nothing on your computer is read or changed
 ```
 
-Exit codes: `0` all clear, `1` needs attention, `2` could lose work, `3` couldn't check. So `npx housekeep . || echo "not clean"` works in scripts, and an AI assistant can run `npx housekeep . --json` before it says it's done.
+Exit codes: `0` all clear, `1` needs attention, `2` could lose work, `3` couldn't check. So `npx git-housekeep . || echo "not clean"` works in scripts, and an AI assistant can run `npx git-housekeep . --json` before it says it's done.
 
-Needs Node 20 or newer and git 2.38 or newer. It has no dependencies.
+Needs Node 20 or newer and git 2.25 or newer (2.38 or newer to recognise squash merges; older versions say so). It has no dependencies.
 
 For GitHub repos, install and log in to the [GitHub CLI](https://cli.github.com) (`gh auth login`). Housekeep then also knows which branches are protected, which have open pull requests, a fork's parent and the real default branch, and it can open pull requests for you. Without it everything still works, but branches are judged by name alone, and the map says so.
 
@@ -132,6 +151,10 @@ node dist/src/cli.js
 ```
 
 The tests build throwaway repos, each with a local bare repo standing in for the remote.
+
+The demo (`--demo`, and the website's live map) is built from scripted throwaway repos by the real scanner: `npm run demo:build` regenerates `assets/demo.json`.
+
+The website is plain HTML in `site/`. `npm run site:build` adds the live demo page, the fonts, and the terminal report from the demo. On Cloudflare Pages, set the build command to `npm ci && npm run site:build` and the output folder to `site` (Node comes from `.nvmrc`).
 
 ## License
 

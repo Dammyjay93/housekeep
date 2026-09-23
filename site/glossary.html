@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Git glossary, in plain English · Housekeep</title>
+<meta name="description" content="What commit, push, pull, origin/main, upstream, worktree, detached HEAD, squash merge and the rest actually mean, in plain English, drawn the way Housekeep's map draws them.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/Geist-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/Geist-Medium.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="site.css">
+<script src="scrollbars.js" defer></script>
+<script>document.documentElement.classList.add("js");</script>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+  <a class="brand" href="./"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><path d="M3.5 16H12" stroke="var(--track)" stroke-width="3.5" stroke-linecap="round"/><rect x="11" y="10.5" width="18" height="11" rx="5.5" fill="none" stroke="var(--track)" stroke-width="3"/><circle cx="23.5" cy="16" r="2.4" fill="var(--c, var(--green))"/></svg>Housekeep</a>
+  <label class="find">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></svg>
+    <span class="visually-hidden">Find a word</span>
+    <input id="find" type="search" placeholder="Find a word" autocomplete="off" spellcheck="false">
+    <kbd aria-hidden="true">/</kbd>
+  </label>
+  <nav class="nav chapters-nav" aria-label="Chapters">
+    <a href="#your-computer"><span class="name">On your computer</span></a>
+    <a href="#branches"><span class="name">Branches</span></a>
+    <a href="#the-remote"><span class="name">The remote</span></a>
+    <a href="#risks"><span class="name">Where work goes missing</span></a>
+  </nav>
+  <div id="index"></div>
+  <div class="side-tools">
+    <a href="./"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4L6 8l4 4"/></svg>Back to Housekeep</a>
+    <a href="https://github.com/Dammyjay93/housekeep"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4.5L2 8l3.5 3.5"/><path d="M10.5 4.5L14 8l-3.5 3.5"/></svg>Source on GitHub</a>
+  </div>
+  <p class="side-note">The same words, and the same drawings, as the map.</p>
+</aside>
+
+<main class="main" id="main">
+  <header class="bar" id="bar">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="./">Housekeep</a><span>/</span><a href="#top">Glossary</a><span id="crumb-sep" hidden>/</span><span class="here" id="crumb"></span></nav>
+    <div class="bar-right"><a class="btn primary" href="./#demo"><span>Try the demo</span></a></div>
+  </header>
+
+  <div class="view" id="top">
+    <div class="head">
+      <div>
+        <h1>Glossary</h1>
+        <div class="meta"><span>22 words</span><span class="sep"></span><span>git's own terms, in plain English</span><span class="sep"></span><span>drawn the way the map draws them</span></div>
+      </div>
+    </div>
+
+    <p class="gloss-empty panel" id="empty" hidden>Nothing here called “<b></b>” yet. <a href="https://github.com/Dammyjay93/housekeep/issues">Ask for it on GitHub</a>.</p>
+
+    <!-- ============ 1 ============ -->
+    <section class="chapter" id="your-computer" aria-labelledby="ch-1">
+      <header><span class="kicker">1 of 4</span><h2 id="ch-1">On your computer</h2><p>Where work starts: the folder, the files you edit, and the snapshots git saves of them.</p></header>
+
+      <article class="panel word" id="repository" data-also="repo project .git">
+        <div class="panel-head"><h2>Repository</h2><span class="end"><span class="tag">repo</span></span></div>
+        <div class="panel-body"><div class="map" data-scene="repository"></div>
+          <p class="def">A project folder that git keeps a history of. The history lives in a hidden <code>.git</code> folder inside it.</p>
+          <p class="in"><b>In Housekeep</b>Each repo you've worked on in the last 45 days is one project.</p></div>
+      </article>
+
+      <article class="panel word" id="commit" data-also="snapshot save version hash log">
+        <div class="panel-head"><h2>Commit</h2><span class="end"><span class="tag mono">git commit</span></span></div>
+        <div class="panel-body"><div class="map" data-scene="commit"></div>
+          <p class="def">A saved snapshot of your project, with a message saying what changed. Saving a file in your editor isn't a commit: you (or your AI assistant) commit once something works, and that's a version you can always get back to.</p>
+          <p class="in"><b>In Housekeep</b>The Working tree check turns clean once everything is committed.</p></div>
+      </article>
+
+      <article class="panel word" id="working-tree" data-also="clean files head">
+        <div class="panel-head"><h2>Working tree</h2></div>
+        <div class="panel-body"><div class="map" data-scene="working-tree"></div>
+          <p class="def">The files you actually see and edit in the project folder, as opposed to the history git has saved. "Working tree clean" is git's way of saying nothing has changed since the last commit.</p>
+          <p class="in"><b>In Housekeep</b>The first of the four checks. "You are here" marks the branch your working tree is on.</p></div>
+      </article>
+
+      <article class="panel word" id="uncommitted" data-also="untracked modified changes edits dirty">
+        <div class="panel-head"><h2>Uncommitted changes</h2></div>
+        <div class="panel-body"><div class="map" data-scene="uncommitted"></div>
+          <p class="def">Edits and new files that aren't in a commit yet. They're on your disk, but git can't bring them back if you overwrite them. New files git has never seen are called untracked.</p>
+          <p class="in"><b>In Housekeep</b>Counted in Working tree, in amber. Normal while you work; the easiest kind of work to lose.</p></div>
+      </article>
+
+      <article class="panel word" id="ignored" data-also=".gitignore env secrets node_modules">
+        <div class="panel-head"><h2>Ignored files</h2><span class="end"><span class="tag mono">.gitignore</span></span></div>
+        <div class="panel-body"><div class="rows">
+          <div class="folder"><div><b>src/app.ts</b><small>tracked</small></div><span class="status" data-tier="safe"><span class="dot" data-tier="safe"></span>In every commit</span></div>
+          <div class="folder"><div><b>node_modules/</b><small>ignored · npm install rebuilds it</small></div><span class="muted">Rebuildable</span></div>
+          <div class="folder"><div><b>.env.local</b><small>ignored · exists only in this folder</small></div><span class="tag">Has .env.local</span></div>
+        </div>
+          <p class="def">Files git deliberately leaves out, listed in a <code>.gitignore</code> file: installed packages, build output, and files with secrets like <code>.env.local</code>. Because they're never committed, they exist only where they are.</p>
+          <p class="in"><b>In Housekeep</b>A worktree holding ignored files that can't be rebuilt is never removed for you.</p></div>
+      </article>
+
+      <article class="panel word" id="stash" data-also="git stash set aside">
+        <div class="panel-head"><h2>Stash</h2><span class="end"><span class="tag mono">git stash</span></span></div>
+        <div class="panel-body"><div class="rows">
+          <div class="folder"><div><b>stash@{0}</b><small>On feat/checkout: half-done header</small></div><span class="status" data-tier="attention"><span class="dot" data-tier="attention"></span>1 stashed</span></div>
+        </div>
+          <p class="def">Changes set aside to clear your working tree, without committing them. They sit out of sight until someone applies them or drops them, which makes them easy to forget.</p>
+          <p class="in"><b>In Housekeep</b>Counted in Working tree, with a request to review what's in them.</p></div>
+      </article>
+    </section>
+
+    <!-- ============ 2 ============ -->
+    <section class="chapter" id="branches" aria-labelledby="ch-2">
+      <header><span class="kicker">2 of 4</span><h2 id="ch-2">Branches</h2><p>Separate lines of work, how they come back into main, and where they live.</p></header>
+
+      <article class="panel word" id="branch" data-also="feature line">
+        <div class="panel-head"><h2>Branch</h2><span class="end"><span class="tag mono">git branch</span></span></div>
+        <div class="panel-body"><div class="map" data-scene="branch"></div>
+          <p class="def">A separate line of work that starts from main, so you can try things without touching main. When it's done, it's merged back into main.</p>
+          <p class="in"><b>In Housekeep</b>Each branch is a line leaving main on the map, and a row in the branch tables.</p></div>
+      </article>
+
+      <article class="panel word" id="main" data-also="master default branch trunk">
+        <div class="panel-head"><h2>main</h2><span class="end"><span class="tag">default branch</span></span></div>
+        <div class="panel-body"><div class="map" data-scene="main"></div>
+          <p class="def">The main version of your project, and usually the one that goes live. Older projects call it <code>master</code>. Whatever your remote calls its default branch is the one that counts.</p>
+          <p class="in"><b>In Housekeep</b>The thick line across the map.</p></div>
+      </article>
+
+      <article class="panel word" id="merge" data-also="git merge merged combine">
+        <div class="panel-head"><h2>Merge</h2><span class="end"><span class="tag mono">git merge</span></span></div>
+        <div class="panel-body"><div class="map" data-scene="merge"></div>
+          <p class="def">Folding a branch's work into main. Once a branch's work is in main, the branch is merged, and it's safe to delete.</p>
+          <p class="in"><b>In Housekeep</b>Merged branches are dotted lines. Locally and on GitHub, they're what Cleanup counts.</p></div>
+      </article>
+
+      <article class="panel word" id="squash" data-also="squash-merged rebase merge">
+        <div class="panel-head"><h2>Squash merge</h2></div>
+        <div class="panel-body"><div class="map" data-scene="squash"></div>
+          <p class="def">Merging a branch by folding all its commits into one new commit on main. It keeps main's history tidy, but the branch's own commits never land in main, so plain git can't tell the branch is done.</p>
+          <p class="in"><b>In Housekeep</b>Checks the changes, not the commits, and shows these as Squash-merged.</p></div>
+      </article>
+
+      <article class="panel word" id="pull-request" data-also="pr review github checks">
+        <div class="panel-head"><h2>Pull request</h2><span class="end"><span class="tag">PR</span></span></div>
+        <div class="panel-body"><div class="map" data-scene="pull-request"></div>
+          <p class="def">A proposal, on GitHub, to merge a branch into main. Automatic checks and other people can look at it first. GitHub can delete the branch for you once it's merged.</p>
+          <p class="in"><b>In Housekeep</b>Can open one for a branch, and never deletes a branch that has one open.</p></div>
+      </article>
+
+      <article class="panel word" id="worktree" data-also="git worktree prunable codex claude folder">
+        <div class="panel-head"><h2>Worktree</h2><span class="end"><span class="tag mono">git worktree</span></span></div>
+        <div class="panel-body"><div class="map" data-scene="worktree"></div>
+          <p class="def">An extra working folder for the same repo, checked out on a different branch. AI assistants like Codex and Claude Code make these to work in parallel, and they're easy to forget. A prunable worktree is one whose folder has been deleted.</p>
+          <p class="in"><b>In Housekeep</b>A square station on the map. Flagged when it holds work that exists nowhere else, or sits in a temporary folder the system empties.</p></div>
+      </article>
+    </section>
+
+    <!-- ============ 3 ============ -->
+    <section class="chapter" id="the-remote" aria-labelledby="ch-3">
+      <header><span class="kicker">3 of 4</span><h2 id="ch-3">The remote</h2><p>The copy somewhere else, usually GitHub, and how work moves between it and you.</p></header>
+
+      <article class="panel word" id="remote" data-also="origin github gitlab backup">
+        <div class="panel-head"><h2>Remote and origin</h2><span class="end"><span class="tag mono">origin</span></span></div>
+        <div class="panel-body"><div class="map" data-scene="remote"></div>
+          <p class="def">A copy of your repo somewhere else, usually GitHub. <code>origin</code> is the name git gives the one you cloned from. If your computer is lost, the remote is what's left.</p>
+          <p class="in"><b>In Housekeep</b>A remote that's just another folder on the same disk isn't treated as a backup.</p></div>
+      </article>
+
+      <article class="panel word" id="origin-main" data-also="source of truth sync remote-tracking">
+        <div class="panel-head"><h2>origin/main</h2></div>
+        <div class="panel-body"><div class="map" data-scene="origin-main"></div>
+          <p class="def">Your computer's record of what main looks like on the remote, as of the last fetch. It's the source of truth: your own main should match it.</p>
+          <p class="in"><b>In Housekeep</b>When they match, they're one station, an interchange. The Sync check compares them.</p></div>
+      </article>
+
+      <article class="panel word" id="push" data-also="git push unpushed upload">
+        <div class="panel-head"><h2>Push</h2><span class="end"><span class="tag mono">git push</span></span></div>
+        <div class="panel-body"><div class="map" data-scene="push"></div>
+          <p class="def">Copying your commits to the remote. Until you push, they exist only on your computer. Commits that haven't been pushed are unpushed.</p>
+          <p class="in"><b>In Housekeep</b>Unpushed work is an amber line and a red light, because it's the work you'd lose with your computer.</p></div>
+      </article>
+
+      <article class="panel word" id="fetch" data-also="git fetch download check">
+        <div class="panel-head"><h2>Fetch</h2><span class="end"><span class="tag mono">git fetch</span></span></div>
+        <div class="panel-body"><div class="map" data-scene="fetch"></div>
+          <p class="def">Asking the remote what's changed there, without changing any of your own branches or files. It only updates what your computer knows about the remote.</p>
+          <p class="in"><b>In Housekeep</b>Fetches every 10 minutes, or when you press Check now, so its answers aren't stale.</p></div>
+      </article>
+
+      <article class="panel word" id="pull" data-also="git pull fast-forward behind update">
+        <div class="panel-head"><h2>Pull and fast-forward</h2><span class="end"><span class="tag mono">git pull</span></span></div>
+        <div class="panel-body"><div class="map" data-scene="pull"></div>
+          <p class="def">Bringing the remote's new commits into your branch. A fast-forward pull only adds them on top of what you have, so nothing of yours can be lost or rewritten.</p>
+          <p class="in"><b>In Housekeep</b>"4 behind origin/main" comes with a Pull button that only ever fast-forwards.</p></div>
+      </article>
+
+      <article class="panel word" id="upstream" data-also="tracking gone follows">
+        <div class="panel-head"><h2>Upstream</h2></div>
+        <div class="panel-body"><div class="map" data-scene="upstream"></div>
+          <p class="def">The remote branch a local branch follows. Plain <code>git push</code> and <code>git pull</code> use it. "Upstream gone" means that remote branch has been deleted.</p>
+          <p class="in"><b>In Housekeep</b>Flags a branch whose upstream is main, when a plain push from it would change main directly.</p></div>
+      </article>
+    </section>
+
+    <!-- ============ 4 ============ -->
+    <section class="chapter" id="risks" aria-labelledby="ch-4">
+      <header><span class="kicker">4 of 4</span><h2 id="ch-4">Where work goes missing</h2><p>The situations that lose work, and the guard rails against them.</p></header>
+
+      <article class="panel word" id="detached" data-also="head no branch lost commits">
+        <div class="panel-head"><h2>Detached HEAD</h2></div>
+        <div class="panel-body"><div class="rows">
+          <div class="folder"><div><b>Main working tree</b><small>detached HEAD, commits on no branch</small></div><span class="status" data-tier="at-risk"><span class="dot" data-tier="at-risk"></span>2 commits on no branch</span></div>
+          <div class="folder"><div><b>~/code/api-codex</b><small>on feat/search</small></div><span class="status" data-tier="safe"><span class="dot" data-tier="safe"></span>Clean</span></div>
+        </div>
+          <p class="def">A working tree that's on a specific commit instead of a branch. New commits made there belong to no branch, so switching away loses them unless they're saved to one.</p>
+          <p class="in"><b>In Housekeep</b>Counts those commits as unpushed, and saves them to a branch when you push.</p></div>
+      </article>
+
+      <article class="panel word" id="diverged" data-also="ahead behind conflict">
+        <div class="panel-head"><h2>Diverged</h2></div>
+        <div class="panel-body"><div class="map" data-scene="diverged"></div>
+          <p class="def">Your main and the remote's main each have commits the other doesn't, so neither can simply fast-forward. It needs a careful fix, not a button.</p>
+          <p class="in"><b>In Housekeep</b>Gives you a request to hand your AI assistant, instead of guessing.</p></div>
+      </article>
+
+      <article class="panel word" id="force-push" data-also="force --force overwrite">
+        <div class="panel-head"><h2>Force push</h2><span class="end"><span class="tag mono">git push --force</span></span></div>
+        <div class="panel-body"><div class="map" data-scene="force-push"></div>
+          <p class="def">Overwriting what's on the remote with your version, even if it throws away commits that are only there. Sometimes necessary, often how work gets lost.</p>
+          <p class="in"><b>In Housekeep</b>Never used.</p></div>
+      </article>
+
+      <article class="panel word" id="protected" data-also="rules ruleset branch protection">
+        <div class="panel-head"><h2>Protected branch</h2></div>
+        <div class="panel-body"><div class="rows scroll">
+          <table>
+            <thead><tr><th>Branch</th><th>Status</th><th>vs main</th></tr></thead>
+            <tbody>
+              <tr><td><span class="bname"><span>main</span><span class="tag">Protected</span></span></td><td><span class="status" data-tier="safe"><span class="dot" data-tier="safe"></span>Up to date with origin/main</span></td><td class="muted">Default branch</td></tr>
+              <tr><td><span class="bname"><span><i>release/</i>1.4</span><span class="tag">Protected</span></span></td><td><span class="status" data-tier="safe"><span class="dot" data-tier="safe"></span>Merged</span></td><td class="muted">Never offered for deletion</td></tr>
+            </tbody>
+          </table>
+        </div>
+          <p class="def">A branch GitHub guards with rules, such as no deleting and no pushing without a pull request. Usually main, and branches that deploy.</p>
+          <p class="in"><b>In Housekeep</b>Never offered for deletion, whatever it contains.</p></div>
+      </article>
+    </section>
+
+    <footer class="foot">
+      <span>Housekeep · MIT licence</span>
+      <nav aria-label="Footer"><a href="./">Home</a><a href="https://github.com/Dammyjay93/housekeep">GitHub</a></nav>
+    </footer>
+  </div>
+</main>
+</div>
+
+<script type="module">
+import { el, T, SOFT, AMBER, RED, HERE, path, station, depot, interchange, commit, youAreHere, badge, label, branchPath, legend, stagger } from "./map.js";
+
+{
+  const W = 620, TERM = 300;
+  const branch = (fx, mainY, y, stroke, width, dash) => path(branchPath(fx, mainY, y, TERM), stroke, width, dash);
+
+  const svg = (h, draw) => {
+    const lines = el("g", {}), marks = el("g", {}), labels = el("g", {});
+    draw(lines, marks, labels);
+    return el("svg", { width: W, height: h, viewBox: `0 0 ${W} ${h}`, "aria-hidden": "true" }, lines, marks, labels);
+  };
+  const mainLine = (y, lines, marks, labels, note, noteColor, tags) => {
+    lines.append(path(`M6 ${y}H${TERM - 13}`, T, 4.5));
+    marks.append(interchange(TERM, y));
+    labels.append(label(TERM + 28, y, "main", note, noteColor, tags));
+  };
+  // origin/main peeling off above main at a junction, as the map draws a main that's ahead or behind.
+  const split = (behind, ahead, upperNote, lowerNote, lowerColor, upperColor) => svg(98, (lines, marks, labels) => {
+    const top = 22, mainY = 76, junction = 150, row = 54;
+    lines.append(path(`M6 ${mainY}H${junction}`, T, 4.5));
+    lines.append(path(`M${junction} ${mainY}l${row} -${row}H${TERM}`, T, 4.5));
+    lines.append(path(`M${junction} ${mainY}H${TERM}`, ahead ? AMBER : T, 4.5));
+    const mid = (junction + row + TERM) / 2;
+    if (behind) marks.append(badge(mid, top, `+${behind}`, T, "var(--black)"));
+    if (ahead) marks.append(badge(mid, mainY, `+${ahead}`, AMBER, "var(--black)"));
+    marks.append(el("circle", { cx: junction, cy: mainY, r: 4, fill: T, class: "mk" }));
+    marks.append(station(TERM, top, upperColor || T), station(TERM, mainY, ahead ? AMBER : T));
+    labels.append(label(TERM + 22, top, "origin/main", upperNote, upperColor || null));
+    labels.append(label(TERM + 22, mainY, "main (local)", lowerNote, lowerColor || null));
+  });
+  const upToDate = ["main, up to date with origin/main", (s) => s.append(el("path", { d: "M1 6H8", stroke: T, "stroke-width": 3, "stroke-linecap": "round" }), el("rect", { x: 8, y: 1.5, width: 13, height: 9, rx: 4.5, fill: "var(--shell)", stroke: T, "stroke-width": 2 }))];
+  const caption = (text) => { const p = document.createElement("p"); p.className = "caption-row"; p.textContent = text; return p; };
+
+  const SCENES = {
+    repository: () => svg(44, (lines, marks, labels) => {
+      lines.append(path(`M6 22H${TERM}`, T, 4.5));
+      marks.append(commit(90, 22), commit(160, 22), commit(230, 22), station(TERM, 22, T));
+      labels.append(label(TERM + 22, 22, "my-app", "Its whole history, kept in .git"));
+    }),
+    commit: () => svg(44, (lines, marks, labels) => {
+      lines.append(path(`M6 22H${TERM}`, T, 4.5));
+      marks.append(commit(90, 22), commit(160, 22), commit(230, 22), station(TERM, 22, T));
+      labels.append(label(TERM + 22, 22, "Add checkout", "The newest commit on main · f07e"));
+    }),
+    "working-tree": () => svg(44, (lines, marks, labels) => {
+      mainLine(22, lines, marks, labels, "Up to date with origin/main · working tree clean", null, HERE);
+      marks.append(youAreHere(TERM, 22));
+    }),
+    uncommitted: () => svg(44, (lines, marks, labels) => {
+      mainLine(22, lines, marks, labels, "Up to date with origin/main · 3 uncommitted changes", AMBER, HERE);
+      marks.append(youAreHere(TERM, 22));
+    }),
+    branch: () => svg(98, (lines, marks, labels) => {
+      lines.append(branch(180, 22, 76, SOFT, 3.5));
+      mainLine(22, lines, marks, labels, "Up to date with origin/main");
+      marks.append(station(TERM, 76, SOFT));
+      labels.append(label(TERM + 22, 76, "feat/checkout", "Unmerged · 2 commits not in origin/main"));
+    }),
+    main: () => [svg(44, (lines, marks, labels) => mainLine(22, lines, marks, labels, "The default branch on origin")), legend([upToDate])],
+    merge: () => svg(98, (lines, marks, labels) => {
+      lines.append(branch(180, 22, 76, SOFT, 3, "0.5 6"));
+      mainLine(22, lines, marks, labels, "Up to date with origin/main");
+      marks.append(station(TERM, 76, SOFT));
+      labels.append(label(TERM + 22, 76, "fix/cart-total", "Merged into origin/main"));
+    }),
+    squash: () => svg(98, (lines, marks, labels) => {
+      lines.append(branch(180, 22, 76, SOFT, 3, "0.5 6"));
+      mainLine(22, lines, marks, labels, "Up to date with origin/main");
+      marks.append(station(TERM, 76, SOFT));
+      labels.append(label(TERM + 22, 76, "feat/rate-limit", "Squash-merged into origin/main"));
+    }),
+    "pull-request": () => svg(98, (lines, marks, labels) => {
+      lines.append(branch(180, 22, 76, SOFT, 3.5));
+      mainLine(22, lines, marks, labels, "Up to date with origin/main");
+      marks.append(station(TERM, 76, SOFT));
+      labels.append(label(TERM + 22, 76, "feat/search", "Unmerged · 3 commits not in origin/main", null, [["pr #14", "var(--text-3)"]]));
+    }),
+    worktree: () => svg(98, (lines, marks, labels) => {
+      lines.append(branch(180, 22, 76, SOFT, 3.5));
+      mainLine(22, lines, marks, labels, "Up to date with origin/main");
+      marks.append(depot(TERM, 76, SOFT));
+      labels.append(label(TERM + 22, 76, "feat/search", "Checked out in ~/code/api-search", null, [["worktree", "var(--text-3)"]]));
+    }),
+    remote: () => split(0, 0, "The copy on GitHub", "The copy on this Mac"),
+    "origin-main": () => [svg(44, (lines, marks, labels) => mainLine(22, lines, marks, labels, "Up to date with origin/main")), legend([upToDate])],
+    push: () => svg(98, (lines, marks, labels) => {
+      lines.append(branch(180, 22, 76, AMBER, 3.5));
+      mainLine(22, lines, marks, labels, "Up to date with origin/main");
+      marks.append(youAreHere(TERM, 76));
+      labels.append(label(TERM + 22, 76, "feat/checkout-redesign", "3 unpushed commits", AMBER, HERE));
+    }),
+    fetch: () => split(4, 0, "4 commits to pull", "Behind origin/main"),
+    pull: () => [caption("Before"), split(4, 0, "4 commits to pull", "Behind origin/main"), caption("After a fast-forward pull"),
+      svg(44, (lines, marks, labels) => mainLine(22, lines, marks, labels, "Up to date with origin/main"))],
+    upstream: () => svg(152, (lines, marks, labels) => {
+      lines.append(branch(160, 22, 130, SOFT, 3.5), branch(186, 22, 76, SOFT, 3.5));
+      mainLine(22, lines, marks, labels, "Up to date with origin/main");
+      marks.append(station(TERM, 76, SOFT), station(TERM, 130, SOFT));
+      labels.append(label(TERM + 22, 76, "feat/search", "Behind its upstream by 2 commits"));
+      labels.append(label(TERM + 22, 130, "feat/old-idea", "Upstream gone, work not in main"));
+    }),
+    diverged: () => split(4, 1, "4 commits to pull", "1 commit origin/main doesn't have", AMBER),
+    "force-push": () => split(4, 1, "4 commits a force push would erase", "1 commit origin/main doesn't have", AMBER, RED),
+  };
+
+  const maps = [...document.querySelectorAll(".map[data-scene]")];
+  const draw = () => {
+    for (const box of maps) {
+      const made = SCENES[box.dataset.scene]();
+      box.replaceChildren(...(Array.isArray(made) ? made : [made]));
+      stagger(box);
+    }
+  };
+  // Labels are measured in Geist, so draw once it's loaded.
+  document.fonts.ready.then(draw);
+
+  const shown = new IntersectionObserver((items) => {
+    for (const item of items) {
+      if (!item.isIntersecting) continue;
+      item.target.classList.add("shown");
+      shown.unobserve(item.target);
+    }
+  }, { threshold: 0.4 });
+  for (const box of maps) shown.observe(box);
+
+  // The index: every word, grouped by chapter, like the app's project list.
+  const words = [...document.querySelectorAll(".word")];
+  const chapters = [...document.querySelectorAll(".chapter")];
+  const index = document.getElementById("index");
+  const links = new Map();
+  for (const chapter of chapters) {
+    const head = document.createElement("p");
+    head.className = "side-head";
+    head.textContent = chapter.querySelector("h2").textContent;
+    const nav = document.createElement("nav");
+    nav.className = "nav words-nav";
+    nav.setAttribute("aria-label", head.textContent);
+    for (const word of chapter.querySelectorAll(".word")) {
+      const a = document.createElement("a");
+      a.href = `#${word.id}`;
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = word.querySelector(".panel-head h2").textContent;
+      a.append(name);
+      nav.append(a);
+      links.set(word, a);
+    }
+    const group = document.createElement("div");
+    group.className = "side-group";
+    group.append(head, nav);
+    index.append(group);
+  }
+
+  // The word you're reading: lit in the index and named in the bar.
+  const bar = document.getElementById("bar");
+  const main = document.getElementById("main");
+  const crumb = document.getElementById("crumb");
+  const crumbSep = document.getElementById("crumb-sep");
+  const reading = new IntersectionObserver((items) => {
+    for (const item of items) {
+      if (!item.isIntersecting) continue;
+      for (const [word, a] of links) a.setAttribute("aria-current", String(word === item.target));
+      crumb.textContent = item.target.querySelector(".panel-head h2").textContent;
+      crumbSep.hidden = false;
+    }
+  }, { rootMargin: "-30% 0px -65% 0px" });
+  for (const word of words) reading.observe(word);
+  const onScroll = () => bar.classList.toggle("scrolled", Math.max(main.scrollTop, window.scrollY) > 4);
+  main.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  // Find a word: matches the word itself and the words people search for instead.
+  const find = document.getElementById("find");
+  const empty = document.getElementById("empty");
+  const names = words.map((word) => [word, (word.querySelector(".panel-head").textContent + " " + (word.dataset.also || "")).toLowerCase()]);
+  find.addEventListener("input", () => {
+    const q = find.value.trim().toLowerCase();
+    for (const [word, name] of names) {
+      word.hidden = q !== "" && !name.includes(q);
+      links.get(word).hidden = word.hidden;
+    }
+    for (const chapter of chapters) chapter.hidden = !chapter.querySelector(".word:not([hidden])");
+    for (const group of index.children) group.hidden = !group.querySelector("a:not([hidden])");
+    empty.hidden = chapters.some((chapter) => !chapter.hidden);
+    empty.querySelector("b").textContent = find.value.trim();
+    for (const box of maps) if (!box.closest("[hidden]")) box.classList.add("shown");
+  });
+  find.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const first = words.find((word) => !word.hidden);
+      if (first) first.scrollIntoView({ block: "start" });
+    } else if (e.key === "Escape") {
+      find.value = "";
+      find.dispatchEvent(new Event("input"));
+      find.blur();
+    }
+  });
+  document.addEventListener("keydown", (e) => {
+    const typing = e.target instanceof HTMLElement && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
+    if (e.key === "/" && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      find.focus();
+    }
+  });
+}
+</script>
+</body>
+</html>

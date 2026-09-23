@@ -26,6 +26,8 @@ const { SERVER_FILE, STATE_DIR, CONFIG_FILE } = await import("../src/config.js")
 const { githubRepo, hostName, localPathOf, remotesOf } = await import("../src/remote.js");
 const { ACTIONS, ActionError } = await import("../src/actions.js");
 const { menubar } = await import("../src/menubar.js");
+const { loadDemo } = await import("../src/demo.js");
+const { renderDashboard } = await import("../src/render.js");
 type Project = import("../src/model.js").Project;
 type Memo = import("../src/config.js").Memo;
 
@@ -580,5 +582,22 @@ describe("the menu bar", () => {
     assert.match(first ?? "", /^1 need you \| sfimage=circle\.fill/);
     assert.ok(text.includes("weird / name |"), "a | in a name would start SwiftBar's parameters");
     assert.ok(text.includes('bash="/path with space/node" param1="/x/cli.js" param2=copy'));
+  });
+});
+
+describe("the demo", () => {
+  it("looks freshly checked, and mentions nobody's real machine", () => {
+    const demo = loadDemo();
+    assert.ok(Date.now() - new Date(demo.generatedAt).getTime() < 5000);
+    assert.deepEqual(demo.projects.map((p) => p.tier), ["at-risk", "at-risk", "attention", "attention", "safe"]);
+    const text = JSON.stringify(demo);
+    for (const p of demo.projects) assert.ok(p.path.startsWith("/Users/you/code/"), p.path);
+    assert.ok(!text.includes(process.env.HOME ?? "/nonexistent-home"));
+  });
+
+  it("renders a page that answers its own buttons, in the bundled font", () => {
+    const html = renderDashboard(loadDemo(), { token: "demo", openers: [], demo: true });
+    assert.ok(html.includes('"demo":true'));
+    assert.ok(html.includes("font/woff2"), "the demo page uses Geist, whatever font this machine prefers");
   });
 });

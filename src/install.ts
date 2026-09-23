@@ -36,7 +36,7 @@ export async function install(): Promise<string[]> {
   const cli = cliPath();
   // npx runs from a cache folder npm may clear; a login item pointing there would break later.
   if (cli.split(sep).includes("_npx")) {
-    return ["Install Housekeep first so it has a permanent home: npm install -g housekeep, then run housekeep install."];
+    return ["Install Housekeep first so it has a permanent home: npm install -g git-housekeep, then run housekeep install."];
   }
   const node = process.execPath;
   const out: string[] = [];

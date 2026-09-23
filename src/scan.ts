@@ -786,7 +786,7 @@ function sameDisk(repo: string, localPath: string | null): boolean {
 
 const slugOf = (name: string): string => "p-" + name.toLowerCase().replace(/[^a-z0-9]/g, "-");
 
-export async function buildProject(repo: string, name: string, everyMs: number, force: boolean, memo: Memo): Promise<Project> {
+export async function buildProject(repo: string, name: string, everyMs: number, force: boolean, memo: Memo, offline = false): Promise<Project> {
   const cdir = await commonDir(repo);
   if (!cdir) {
     return {
@@ -803,7 +803,8 @@ export async function buildProject(repo: string, name: string, everyMs: number, 
   let cached = metaFromMemo(memo.github[repo]);
   let rem = await remotesOf(repo, cached?.parent ?? null);
   const due = Boolean(rem.truth) && fetchDue(cdir, repo, everyMs, force, memo);
-  if (rem.truth && (due || !cached)) {
+  // Offline means no network at all: GitHub's answers come only from what was remembered.
+  if (rem.truth && !offline && (due || !cached)) {
     const fresh = await githubMeta(rem);
     // A failed ask keeps the last good answer for a day rather than dropping every safeguard.
     if (fresh.ok || !cached?.ok || Date.now() - (cached.at ?? 0) > 86_400_000) {
@@ -911,7 +912,7 @@ export async function scan(opts: ScanOptions = {}): Promise<Snapshot> {
       ({ roots, watch, found, blocked } = await discover(cfg));
     }
     const force = Boolean(opts.force) && !opts.offline;
-    const projects = await pool(watch, 6, (r) => buildProject(r, projectName(r, roots), everyMs(cfg, opts), force, memo));
+    const projects = await pool(watch, 6, (r) => buildProject(r, projectName(r, roots), everyMs(cfg, opts), force, memo, Boolean(opts.offline)));
     saveMemo(memo);
     saveMergeCache();
     const rank = { "at-risk": 0, attention: 1, safe: 2 } as const;

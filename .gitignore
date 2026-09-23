@@ -1,3 +1,6 @@
 node_modules/
 dist/
 .DS_Store
+.demo-build/
+site/demo.html
+site/fonts/

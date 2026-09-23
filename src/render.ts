@@ -23,7 +23,7 @@ interface Face {
   fill?: boolean;
 }
 
-let fontCss: string | null = null;
+const fontCss = new Map<boolean, string>();
 
 /**
  * The interface font as embedded @font-face rules. To use your own, put its files in
@@ -31,10 +31,11 @@ let fontCss: string | null = null;
  * "labelLift": "0px"}. A face can carry a unicode "range"; one marked "fill" catches characters the
  * others lack; labelLift nudges button labels for fonts whose letters sit low.
  */
-function fonts(): string {
-  if (fontCss !== null) return fontCss;
+function fonts(bundledOnly: boolean): string {
+  const known = fontCss.get(bundledOnly);
+  if (known !== undefined) return known;
   const customDir = join(CONFIG_DIR, "fonts");
-  const custom = readJson(join(customDir, "faces.json"));
+  const custom = bundledOnly ? undefined : readJson(join(customDir, "faces.json"));
   let dir = join(ASSETS, "fonts");
   let faces = DEFAULT_FACES;
   let lift = "0px";
@@ -56,15 +57,26 @@ function fonts(): string {
     const src = `url(data:${kind[0]};base64,${readFileSync(path).toString("base64")}) format('${kind[1]}')`;
     rules.push(`@font-face{font-family:"${family}";src:${src};font-weight:${face.weight};font-display:block;${face.range ? `unicode-range:${face.range};` : ""}}`);
   }
-  fontCss = rules.join("\n");
-  return fontCss;
+  const css = rules.join("\n");
+  fontCss.set(bundledOnly, css);
+  return css;
 }
 
-/** `live` carries the server's token; without it the page is a read-only snapshot. */
-export function renderDashboard(data: Snapshot, live: { token: string; openers: string[] } | null): string {
+export interface LivePage {
+  token: string;
+  openers: string[];
+  /** Made-up projects: buttons show what they'd do, and the page answers them itself. */
+  demo?: boolean;
+}
+
+/**
+ * `live` carries the server's token; without it the page is a read-only snapshot. A demo page always
+ * uses the bundled font, since it's shared (the website) rather than yours.
+ */
+export function renderDashboard(data: Snapshot, live: LivePage | null): string {
   const embed = (value: unknown): string => JSON.stringify(value).replace(/</g, "\\u003c");
   return readFileSync(TEMPLATE, "utf8")
-    .replace("/*__FONTS__*/", () => fonts())
+    .replace("/*__FONTS__*/", () => fonts(Boolean(live?.demo)))
     .replace("/*__HOUSEKEEP_LIVE__*/null", () => embed(live))
     .replace("/*__HOUSEKEEP_DATA__*/null", () => embed(data));
 }

@@ -39,7 +39,7 @@ function verdict(c: Paint, tier: Tier): string {
 
 /** A short phrase per unhealthy signal, e.g. "5 behind origin/main". */
 function brief(p: Project, s: Signal): string {
-  if (s.key === "sync" && p.main.remoteRef && /^\d+ (behind|ahead)$/.test(s.cell)) return `${s.cell} ${p.main.remoteRef}`;
+  if (s.key === "sync" && p.main.remoteRef && /^\d+ (behind|ahead)$/.test(s.cell)) return `${s.cell.replace("ahead", "ahead of")} ${p.main.remoteRef}`;
   if (s.key === "sync" && s.cell === "Diverged" && p.main.remoteRef) return `diverged from ${p.main.remoteRef}`;
   if (s.key === "cleanup") return s.headline;
   return s.cell.charAt(0).toLowerCase() + s.cell.slice(1);
@@ -65,10 +65,11 @@ export function summaryReport(data: Snapshot, c: Paint): string {
       lines.push(`    ${c.dim(p.error)}`, "");
       continue;
     }
+    // What to do leads; what was found follows, quieter, under it.
     const issues = p.signals.filter((s) => s.tier !== "safe").map((s) => brief(p, s));
-    if (issues.length) lines.push(`    ${issues.join(c.dim("  ·  "))}`);
-    if (p.fetch.error) lines.push(`    ${c.dim(p.fetch.error)}`);
     if (p.next && p.next.tier !== "safe") lines.push(`    ${c.dim("→")} ${p.next.title}`);
+    if (issues.length) lines.push(`      ${c.dim(issues.join("  ·  "))}`);
+    if (p.fetch.error) lines.push(`      ${c.dim(p.fetch.error)}`);
     if (p.tier !== "safe") lines.push("");
   }
   if (data.projects.some((p) => p.tier === "safe")) lines.push("");

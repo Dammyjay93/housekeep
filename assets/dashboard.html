@@ -43,6 +43,17 @@ button { font: inherit; color: inherit; }
 :focus-visible { outline: 1.5px solid var(--text-2); outline-offset: 2px; }
 .mono { font-family: var(--mono); font-size: 12px; letter-spacing: -0.01em; }
 [hidden] { display: none !important; }
+/* Scrollbars: a hairline thumb that shows while something scrolls, then hides again.
+   Chrome and Safari take the ::-webkit-scrollbar rules; Firefox takes the standard ones. */
+*::-webkit-scrollbar { width: 6px; height: 6px; background: transparent; }
+*::-webkit-scrollbar-track, *::-webkit-scrollbar-corner { background: transparent; }
+*::-webkit-scrollbar-thumb { border: 1px solid transparent; border-radius: 3px; background: transparent padding-box; }
+.scrolling::-webkit-scrollbar-thumb, *::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.18); }
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+  .scrolling { scrollbar-color: rgba(255, 255, 255, 0.18) transparent; }
+}
+
 
 [data-tier="at-risk"] { --c: var(--red); }
 [data-tier="attention"] { --c: var(--amber); }
@@ -59,8 +70,10 @@ button { font: inherit; color: inherit; }
 .app { display: grid; grid-template-columns: 248px minmax(0, 1fr); height: 100vh; overflow: hidden; }
 .side { height: 100vh; overflow-y: auto; display: flex; flex-direction: column; padding: 20px 12px 16px; }
 .brand { display: flex; align-items: center; gap: 10px; padding: 6px 10px 26px; font-size: 15px; font-weight: 500; letter-spacing: -0.01em; }
-.brand .dot { width: 8px; height: 8px; }
-.nav { display: grid; gap: 1px; }
+/* The mark: main arriving at the map's interchange, lit with the worst project's light. */
+.brand .logo { flex: none; width: 22px; height: 22px; margin: -2px 0; }
+.brand .logo circle { transition: fill 500ms var(--ease); }
+.nav { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; }
 .nav + .nav { margin-top: 18px; }
 .nav a { display: flex; align-items: center; gap: 11px; min-height: 36px; padding: 0 12px; border-radius: 10px; color: var(--text-2); font-size: 13.5px; transition: background-color 120ms var(--ease), color 120ms var(--ease); }
 .nav a:hover { color: var(--text); background: var(--layer-1); }
@@ -71,7 +84,7 @@ button { font: inherit; color: inherit; }
 
 /* The shell: inset from the top, right and bottom, scrolling on its own so its edges never move. */
 .main { min-width: 0; margin: 8px 8px 8px 0; height: calc(100vh - 16px); overflow-y: auto; border-radius: 22px; background: var(--shell); border: 1px solid var(--line); overscroll-behavior: contain; }
-.bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: var(--edge) var(--gutter) calc(var(--edge) / 2); background: var(--shell); box-shadow: 0 1px 0 transparent; transition: box-shadow 160ms var(--ease); }
+.bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: calc(var(--edge) * 0.75) var(--gutter); background: var(--shell); box-shadow: 0 1px 0 transparent; transition: box-shadow 160ms var(--ease); }
 .bar.scrolled { box-shadow: 0 1px 0 var(--line); }
 .crumbs { display: flex; align-items: center; gap: 9px; min-width: 0; color: var(--text-3); font-size: 13.5px; }
 .crumbs a:hover { color: var(--text-2); }
@@ -79,7 +92,7 @@ button { font: inherit; color: inherit; }
 .bar-right { display: flex; align-items: center; gap: 16px; color: var(--text-3); font-size: 12.5px; white-space: nowrap; }
 .live { display: inline-flex; align-items: center; gap: 8px; padding: 0; border: 0; background: none; color: var(--text-3); font-size: 12.5px; }
 .live .dot { background: var(--text-3); }
-.live[data-state="live"] .dot { background: var(--green); }
+.live[data-state="live"] .dot, .live[data-state="demo"] .dot { background: var(--green); }
 .live[data-state="reconnecting"] .dot, .live[data-state="restart"] .dot { background: var(--amber); }
 .live[data-state="restart"] { color: var(--text-2); cursor: pointer; }
 
@@ -126,7 +139,8 @@ button { font: inherit; color: inherit; }
 .menu-list .btn { border-radius: 11px; height: 34px; padding: 0 12px; }
 
 /* ---------- content ---------- */
-.view { padding: calc(var(--edge) / 2) var(--gutter) var(--edge); display: grid; gap: 16px; align-content: start; }
+/* The bar pads evenly so it balances once it sticks; the view makes up the rest of the gap. */
+.view { padding: calc(var(--edge) / 4) var(--gutter) var(--edge); display: grid; gap: 16px; align-content: start; }
 .view.enter { animation: enter 220ms var(--ease) both; }
 @keyframes enter { from { opacity: 0; transform: translateY(4px); } }
 .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -256,29 +270,33 @@ dialog.confirm::backdrop { background: rgba(0, 0, 0, 0.72); }
 .term { display: inline-flex; align-items: center; gap: 7px; }
 
 /* ---------- onboarding: a modal with the drawing in one panel and the words in the next ---------- */
-dialog.ob { width: min(720px, calc(100vw - 32px)); max-width: none; max-height: calc(100vh - 32px); margin: auto; padding: 8px; border: 0; border-radius: 28px; background: var(--layer-1); color: var(--text); overflow: hidden; box-shadow: inset 0 0 0 1px var(--line-2), 0 40px 120px rgba(0, 0, 0, 0.85); }
+dialog.ob { width: min(560px, calc(100vw - 32px)); max-width: none; max-height: calc(100vh - 32px); margin: auto; padding: 8px; border: 0; border-radius: 28px; background: var(--layer-1); color: var(--text); overflow: hidden; box-shadow: inset 0 0 0 1px var(--line-2), 0 40px 120px rgba(0, 0, 0, 0.85); }
 dialog.ob::backdrop { background: rgba(0, 0, 0, 0.74); backdrop-filter: blur(8px); }
 dialog.ob:focus { outline: none; }
 dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; animation: ob-open 420ms var(--ease) both; }
 @keyframes ob-open { from { opacity: 0; transform: translateY(10px) scale(0.985); } }
-.ob-stage { position: relative; height: 316px; border-radius: 20px; background: var(--shell); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.ob-stage { position: relative; height: 248px; border-radius: 20px; background: var(--shell); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
 .ob-skip { position: absolute; top: 12px; right: 12px; z-index: 1; }
-.ob-art { display: grid; place-items: center; width: 100%; height: 100%; padding: 28px 24px; }
-.ob-text { display: grid; align-content: start; padding: 26px 26px 22px; border-radius: 20px; box-shadow: inset 0 0 0 1px var(--line); overflow-y: auto; }
-.ob-copy { min-height: 96px; }
-.ob-copy h1 { margin: 0; font-size: 26px; line-height: 1.15; font-weight: 500; letter-spacing: -0.025em; text-wrap: balance; }
-.ob-copy p { margin: 8px 0 0; max-width: 560px; color: var(--text-2); font-size: 15px; line-height: 1.55; text-wrap: pretty; }
-.ob-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 26px; }
+.ob-art { display: grid; place-items: center; width: 100%; height: 100%; padding: 42px 20px 14px; }
+/* Each step's drawing, sized to the compact stage. */
+.ob-art .orb { width: 184px; height: 184px; }
+.ob-text { display: grid; align-content: start; padding: 22px 22px 18px; border-radius: 20px; box-shadow: inset 0 0 0 1px var(--line); overflow-y: auto; }
+.ob-copy { min-height: 84px; }
+.ob-copy h1 { margin: 0; font-size: 21px; line-height: 1.2; font-weight: 500; letter-spacing: -0.025em; text-wrap: balance; }
+.ob-copy p { margin: 6px 0 0; max-width: 460px; color: var(--text-2); font-size: 14px; line-height: 1.55; text-wrap: pretty; }
+.ob-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; }
 .ob-progress { display: flex; gap: 6px; }
 .ob-progress i { position: relative; width: 28px; height: 3px; border-radius: 3px; background: var(--layer-3); overflow: hidden; }
 .ob-progress i::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--text-2); transform: scaleX(0); transform-origin: left; transition: transform 520ms var(--ease); }
 .ob-progress i.done::after { transform: scaleX(1); }
-.ob-actions { display: flex; align-items: center; gap: 8px; min-height: 40px; }
-.ob-actions .btn { height: 40px; padding: 0 20px; font-size: 13.5px; }
-.ob-actions .btn.primary:has(> svg.idle:first-child) { padding-left: 18px; }
-.ob-hint { margin-top: 12px; color: var(--text-3); font-size: 12.5px; }
-.ob-hint button { padding: 0; border: 0; background: none; color: var(--text-2); font: inherit; text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; cursor: pointer; }
-.ob-hint pre { margin: 10px 0 0; width: max-content; max-width: 100%; padding: 10px 14px; border-radius: 12px; background: var(--shell); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); font: 11.5px/1.6 var(--mono); white-space: pre-wrap; }
+.ob-actions { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+.ob-actions .btn { height: 36px; padding: 0 18px; font-size: 13px; }
+.ob-actions .btn.primary:has(> svg.idle:first-child) { padding-left: 16px; }
+/* The way on: two rings ripple out from "Show me around", half a beat apart, like the light's rings in the first step. */
+.btn.beckon { position: relative; }
+.btn.beckon::before, .btn.beckon::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 1.5px solid rgba(237, 237, 237, 0.6); opacity: 0; pointer-events: none; animation: ripple 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+.btn.beckon::after { animation-delay: 1.2s; }
+@keyframes ripple { 0% { inset: 0; opacity: 0.7; } 100% { inset: -12px; opacity: 0; } }
 
 /* staggered entrance: every step's pieces arrive in reading order */
 .ob-in > * { animation: ob-rise 560ms var(--ease) both; }
@@ -305,7 +323,7 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
 
 /* 2 · the check */
 .scan { width: min(440px, 100%); display: grid; text-align: left; }
-.scan-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 14px; height: 40px; border-top: 1px solid var(--line); opacity: 0; transform: translateY(6px); transition: opacity 360ms var(--ease), transform 360ms var(--ease); }
+.scan-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 14px; height: 32px; border-top: 1px solid var(--line); opacity: 0; transform: translateY(6px); transition: opacity 360ms var(--ease), transform 360ms var(--ease); }
 .scan-row:first-child { border-top: 0; }
 .scan-row.shown { opacity: 1; transform: none; }
 .scan-row b { font-size: 14px; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -316,18 +334,18 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
 .scan-row.done .spinner { display: none; }
 .scan-row .dot { transform: scale(0); transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1); }
 .scan-row.done .dot { transform: scale(1); }
-.scan-more { height: 34px; display: flex; align-items: center; padding-left: 32px; border-top: 1px solid var(--line); color: var(--text-3); font-size: 13px; opacity: 0; transition: opacity 360ms var(--ease); }
+.scan-more { height: 32px; display: flex; align-items: center; padding-left: 32px; border-top: 1px solid var(--line); color: var(--text-3); font-size: 13px; opacity: 0; transition: opacity 360ms var(--ease); }
 .scan-more.shown { opacity: 1; }
 
 /* 3 · the menu bar */
-.mb { position: relative; width: min(460px, 100%); height: 216px; }
+.mb { position: relative; width: min(460px, 100%); height: 192px; }
 .mb-bar { display: flex; align-items: center; gap: 18px; height: 30px; padding: 0 14px; border-radius: 9px; background: #1b1b1d; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); color: var(--text-2); font-size: 12.5px; text-align: left; }
 .mb-bar b { color: var(--text); font-weight: 500; }
 .mb-right { display: flex; align-items: center; gap: 14px; margin-left: auto; color: var(--text-2); }
 .mb-right svg { width: 15px; height: 15px; }
 .mb-gl { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); color: var(--text); }
 .mb-gl i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px color-mix(in srgb, var(--c) 60%, transparent); transition: background-color 500ms var(--ease), box-shadow 500ms var(--ease); }
-.mb-menu { position: absolute; top: 38px; right: 70px; width: 236px; padding: 6px; border-radius: 12px; background: #1f1f22; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.6); text-align: left; transform-origin: top right; animation: mb-open 520ms var(--ease) 320ms both; }
+.mb-menu { position: absolute; top: 36px; right: 70px; width: 236px; padding: 6px; border-radius: 12px; background: #1f1f22; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.6); text-align: left; transform-origin: top right; animation: mb-open 520ms var(--ease) 320ms both; }
 @keyframes mb-open { from { opacity: 0; transform: scale(0.96) translateY(-4px); } }
 .mb-menu .h { padding: 6px 10px 8px; color: var(--text); font-size: 12.5px; font-weight: 500; border-bottom: 1px solid rgba(255, 255, 255, 0.06); margin-bottom: 4px; }
 .mb-menu .r { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 10px; border-radius: 6px; color: var(--text-2); font-size: 12.5px; }
@@ -335,28 +353,13 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
 .mb-caption { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; }
 .mb-caption > span { display: inline-flex; align-items: center; gap: 9px; height: 32px; padding: 0 14px; border-radius: 999px; background: var(--layer-1); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); font-size: 13px; }
 
-/* 4 · the first fix */
-.fix { overflow: visible; }
-.fix .commit { transform-box: fill-box; transform-origin: center; animation: bob 2.4s ease-in-out infinite; }
-.fix .commit:nth-of-type(2) { animation-delay: 0.3s; }
-.fix .commit:nth-of-type(3) { animation-delay: 0.6s; }
-@keyframes bob { 50% { transform: translateY(-3px); } }
-.fix .arrived { transform-box: fill-box; transform-origin: center; opacity: 0; }
-.fix.done .arrived { animation: pop-in 520ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-.fix.done .arrived:nth-of-type(2) { animation-delay: 150ms; }
-.fix.done .arrived:nth-of-type(3) { animation-delay: 300ms; }
-.fix.launch .commit { animation: fade-out 300ms var(--ease) forwards; }
-@keyframes pop-in { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: none; } }
-@keyframes fade-out { to { opacity: 0; } }
-.fix .tick { stroke-dasharray: 24; stroke-dashoffset: 24; }
-.fix.done .tick { transition: stroke-dashoffset 520ms var(--ease) 420ms; stroke-dashoffset: 0; }
-.fix .badge { opacity: 0; transform-box: fill-box; transform-origin: center; }
-.fix.done .badge { animation: pop-in 480ms cubic-bezier(0.34, 1.56, 0.64, 1) 260ms forwards; }
-.fix .route { stroke-dasharray: 3 6; animation: march 1.2s linear infinite; }
-@keyframes march { to { stroke-dashoffset: -18; } }
 
 .tour-shield { position: fixed; inset: 0; z-index: 38; }
 .tour-spot { position: fixed; z-index: 39; border-radius: 16px; pointer-events: none; box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.28), 0 0 0 200vmax rgba(0, 0, 0, 0.74); transition: top 300ms var(--ease), left 300ms var(--ease), width 300ms var(--ease), height 300ms var(--ease); }
+/* The spotlit part ripples the same way, its corners growing with the ring so the shape holds. */
+.tour-spot::before, .tour-spot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 2px solid rgba(255, 255, 255, 0.7); opacity: 0; animation: spot-ripple 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+.tour-spot::after { animation-delay: 1.2s; }
+@keyframes spot-ripple { 0% { inset: 0; border-radius: 16px; opacity: 0.9; } 100% { inset: -14px; border-radius: 30px; opacity: 0; } }
 .tour-card { position: fixed; z-index: 40; width: 316px; padding: 18px 18px 14px; border-radius: 18px; background: var(--layer-3); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2), 0 24px 60px rgba(0, 0, 0, 0.7); transition: top 300ms var(--ease), left 300ms var(--ease); }
 .tour-card h3 { margin: 0; font-size: 15px; font-weight: 500; }
 .tour-card p { margin: 6px 0 0; color: var(--text-2); font-size: 13.5px; line-height: 1.5; }
@@ -364,10 +367,9 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
 .tour-foot > span { color: var(--text-3); font-size: 12px; }
 .tour-foot .row { display: flex; gap: 8px; }
 @media (max-width: 860px) {
-  .ob-stage { height: 250px; }
-  .ob-text { padding: 20px 18px 18px; }
-  .ob-copy h1 { font-size: 22px; }
-  .ob-copy p { font-size: 14.5px; }
+  .ob-text { padding: 18px 16px 16px; }
+  .ob-copy h1 { font-size: 19px; }
+  .ob-copy p { font-size: 13.5px; }
   .ob-progress i { width: 20px; }
   .mb-bar .menu-name { display: none; }
   .mb-menu { right: 8px; }
@@ -375,13 +377,12 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
   .tour-card { width: calc(100vw - 32px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  dialog.ob[open], .ob-in > *, .ob-out > *, .ob-swap, .mb-menu { animation: none; }
-  .orb .glow, .orb .pulse, .orb .orbit, .fix .commit, .fix .route, .scan-row .spinner { animation: none; }
+  dialog.ob[open], .ob-in > *, .ob-out > *, .ob-swap, .mb-menu, .btn.beckon::before, .btn.beckon::after { animation: none; }
+  .orb .glow, .orb .pulse, .orb .orbit, .scan-row .spinner { animation: none; }
   .orb .pulse { opacity: 0; }
   .scan-row, .scan-row .v, .scan-row .dot, .scan-more, .ob-progress i::after, .mb-gl i { transition: none; }
-  .fix.done .arrived, .fix.done .badge { animation: none; opacity: 1; }
-  .fix.done .tick { transition: none; }
   .tour-spot, .tour-card { transition: none; }
+  .tour-spot::before, .tour-spot::after { animation: none; }
 }
 
 /* overview plan */
@@ -421,7 +422,7 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
 <body>
 <div class="app">
   <aside class="side" aria-label="Projects">
-    <div class="brand"><span class="dot" id="brand-dot" data-tier="unknown"></span>Housekeep</div>
+    <div class="brand"><svg class="logo" id="brand-dot" data-tier="unknown" viewBox="0 0 32 32" aria-hidden="true"><path d="M3.5 16H12" stroke="var(--track)" stroke-width="3.5" stroke-linecap="round"/><rect x="11" y="10.5" width="18" height="11" rx="5.5" fill="none" stroke="var(--track)" stroke-width="3"/><circle cx="23.5" cy="16" r="2.4" fill="var(--c)"/></svg>Housekeep</div>
     <nav class="nav" id="nav-top"></nav>
     <nav class="nav" id="nav-projects"></nav>
     <div class="side-tools" id="side-tools"></div>
@@ -451,6 +452,16 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
 <script>
 (() => {
   "use strict";
+  // Scrollbars show while something scrolls, and hide again 800ms after it stops.
+  const hideAfter = new WeakMap();
+  document.addEventListener("scroll", (e) => {
+    const box = e.target === document ? document.documentElement : e.target;
+    if (!(box instanceof Element)) return;
+    box.classList.add("scrolling");
+    clearTimeout(hideAfter.get(box));
+    hideAfter.set(box, setTimeout(() => box.classList.remove("scrolling"), 800));
+  }, { capture: true, passive: true });
+
   // LIVE is set when the page comes from the Housekeep server: updates stream in and buttons work.
   // Without it (the file in state/), the page is a read-only snapshot.
   const LIVE = JSON.parse(document.getElementById("housekeep-live").textContent);
@@ -462,7 +473,6 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
   const OPENER_LABEL = { files: /Mac/.test(navigator.userAgent) ? "Finder" : "Files", terminal: "Terminal", vscode: "VS Code", cursor: "Cursor" };
   // The browser runs on the machine being checked, so it knows what to call it.
   const HERE = /Mac/.test(navigator.userAgent) ? "this Mac" : "this computer";
-  const HERE_CAP = HERE.charAt(0).toUpperCase() + HERE.slice(1);
   const DEPLOY = "If this project goes live whenever main changes (Vercel, Netlify and similar hosts do this), this can put it live.";
   // Where work lives online: a project's own server, or across all projects the one they share.
   const hostAll = () => {
@@ -542,7 +552,6 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
     ...ICONS[name].map((d) => el("svg:path", { d })));
   const spinner = () => el("svg:svg", { class: "spin", viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", "stroke-width": 1.5, "stroke-linecap": "round", "aria-hidden": "true" }, el("svg:path", { d: "M8 2.5a5.5 5.5 0 1 1-5.5 5.5" }));
   const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + "s")}`;
-  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
   const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   const shortPath = (full) => { const parts = full.replace(/^\/Users\/[^/]+/, "~").split("/"); return parts.length > 4 ? "…/" + parts.slice(-3).join("/") : parts.join("/"); };
   const since = (seconds) => {
@@ -585,7 +594,25 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
 
   /* ---------- talking to the server ---------- */
 
+  // Demo mode: made-up projects, and buttons that show what they'd do without doing it.
+  const DEMO = Boolean(LIVE && LIVE.demo);
+  // A demo page can be saved and served for months: keep it looking freshly checked.
+  if (DEMO && data.generatedAt) {
+    const shift = Date.now() - new Date(data.generatedAt).getTime();
+    const later = (iso) => iso ? new Date(new Date(iso).getTime() + shift).toISOString() : iso;
+    data.generatedAt = later(data.generatedAt);
+    for (const p of data.projects || []) {
+      if (p.fetch) p.fetch.at = later(p.fetch.at);
+      for (const b of [...(p.branches || []), ...(p.remoteBranches || [])]) if (b.lastCommit) b.lastCommit += Math.round(shift / 1000);
+    }
+  }
+  const DEMO_DONE = "Demo: nothing was changed. On your own repos, this runs for real.";
+
   async function api(path, body) {
+    if (DEMO) {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      return path.startsWith("/api/check") ? data : { ok: true, message: DEMO_DONE, output: "" };
+    }
     const response = await fetch(path, {
       method: body ? "POST" : "GET",
       headers: { "Content-Type": "application/json", "X-Housekeep-Token": LIVE.token },
@@ -599,8 +626,8 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
   const liveButton = document.getElementById("live");
   function setLive(state) {
     liveButton.dataset.state = state;
-    liveButton.querySelector(".word").textContent = { live: "Live", reconnecting: "Reconnecting", restart: "Reload", snapshot: "Snapshot" }[state];
-    liveButton.title = { live: "Updates arrive as your projects change", reconnecting: "Lost the connection to Housekeep. Trying again.", restart: "Housekeep restarted. Reload to reconnect.", snapshot: "A saved copy. Run housekeep open for live updates and buttons." }[state];
+    liveButton.querySelector(".word").textContent = { live: "Live", reconnecting: "Reconnecting", restart: "Reload", snapshot: "Snapshot", demo: "Demo" }[state];
+    liveButton.title = { live: "Updates arrive as your projects change", reconnecting: "Lost the connection to Housekeep. Trying again.", restart: "Housekeep restarted. Reload to reconnect.", snapshot: "A saved copy. Run housekeep open for live updates and buttons.", demo: "Made-up projects, so you can try every button. Nothing on your computer is read or changed." }[state];
   }
   liveButton.addEventListener("click", () => { if (liveButton.dataset.state === "restart") location.reload(); });
 
@@ -866,7 +893,7 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
     document.getElementById("brand-dot").dataset.tier = worst;
     document.title = data.error ? "Housekeep · couldn't check" : need.length ? `Housekeep · ${need.length} need${need.length === 1 ? "s" : ""} you` : "Housekeep · all clear";
     const color = css({ "at-risk": "--red", attention: "--amber", safe: "--green" }[worst] || "--text-3");
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#000"/><circle cx="16" cy="16" r="6" fill="${color}"/></svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#000"/><g transform="translate(4 4) scale(0.75)"><path d="M3.5 16H12" stroke="#d9d9d9" stroke-width="3.5" stroke-linecap="round"/><rect x="11" y="10.5" width="18" height="11" rx="5.5" fill="#000" stroke="#d9d9d9" stroke-width="3"/><circle cx="23.5" cy="16" r="2.4" fill="${color}"/></g></svg>`;
     document.getElementById("favicon").href = "data:image/svg+xml," + encodeURIComponent(svg);
     renderChecked();
     document.getElementById("nav-top").replaceChildren(
@@ -1352,7 +1379,7 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
     return [head, strip(cells), next, map, branchesPanel(p), remotePanel(p), worktreesPanel(p)];
   }
 
-  /* ---------- onboarding: four full-screen moments, then a short tour ---------- */
+  /* ---------- onboarding: the light, the check, the menu bar, where to start; then a short tour ---------- */
 
   const ONBOARDED = "housekeep.onboarded";
   const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1423,47 +1450,6 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
     return art;
   }
 
-  // 4 · The first fix: commits waiting on the Mac, flying to the server when you back them up.
-  const ROUTE = "M178 70 C 226 10, 282 10, 322 66";
-  function fixArt(count, host) {
-    const n = Math.max(1, Math.min(3, count));
-    const xs = [[112], [100, 124], [88, 112, 136]][n - 1];
-    const flyer = (i) => el("svg:circle", { class: "flyer", r: 6, fill: "var(--shell)", stroke: "var(--amber)", "stroke-width": 3, style: "opacity:0" },
-      el("svg:animateMotion", { dur: "0.95s", begin: "indefinite", fill: "freeze", path: ROUTE, calcMode: "spline", keyTimes: "0;1", keySplines: "0.45 0 0.15 1", id: `flight-${i}` }));
-    return el("svg:svg", { class: "fix", viewBox: "0 0 460 200", width: 460, height: 200, "aria-hidden": "true" },
-      el("svg:path", { class: "route", d: ROUTE, fill: "none", stroke: "var(--text-3)", "stroke-width": 1.5, "stroke-linecap": "round" }),
-      // This Mac
-      el("svg:rect", { x: 46, y: 40, width: 132, height: 86, rx: 10, fill: "var(--layer-2)", stroke: "var(--line-2)", "stroke-width": 1.5 }),
-      el("svg:rect", { x: 54, y: 48, width: 116, height: 70, rx: 5, fill: "var(--black)" }),
-      el("svg:path", { d: "M30 134H194a2 2 0 0 1-2 6H32a2 2 0 0 1-2-6z", fill: "var(--layer-2)", stroke: "var(--line-2)", "stroke-width": 1.5, "stroke-linejoin": "round" }),
-      el("svg:g", {}, xs.map((x) => el("svg:circle", { class: "commit", cx: x, cy: 83, r: 6, fill: "var(--shell)", stroke: "var(--amber)", "stroke-width": 3 }))),
-      el("svg:text", { x: 112, y: 172, "text-anchor": "middle", "font-size": 13, "font-family": "var(--font)", fill: "var(--text-2)", text: HERE_CAP }),
-      // The server
-      el("svg:rect", { x: 314, y: 44, width: 124, height: 38, rx: 11, fill: "var(--layer-2)", stroke: "var(--line-2)", "stroke-width": 1.5 }),
-      el("svg:rect", { x: 314, y: 90, width: 124, height: 38, rx: 11, fill: "var(--layer-2)", stroke: "var(--line-2)", "stroke-width": 1.5 }),
-      el("svg:circle", { cx: 332, cy: 109, r: 2.5, fill: "var(--text-3)" }),
-      el("svg:rect", { x: 346, y: 106, width: 56, height: 6, rx: 3, fill: "var(--layer-3)" }),
-      el("svg:circle", { cx: 332, cy: 63, r: 2.5, fill: "var(--text-3)" }),
-      el("svg:g", {}, [360, 384, 408].slice(0, n).map((x) => el("svg:circle", { class: "arrived", cx: x, cy: 63, r: 6, fill: "var(--shell)", stroke: "var(--green)", "stroke-width": 3 }))),
-      el("svg:text", { x: 376, y: 172, "text-anchor": "middle", "font-size": 13, "font-family": "var(--font)", fill: "var(--text-2)", text: cap(host) }),
-      el("svg:circle", { class: "badge", cx: 438, cy: 44, r: 11, fill: "var(--green)" }),
-      el("svg:path", { class: "tick", d: "M433 44.5l3.4 3.4 6-7", fill: "none", stroke: "var(--black)", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round" }),
-      ...xs.map((_, i) => flyer(i)));
-  }
-  async function launch(svg) {
-    svg.classList.add("launch");
-    const flyers = [...svg.querySelectorAll(".flyer")];
-    for (const f of flyers) {
-      if (!calm) {
-        f.style.opacity = "1";
-        f.querySelector("animateMotion").beginElement();
-      }
-      await wait(170);
-    }
-    await wait(820);
-    flyers.forEach((f) => { f.style.opacity = "0"; });
-    svg.classList.add("done");
-  }
 
   function startOnboarding() {
     document.querySelectorAll("dialog.ob").forEach((d) => d.remove());
@@ -1471,7 +1457,6 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
     const risky = projects.filter((p) => p.tier === "at-risk");
     const attention = projects.filter((p) => p.tier === "attention" || p.tier === "behind");
     const worst = risky.length ? "at-risk" : attention.length ? "attention" : "safe";
-    const target = risky.find((p) => p.next && p.next.kind === "push-all");
     let at = -1;
     let timer = null;
 
@@ -1495,7 +1480,11 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
       render();
       if (tour) startTour();
     };
-    const endButtons = () => [onClick(secondary("Done"), () => finish(false)), onClick(primary("Show me around"), () => finish(true))];
+    const endButtons = () => {
+      const tour = primary("Show me around");
+      tour.classList.add("beckon");
+      return [onClick(secondary("Done"), () => finish(false)), onClick(tour, () => finish(true))];
+    };
 
     const screens = [
       () => {
@@ -1522,9 +1511,9 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
           if (more) more.classList.add("shown");
           await wait(380);
           if (at !== mine) return;
-          title.textContent = risky.length ? `${risky.length === 1 ? "One project has" : `${risky.length} projects have`} unpushed commits`
+          title.textContent = risky.length ? `${risky.length === 1 ? "One project" : `${risky.length} projects`} could lose work`
             : attention.length ? "Nothing is at risk" : "Everything is safe";
-          body.textContent = risky.length ? `That work isn't on ${hostAll()} yet, so it would be lost with ${HERE}. Everything else can wait.`
+          body.textContent = risky.length ? "Red means work that isn't safe yet, like commits that exist only here. Everything else can wait."
             : attention.length ? `${plural(attention.length, "project")} could use some attention when you have a minute.`
             : "Everything is committed, backed up and in sync.";
           replay(title, "ob-swap");
@@ -1540,50 +1529,21 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
         actions.replaceChildren(onClick(primary("Continue"), () => go(at + 1)));
       }),
       () => {
-        if (!target || !LIVE) {
-          art.replaceChildren(orb(worst));
-          words(el("h1", { text: risky.length ? "Start with the red ones" : "You're all set" }),
-            el("p", { text: risky.length ? "Push them from Your next steps on the overview." : attention.length ? "Nothing is at risk. Your next steps are waiting on the overview whenever you're ready." : "Housekeep will let you know the moment that changes." }));
-          actions.replaceChildren(...endButtons());
-          return;
-        }
-        const pushed = sig(target, "push");
-        const drawing = fixArt(parseInt(pushed.count, 10) || 1, H(target));
-        const title = el("h1", { text: `Push ${target.name}` });
-        const body = el("p", { text: `${cap(pushed.count)} exist only on ${HERE}. Pushing copies them to ${H(target)} and leaves your live site alone.` });
-        const detail = el("div", { class: "ob-hint" });
-        const explain = el("button", { type: "button", text: "What happens?" });
-        explain.addEventListener("click", () => detail.replaceChildren("Nothing is merged or deleted.", el("pre", { text: pushAllConfirm(target).command })));
-        detail.append("Nothing is merged or deleted. ", explain);
-        art.replaceChildren(drawing);
-        words(title, body, detail);
-        const doIt = primary("Push now", "upload");
-        // It appears exactly where Continue was: ignore the tail of a double-click, which would push for real.
-        const armed = Date.now() + 900;
-        doIt.addEventListener("click", async () => {
-          if (Date.now() < armed || doIt.classList.contains("busy")) return;
-          doIt.classList.add("busy");
-          doIt.querySelector("span").textContent = "Pushing";
-          try {
-            await api("/api/action", { project: target.path, action: "push-all" });
-          } catch (err) {
-            doIt.classList.remove("busy");
-            doIt.querySelector("span").textContent = "Try again";
-            detail.replaceChildren(el("span", { class: "warn", text: err.message }));
-            return;
-          }
-          actions.replaceChildren();
-          detail.remove();
-          await launch(drawing);
-          await wait(500);
-          title.textContent = "Pushed";
-          body.textContent = `${target.name}'s work is safe on ${H(target)} now.${risky.length > 1 ? ` ${plural(risky.length - 1, "other project")} still ${risky.length === 2 ? "needs" : "need"} the same. You'll find ${risky.length === 2 ? "it" : "them"} under Your next steps.` : ""}`;
-          replay(title, "ob-swap");
-          replay(body, "ob-swap");
-          actions.replaceChildren(...endButtons());
-          replay(actions, "ob-in");
-        });
-        actions.replaceChildren(onClick(secondary("Not now"), () => finish(false)), doIt);
+        // Where to start, for every project that needs you. Onboarding only explains:
+        // each fix runs from Your next steps, where it shows its command and asks first.
+        const needy = [...risky, ...attention];
+        const shown = needy.slice(0, 5);
+        if (shown.length) {
+          const rows = shown.map((p) => el("div", { class: "scan-row shown done" },
+            el("span", { class: "ind" }, dot(p.tier)), el("b", { text: p.name }), el("span", { class: "v", text: p.next ? p.next.title : verdictOf(p) })));
+          const more = needy.length > shown.length ? el("div", { class: "scan-more shown", text: `and ${plural(needy.length - shown.length, "more project")}` }) : null;
+          art.replaceChildren(el("div", { class: "scan" }, rows, more));
+        } else art.replaceChildren(orb(worst));
+        words(el("h1", { text: risky.length ? (risky.length === 1 ? "Start with the red one" : `Start with the ${risky.length} red ones`) : attention.length ? "Nothing is at risk" : "You're all set" }),
+          el("p", { text: risky.length ? "Each has one next step. Every fix shows its git command and asks before it runs. They're first under Your next steps."
+            : attention.length ? "These are waiting under Your next steps, whenever you have a minute."
+            : "Housekeep will let you know the moment that changes." }));
+        actions.replaceChildren(...endButtons());
       },
     ].filter(Boolean);
     progress.replaceChildren(...screens.map(() => el("i")));
@@ -1746,7 +1706,9 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
   window.addEventListener("hashchange", render);
   render();
   // First visit: welcome them properly before anything else.
-  if (pref(ONBOARDED) !== "done" && !data.error) startOnboarding();
+  // Embedded in another page (the website), the map speaks for itself; the tour is one click away in the sidebar.
+  const embedded = new URLSearchParams(location.search).has("embed");
+  if (pref(ONBOARDED) !== "done" && !data.error && !embedded) startOnboarding();
   if (document.fonts) document.fonts.ready.then(paintMap);
 
   document.addEventListener("keydown", (e) => {
@@ -1757,7 +1719,9 @@ dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8
     if (i >= 0 && i < Math.min(9, projects.length)) location.hash = projects[i].slug;
   });
 
-  if (LIVE) {
+  if (DEMO) {
+    setLive("demo");
+  } else if (LIVE) {
     connect();
   } else {
     setLive("snapshot");

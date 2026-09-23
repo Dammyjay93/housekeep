@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Housekeep: know if your git work is safe</title>
+<meta name="description" content="Housekeep checks every repo you've worked on: what's committed, what's pushed, whether main is up to date, and what's left to clean up. In git's own words, explained. Open source.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/Geist-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/Geist-Medium.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="site.css">
+<script src="scrollbars.js" defer></script>
+<script>document.documentElement.classList.add("js");</script>
+</head>
+<body>
+<div class="app solo">
+<main class="main" id="main">
+  <header class="bar" id="bar">
+    <div class="bar-left">
+      <a class="brand" href="./"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><path d="M3.5 16H12" stroke="var(--track)" stroke-width="3.5" stroke-linecap="round"/><rect x="11" y="10.5" width="18" height="11" rx="5.5" fill="none" stroke="var(--track)" stroke-width="3"/><circle cx="23.5" cy="16" r="2.4" fill="var(--c, var(--green))"/></svg>Housekeep</a>
+      <nav class="crumbs links" aria-label="Site">
+        <a href="#try">Try it</a>
+        <a href="#why">Why</a>
+        <a href="#checks">How it works</a>
+        <a href="glossary.html">Glossary</a>
+      </nav>
+    </div>
+    <div class="bar-right">
+      <a class="btn ghost" href="https://github.com/Dammyjay93/housekeep">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style="stroke:none"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span>GitHub</span>
+      </a>
+      <a class="btn primary" href="#demo"><span>Open the demo</span></a>
+    </div>
+  </header>
+
+  <div class="view">
+    <section class="hero">
+      <span class="kicker rise"><span class="dot" data-tier="safe"></span>Open source, for anyone who builds with AI</span>
+      <h1 class="rise" style="--d:60ms">Know your git work is safe.</h1>
+      <div class="hero-foot rise" style="--d:140ms">
+        <p>Housekeep checks every repo you've worked on: what's committed, what's pushed, whether main is up to date, and what's left to clean up. In git's own words, with each one explained.</p>
+        <div class="act">
+          <button class="btn cmd" type="button" data-copy="npx git-housekeep" aria-label="Copy npx git-housekeep">
+            <span class="prompt">$</span><span>npx git-housekeep</span>
+            <span class="copy">
+              <svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6h6a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 12 15H6a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 6 6z"/><path d="M11 3.5V3A1.5 1.5 0 0 0 9.5 1.5h-6A1.5 1.5 0 0 0 2 3v6a1.5 1.5 0 0 0 1.5 1.5H4"/></svg>
+              <svg class="done" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"/></svg>
+            </span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- One project you can fix: the light in the menu bar follows what you do. -->
+    <section class="instrument rise" id="try" style="--d:240ms" aria-label="Try it: fix a made-up project">
+      <div class="inst-stage">
+        <div class="mb-bar" aria-hidden="true">
+          <b>Cursor</b><span class="menu-name">File</span><span class="menu-name">Edit</span><span class="menu-name">View</span>
+          <div class="mb-right">
+            <span class="mb-gl" id="light" data-tier="at-risk"><i></i><span class="n">1</span></span>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6.2a8.5 8.5 0 0 1 12 0"/><path d="M4.3 8.8a5.2 5.2 0 0 1 7.4 0"/><path d="M6.7 11.3a1.9 1.9 0 0 1 2.6 0"/></svg>
+            <svg viewBox="0 0 20 16" fill="none" stroke="currentColor" stroke-width="1.3" style="width:20px"><rect x="1.5" y="4.5" width="15" height="7" rx="2"/><path d="M18.5 7v2" stroke-linecap="round"/><rect x="3" y="6" width="9" height="4" rx="1" fill="currentColor" stroke="none"/></svg>
+            <span>9:41</span>
+          </div>
+        </div>
+        <div class="inst-head">
+          <div><b>shop-app</b><small>~/code/shop-app · on feat/checkout-redesign</small></div>
+          <span class="status" id="verdict" data-tier="at-risk"><span class="dot" data-tier="at-risk"></span><span>Could lose work</span></span>
+        </div>
+        <div class="map hero-map" id="hero-map" role="img" aria-label="Map of shop-app: main up to date with origin/main, feat/checkout-redesign with 3 unpushed commits, feat/search in a worktree, and 2 merged branches"></div>
+      </div>
+
+      <div class="inst-text">
+        <div id="next" aria-live="polite">
+          <span class="kicker"><span class="dot" data-tier="at-risk" id="next-dot"></span><span id="next-kicker">Start here</span></span>
+          <h2 id="next-title">Push 3 unpushed commits</h2>
+          <p id="next-why">They exist only on this Mac. Pushing copies them to GitHub; origin/main itself isn't changed.</p>
+          <div class="act">
+            <button class="btn primary" type="button" id="next-go">
+              <svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="next-icon" d="M8 10.5V2.5M4.5 6L8 2.5 11.5 6M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2"/></svg>
+              <svg class="spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 2.5a5.5 5.5 0 1 1-5.5 5.5"/></svg>
+              <span id="next-label">Push to origin</span>
+            </button>
+          </div>
+        </div>
+        <div class="inst-foot">
+          <span id="meaning"><span class="dot" data-tier="at-risk"></span><span>Red means work could be lost</span></span>
+          <button class="btn ghost" type="button" id="reset" hidden><span>Start over</span></button>
+        </div>
+      </div>
+
+      <div class="inst-dialog" id="dialog" hidden>
+        <div class="confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+          <div class="confirm-body">
+            <h3 id="confirm-title"></h3>
+            <p id="confirm-body"></p>
+            <ul id="confirm-items"></ul>
+            <pre id="confirm-command"></pre>
+          </div>
+          <div class="confirm-actions">
+            <button class="btn ghost" type="button" id="confirm-cancel"><span>Cancel</span></button>
+            <button class="btn primary" type="button" id="confirm-ok"><span></span></button>
+          </div>
+        </div>
+      </div>
+      <div class="toasts" id="toasts" aria-live="polite"></div>
+    </section>
+
+    <!-- Why: a normal week, and everything in it that git knew and didn't say. -->
+    <section class="story" id="why" aria-labelledby="why-title">
+      <header class="story-head">
+        <span class="kicker">Why</span>
+        <h2 id="why-title">Your assistant moves faster than you can keep track.</h2>
+        <p>A normal week of building with an AI assistant. None of it raises an error. Git knows about all of it, but only tells you if you ask the right question, in the right folder.</p>
+      </header>
+      <div class="panel timeline">
+        <div class="tl-row reveal" style="--d:0ms"><span class="when mono">Mon 10:12</span><span class="dot" data-tier="attention"></span><div><b>Your assistant starts a branch in a new worktree</b><small>The folder lands in a temporary directory that the system empties on its own.</small></div><span class="tag">Temporary folder</span></div>
+        <div class="tl-row reveal" style="--d:80ms"><span class="when mono">Tue 18:40</span><span class="dot" data-tier="at-risk"></span><div><b>You close the laptop</b><small>Three commits on feat/checkout were never pushed. This Mac holds the only copy.</small></div><span class="status" data-tier="at-risk"><span class="dot" data-tier="at-risk"></span>3 unpushed</span></div>
+        <div class="tl-row reveal" style="--d:160ms"><span class="when mono">Wed 09:05</span><span class="dot" data-tier="attention"></span><div><b>GitHub squash-merges pull request #14</b><small>Locally, git still calls the branch unmerged, so you don't dare delete it.</small></div><span class="status" data-tier="attention"><span class="dot" data-tier="attention"></span>Squash-merged</span></div>
+        <div class="tl-row reveal" style="--d:240ms"><span class="when mono">Thu 14:30</span><span class="dot" data-tier="at-risk"></span><div><b>An agent commits on a detached HEAD</b><small>Testing a fix, it checked out a commit instead of a branch. Switch away and those commits are gone.</small></div><span class="status" data-tier="at-risk"><span class="dot" data-tier="at-risk"></span>2 commits on no branch</span></div>
+        <div class="tl-row reveal" style="--d:320ms"><span class="when mono">Thu 16:10</span><span class="dot" data-tier="at-risk"></span><div><b>A .env gets committed</b><small>One <code>git add .</code> and your keys are in the history, a push away from GitHub.</small></div><span class="status" data-tier="at-risk"><span class="dot" data-tier="at-risk"></span>Secret committed</span></div>
+        <div class="tl-row reveal" style="--d:400ms"><span class="when mono">Fri 17:00</span><span class="dot" data-tier="attention"></span><div><b>Twelve repos, thirty branches</b><small>Which are merged, which are safe to delete, which hold the only copy of something? No single git command can say.</small></div><span class="muted">No one place to look</span></div>
+      </div>
+      <div class="turn reveal">
+        <span class="lights" aria-hidden="true"><span class="mb-gl" data-tier="at-risk"><i></i></span><span class="mb-gl" data-tier="attention"><i></i></span><span class="mb-gl" data-tier="safe"><i></i></span></span>
+        <p><b>Housekeep asks those questions for you,</b> in every repo you've worked on, all day, and turns the answers into one light: red when work could be lost, amber when something needs a look, green when you're clear.</p>
+      </div>
+      <div class="panel strip three" aria-label="Who it's for">
+        <div class="cell"><span class="kicker">If you build with AI</span><h3>Claude Code, Cursor, Codex</h3><p class="caption">They make branches, worktrees and commits for you. Housekeep keeps count of all of it, so you don't have to.</p></div>
+        <div class="cell"><span class="kicker">If git's words feel foreign</span><h3>Learn them as you go</h3><p class="caption">Every word is git's own, explained where you see it, so what you pick up works everywhere else too.</p></div>
+        <div class="cell"><span class="kicker">If you have too many repos</span><h3>One command, one light</h3><p class="caption">Every repo you've touched in 45 days, checked at once, with the one thing to do first.</p></div>
+      </div>
+    </section>
+
+    <section class="sect wide" id="demo" aria-labelledby="demo-title">
+      <header class="sect-head">
+        <span class="kicker">The whole map</span>
+        <h2 id="demo-title">Five made-up projects, every button live</h2>
+        <p>The real map, running on scripted repos. Each button shows the exact command it would run, then changes nothing.</p>
+      </header>
+      <div class="sect-body">
+        <div class="panel embed" id="embed" data-view="map">
+          <div class="panel-head">
+            <h2>Housekeep</h2>
+            <div class="end">
+              <span>What you see after <span class="mono">npx git-housekeep</span>, then <span class="mono">o</span></span>
+              <div class="seg" role="tablist" aria-label="View">
+                <button class="btn ghost" type="button" role="tab" aria-selected="true" data-view="map">Map</button>
+                <button class="btn ghost" type="button" role="tab" aria-selected="false" data-view="terminal">Terminal</button>
+              </div>
+            </div>
+          </div>
+          <iframe src="demo.html?embed" title="Housekeep's map, with five made-up projects" loading="lazy"></iframe>
+<div class="term" id="term"><div class="term-window"><div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>~/code · zsh</span></div><pre class="term-body"><!--demo-report--><span class="d">~/code</span> <span class="g">$</span> npx git-housekeep
+
+  <span class="b">housekeep</span>  <span class="d">·  5 repos  ·  fetched 4 min ago</span>
+
+  <span class="r">●</span> <span class="b">portfolio   </span> <span class="r">Could lose work</span>
+    <span class="d">→</span> Remove a committed secret: .env
+      <span class="d">secret committed  ·  1 unpushed  ·  1 ahead of origin/main</span>
+
+  <span class="r">●</span> <span class="b">shop-app    </span> <span class="r">Could lose work</span>
+    <span class="d">→</span> Push 3 unpushed commits
+      <span class="d">3 uncommitted  ·  3 unpushed  ·  1 merged branch on origin</span>
+
+  <span class="a">●</span> <span class="b">api         </span> <span class="a">Needs attention</span>
+    <span class="d">→</span> Pull main (fast-forward)
+      <span class="d">4 behind origin/main  ·  2 merged branches (2 local, 2 on origin)</span>
+
+  <span class="a">●</span> <span class="b">mobile-app  </span> <span class="a">Needs attention</span>
+    <span class="d">→</span> Review 1 stash
+      <span class="d">1 stashed  ·  1 prunable worktree (folder deleted)</span>
+
+  <span class="g">✓</span> <span class="b">blog        </span> <span class="d">All clear</span>
+
+  <span class="r">2 could lose work</span><span class="d">  ·  </span><span class="a">2 need attention</span><span class="d">  ·  </span><span class="g">1 all clear</span>
+
+  <span class="b">o</span> <span class="d">open the map</span>   <span class="b">q</span> <span class="d">quit</span> <span class="cursor"></span><!--/demo-report--></pre></div></div>
+        </div>
+        <p class="panel-note phone-only">The map is made for a bigger screen. <a href="demo.html">Open the full demo</a></p>
+      </div>
+    </section>
+
+    <section class="sect" id="checks" aria-labelledby="checks-title">
+      <header class="sect-head">
+        <span class="kicker">How it works</span>
+        <h2 id="checks-title">Four checks, on every repo</h2>
+        <p>Each uses git's own word, so what you learn here is what GitHub and your AI assistant say too. The <span class="q" aria-hidden="true">?</span> beside a word explains it.</p>
+      </header>
+      <div class="sect-body">
+        <div class="panel strip" aria-label="The four checks, for shop-app">
+          <div class="cell" data-tier="attention"><div class="label"><span class="dot" data-tier="attention"></span>Working tree <a class="q" href="glossary.html#working-tree" aria-label="What is the working tree?">?</a></div><span class="value">3</span><span class="unit">uncommitted changes</span><p class="caption">Normal while you work. Commit once something works, so you can always get back to it.</p></div>
+          <div class="cell" data-tier="at-risk"><div class="label"><span class="dot" data-tier="at-risk"></span>Push <a class="q" href="glossary.html#push" aria-label="What is a push?">?</a></div><span class="value">3</span><span class="unit">unpushed commits</span><p class="caption">They exist only on this Mac. Push them so they're safe if this Mac is lost.</p></div>
+          <div class="cell" data-tier="safe"><div class="label"><span class="dot" data-tier="safe"></span>Sync <a class="q" href="glossary.html#origin-main" aria-label="What is origin/main?">?</a></div><span class="value">0</span><span class="unit">commits apart</span><p class="caption">This Mac and GitHub agree.</p></div>
+          <div class="cell" data-tier="attention"><div class="label"><span class="dot" data-tier="attention"></span>Cleanup <a class="q" href="glossary.html#merge" aria-label="What is a merged branch?">?</a></div><span class="value">1</span><span class="unit">to clean up</span><p class="caption">Its work is already in origin/main. Safe to delete.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sect" id="catches" aria-labelledby="catches-title">
+      <header class="sect-head">
+        <span class="kicker">What it catches</span>
+        <h2 id="catches-title">The things that are easy to miss</h2>
+        <p>Especially when an AI assistant is making branches and worktrees for you.</p>
+      </header>
+      <div class="sect-body">
+        <div class="panel">
+          <div class="plan-row" style="border-top:0"><span class="dot" data-tier="attention"></span><div><b>Merged, even when git says it isn't</b><small>GitHub squash-merged the branch, so its commits never reached main. Housekeep checks the changes, not the commits.</small></div><span class="status" data-tier="attention"><span class="dot" data-tier="attention"></span>Squash-merged</span></div>
+          <div class="plan-row"><span class="dot" data-tier="at-risk"></span><div><b>Commits on no branch at all</b><small>An agent committed on a detached HEAD. They count as unpushed, and pushing saves them to a branch.</small></div><span class="status" data-tier="at-risk"><span class="dot" data-tier="at-risk"></span>2 commits on no branch</span></div>
+          <div class="plan-row"><span class="dot" data-tier="attention"></span><div><b>The .env.local only one worktree has</b><small>Removing a worktree deletes its ignored files too, so one holding anything found nowhere else is never removed.</small></div><span class="tag">Has .env.local</span></div>
+          <div class="plan-row"><span class="dot" data-tier="at-risk"></span><div><b>A key committed, or already pushed</b><small>Flagged red, with the order to fix it in: rotate the keys first, then take the file out of git.</small></div><span class="status" data-tier="at-risk"><span class="dot" data-tier="at-risk"></span>Secret pushed: .env</span></div>
+          <div class="plan-row"><span class="dot" data-tier="at-risk"></span><div><b>Work on a branch someone deleted</b><small>When a branch with unmerged work disappears from GitHub, a copy is kept before git forgets it, ready to restore.</small></div><span class="tag">Restore 1 branch</span></div>
+          <div class="plan-row"><span class="dot" data-tier="attention"></span><div><b>Backups that aren't</b><small>A remote that's just another folder on the same disk isn't a backup, so it doesn't show green.</small></div><span class="status" data-tier="attention"><span class="dot" data-tier="attention"></span>Same disk</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sect" aria-labelledby="careful-title">
+      <header class="sect-head">
+        <span class="kicker">Careful by design</span>
+        <h2 id="careful-title">It asks before it changes anything</h2>
+        <p>You saw it above: nothing changes until you press a button, and every button shows its git command first.</p>
+      </header>
+      <div class="sect-body">
+        <div class="panel">
+          <div class="plan-row" style="border-top:0"><span class="dot" data-tier="safe"></span><div><b>Checks again right before it runs</b><small>A branch is only deleted once all its changes are in main, and a branch on GitHub only if nobody has pushed to it since.</small></div><span></span></div>
+          <div class="plan-row"><span class="dot" data-tier="safe"></span><div><b>Never force-pushes, never pushes main</b><small>Unpushed commits on main go to a separate backup branch, because pushing main can put a site live.</small></div><span></span></div>
+          <div class="plan-row"><span class="dot" data-tier="safe"></span><div><b>Stays on your computer</b><small>No account, no telemetry, no server of ours. The only traffic is git's own, and GitHub's when you've set it up.</small></div><span></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sect" aria-labelledby="ai-title">
+      <header class="sect-head">
+        <span class="kicker">For AI assistants</span>
+        <h2 id="ai-title">Your assistant can check before it says “done”</h2>
+        <p>Claude Code, Cursor or Codex can run it in a repo and read the answer. Anything that needs judgement comes with a request written for them.</p>
+      </header>
+      <div class="sect-body">
+        <div class="panel">
+          <div class="panel-head"><h2 class="mono" style="font-size:12.5px;font-weight:400">npx git-housekeep . --json</h2><span class="end"><span class="status" data-tier="at-risk"><span class="dot" data-tier="at-risk"></span>exit 2 · could lose work</span></span></div>
+          <div class="panel-body"><pre class="pre">{
+  "tier": "at-risk",
+  "next": {
+    "title": "Push 3 unpushed commits",
+    "why": "They exist only on this Mac. Pushing copies them to GitHub; origin/main itself isn't changed.",
+    "ask": "In /Users/you/code/shop-app, some commits exist only on this machine. Push every branch with unpushed commits to origin, without changing origin/main or anything that could deploy. Show me the plan first."
+  }
+}</pre></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sect" id="start" aria-labelledby="start-title">
+      <header class="sect-head">
+        <span class="kicker">Get started</span>
+        <h2 id="start-title">One command, nothing to set up</h2>
+        <p>Needs Node 20 and git. For protected branches and pull requests, add the <a class="u" href="https://cli.github.com">GitHub CLI</a>.</p>
+      </header>
+      <div class="sect-body">
+        <div class="panel">
+          <div class="plan-row" style="border-top:0"><span class="num">1</span><div><b class="mono">npx git-housekeep</b><small>Checks every repo you've worked on in the last 45 days, and tells you what to do first.</small></div><span></span></div>
+          <div class="plan-row"><span class="num">2</span><div><b>Press <kbd>o</kbd></b><small>Opens the map in your browser, with a button for each fix.</small></div><span></span></div>
+          <div class="plan-row"><span class="num">3</span><div><b class="mono">housekeep install</b><small>On a Mac, keeps it running from login, with the light in your menu bar.</small></div><span></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="closing" aria-labelledby="closing-title">
+      <span class="mb-gl" data-tier="safe"><i></i><span>All clear</span></span>
+      <h2 id="closing-title">Get every repo to green.</h2>
+      <p>New to git's words? The <a class="u" href="glossary.html">glossary</a> draws each one the way the map does.</p>
+      <div class="act">
+        <button class="btn cmd" type="button" data-copy="npx git-housekeep" aria-label="Copy npx git-housekeep">
+          <span class="prompt">$</span><span>npx git-housekeep</span>
+          <span class="copy">
+            <svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6h6a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 12 15H6a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 6 6z"/><path d="M11 3.5V3A1.5 1.5 0 0 0 9.5 1.5h-6A1.5 1.5 0 0 0 2 3v6a1.5 1.5 0 0 0 1.5 1.5H4"/></svg>
+            <svg class="done" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"/></svg>
+          </span>
+        </button>
+        <a class="btn ghost" href="https://github.com/Dammyjay93/housekeep"><span>Read the source</span></a>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span>Housekeep · MIT licence</span>
+      <nav aria-label="Footer"><a href="glossary.html">Glossary</a><a href="https://github.com/Dammyjay93/housekeep">GitHub</a></nav>
+    </footer>
+  </div>
+</main>
+</div>
+
+<script type="module">
+import { el, T, SOFT, AMBER, HERE, path, depot, interchange, youAreHere, counter, label, branchPath, stagger } from "./map.js";
+
+const main = document.getElementById("main");
+const bar = document.getElementById("bar");
+// The page scrolls inside the shell on wide screens and as a whole on narrow ones, as the app does.
+const onScroll = () => bar.classList.toggle("scrolled", Math.max(main.scrollTop, window.scrollY) > 4);
+main.addEventListener("scroll", onScroll, { passive: true });
+window.addEventListener("scroll", onScroll, { passive: true });
+onScroll();
+
+for (const button of document.querySelectorAll("[data-copy]")) {
+  button.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(button.dataset.copy);
+      button.classList.add("copied");
+      setTimeout(() => button.classList.remove("copied"), 1600);
+    } catch (err) {
+      // Some browsers refuse clipboard access; the command is on screen to copy by hand.
+      button.setAttribute("aria-label", `Select ${button.dataset.copy} to copy it`);
+    }
+  });
+}
+
+const embed = document.getElementById("embed");
+const tabs = embed.querySelectorAll(".seg button");
+for (const tab of tabs) {
+  tab.addEventListener("click", () => {
+    embed.dataset.view = tab.dataset.view;
+    for (const t of tabs) t.setAttribute("aria-selected", String(t === tab));
+  });
+}
+
+// ---------- the instrument ----------
+// shop-app's map, laid out as the dashboard lays out a map of this width: wide, the termini line up
+// in a column with labels beside them; under 540px, the compact layout puts each label above its line.
+const mapBox = document.getElementById("hero-map");
+let work, grp;
+const drawMap = () => {
+  const width = Math.min(680, Math.floor(mapBox.clientWidth));
+  const compact = width < 540;
+  const row = compact ? 66 : 54;
+  const termX = compact ? width - 14 : Math.min(width - 320, 500);
+  const mainY = compact ? 42 : 22;
+  const height = mainY + 3 * row + 20;
+  const forkRoom = termX - 150;
+  const gap = Math.max(14, Math.min(26, (forkRoom - 30) / 2));
+  const fork = (i) => compact ? 44 - i * 12 : forkRoom - i * gap;
+  const rowY = (i) => mainY + (i + 1) * row;
+  const place = (y, lineStart) => compact ? [lineStart + 2, y - 24] : [termX + 22, y];
+  const lines = el("g", {}), marks = el("g", {}), labels = el("g", {});
+  const workLine = path(branchPath(fork(0), mainY, rowY(0), termX), AMBER, 3.5);
+  const grpLines = el("g", { class: "grp" }, path(branchPath(fork(2), mainY, rowY(2), termX), SOFT, 3, "0.5 6"));
+  lines.append(grpLines, path(branchPath(fork(1), mainY, rowY(1), termX), SOFT, 3.5), workLine, path(`M6 ${mainY}H${termX - 13}`, T, 4.5));
+  const grpMark = el("g", { class: "grp" }, counter(termX, rowY(2), 2, SOFT, true));
+  marks.append(grpMark, depot(termX, rowY(1), SOFT), youAreHere(termX, rowY(0)), interchange(termX, mainY));
+  const [mx, my] = place(mainY, 6);
+  const [wx, wy] = place(rowY(0), fork(0) + 20);
+  const [tx, ty] = place(rowY(1), fork(1) + 20);
+  const [gx, gy] = place(rowY(2), fork(2) + 20);
+  const workLabel = label(wx, wy, "feat/checkout-redesign", "3 unpushed commits", AMBER, HERE);
+  const grpLabel = el("g", { class: "grp" }, label(compact ? gx : gx + 5, gy, "2 merged branches", "Safe to delete: cart-total, rate-limit"));
+  labels.append(label(compact ? mx : mx + 6, my, "main", "Up to date with origin/main"), workLabel,
+    label(tx, ty, "feat/search", "Unmerged · 1 commit not in origin/main", null, [["worktree", "var(--text-3)"]]), grpLabel);
+  mapBox.replaceChildren(el("svg", { width, height, viewBox: `0 0 ${width} ${height}`, "aria-hidden": "true" }, lines, marks, labels));
+  stagger(mapBox, 140, 700, 90);
+  work = { line: workLine, note: workLabel.querySelector(".note") };
+  grp = [grpLines, grpMark, grpLabel];
+};
+
+const ICON = {
+  upload: "M8 10.5V2.5M4.5 6L8 2.5 11.5 6M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2",
+  trash: "M2.5 4.5h11M6 4.5V3a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1.5M4 4.5l.7 9h6.6l.7-9",
+};
+// Each step in the app's own words: its next step, its confirm dialog, and what the light says.
+const STEPS = [
+  { tier: "at-risk", verdict: "Could lose work", count: "1", meaning: "Red means work could be lost",
+    kicker: "Start here", title: "Push 3 unpushed commits", why: "They exist only on this Mac. Pushing copies them to GitHub; origin/main itself isn't changed.",
+    go: "Push to origin", icon: "upload",
+    confirm: { title: "Push feat/checkout-redesign", body: "Copies this branch to GitHub so its commits are safe if this Mac is lost. Nothing is merged or deleted, and nothing goes live.",
+      items: [["feat/checkout-redesign", "3 unpushed commits"]], command: "git push -u origin feat/checkout-redesign", ok: "Push" },
+    done: "Pushed feat/checkout-redesign to origin" },
+  { tier: "attention", verdict: "Needs attention", count: "1", meaning: "Amber means something needs attention",
+    kicker: "Next", title: "Delete 2 merged branches", why: "Their work is already in origin/main, so no work is lost.",
+    go: "Delete merged branches", icon: "trash",
+    confirm: { title: "Delete 2 merged branches", body: "Everything on these is already in origin/main, so no work is lost. Branches on origin aren't touched. Each one is checked again right before it's deleted.",
+      items: [["fix/cart-total", "squash-merged"], ["feat/rate-limit", "merged"]], command: "git branch -D fix/cart-total\ngit branch -D feat/rate-limit", ok: "Delete" },
+    done: "Deleted 2 merged branches" },
+  { tier: "safe", verdict: "All clear", count: "", meaning: "Green means you're all set",
+    kicker: "All clear", title: "Nothing to do", why: "Everything is committed, pushed, in sync with origin/main, and cleaned up." },
+];
+
+const $ = (id) => document.getElementById(id);
+const setTier = (node, tier) => { node.dataset.tier = tier; for (const d of node.querySelectorAll(".dot")) d.dataset.tier = tier; };
+let step = 0;
+const paint = (animate) => {
+  const s = STEPS[step];
+  setTier($("light"), s.tier);
+  $("light").querySelector(".n").textContent = s.count;
+  setTier($("verdict"), s.tier);
+  $("verdict").lastElementChild.textContent = s.verdict;
+  $("next-dot").dataset.tier = s.tier;
+  $("next-kicker").textContent = s.kicker;
+  $("next-title").textContent = s.title;
+  $("next-why").textContent = s.why;
+  $("next-go").hidden = !s.go;
+  if (s.go) {
+    $("next-label").textContent = s.go;
+    $("next-icon").setAttribute("d", ICON[s.icon]);
+  }
+  setTier($("meaning"), s.tier);
+  $("meaning").lastElementChild.textContent = s.meaning;
+  $("reset").hidden = step === 0;
+  if (animate) for (const node of [$("next"), $("meaning")]) { node.classList.remove("swap"); void node.offsetWidth; node.classList.add("swap"); }
+};
+
+const toast = (message, output) => {
+  const node = document.createElement("div");
+  node.className = "toast";
+  const dot = document.createElement("span");
+  dot.className = "dot";
+  dot.dataset.tier = "safe";
+  const body = document.createElement("div");
+  const b = document.createElement("b");
+  b.textContent = message;
+  const pre = document.createElement("pre");
+  pre.textContent = output;
+  body.append(b, pre);
+  node.append(dot, body);
+  $("toasts").append(node);
+  setTimeout(() => { node.classList.add("leaving"); setTimeout(() => node.remove(), 160); }, 3200);
+};
+
+// What each confirmed step does to the map.
+const APPLY = [
+  () => { work.line.setAttribute("stroke", SOFT); work.note.textContent = "Unmerged · 3 commits not in origin/main"; work.note.setAttribute("fill", "var(--text-3)"); },
+  () => { for (const g of grp) g.classList.add("gone"); },
+];
+
+const dialog = $("dialog");
+const ask = () => {
+  const c = STEPS[step].confirm;
+  $("confirm-title").textContent = c.title;
+  $("confirm-body").textContent = c.body;
+  $("confirm-items").replaceChildren(...c.items.map(([a, b]) => {
+    const li = document.createElement("li");
+    const x = document.createElement("span"), y = document.createElement("span");
+    x.textContent = a;
+    y.textContent = b;
+    li.append(x, y);
+    return li;
+  }));
+  $("confirm-command").textContent = c.command;
+  $("confirm-ok").firstElementChild.textContent = c.ok;
+  dialog.hidden = false;
+  $("confirm-ok").focus();
+};
+const close = () => { dialog.hidden = true; $("next-go").focus(); };
+$("next-go").addEventListener("click", ask);
+$("confirm-cancel").addEventListener("click", close);
+dialog.addEventListener("click", (e) => { if (e.target === dialog) close(); });
+dialog.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") close();
+  if (e.key === "Tab") {
+    // Keep focus inside the dialog, between its two buttons.
+    const [first, last] = [$("confirm-cancel"), $("confirm-ok")];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+});
+$("confirm-ok").addEventListener("click", () => {
+  const s = STEPS[step];
+  close();
+  const go = $("next-go");
+  go.classList.add("busy");
+  setTimeout(() => {
+    go.classList.remove("busy");
+    APPLY[step]();
+    toast(s.done, s.confirm.command);
+    step += 1;
+    paint(true);
+    (step < STEPS.length - 1 ? go : $("reset")).focus();
+  }, 900);
+});
+const redraw = () => {
+  drawMap();
+  for (let i = 0; i < step; i += 1) APPLY[i]();
+};
+let lastWidth = 0;
+new ResizeObserver(() => {
+  const w = Math.floor(mapBox.clientWidth);
+  if (w === lastWidth) return;
+  lastWidth = w;
+  redraw();
+}).observe(mapBox);
+
+$("reset").addEventListener("click", () => {
+  step = 0;
+  drawMap();
+  mapBox.classList.add("shown");
+  paint(true);
+  $("next-go").focus();
+});
+
+// The week's moments arrive one after another as the story scrolls into view.
+const reveal = new IntersectionObserver((items) => {
+  for (const item of items) {
+    if (!item.isIntersecting) continue;
+    item.target.classList.add("in");
+    reveal.unobserve(item.target);
+  }
+}, { threshold: 0.3 });
+for (const node of document.querySelectorAll(".reveal")) reveal.observe(node);
+
+document.fonts.ready.then(() => {
+  redraw();
+  // Let the words settle first, then draw the map in.
+  setTimeout(() => mapBox.classList.add("shown"), 350);
+});
+paint(false);
+</script>
+</body>
+</html>

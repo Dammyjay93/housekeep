@@ -4,7 +4,9 @@
 import { spawn } from "node:child_process";
 import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
-import { CONFIG_FILE, MAP_FILE, writeAtomic } from "./config.js";
+import { join } from "node:path";
+import { CONFIG_FILE, MAP_FILE, STATE_DIR, writeAtomic } from "./config.js";
+import { loadDemo } from "./demo.js";
 import { cliPath, install, swiftBarApp, uninstall } from "./install.js";
 import { menubar } from "./menubar.js";
 import { ENV, run, tilde } from "./proc.js";
@@ -30,6 +32,7 @@ Options
   --fetch                 Fetch from every remote now, whatever the schedule
   --offline               Don't touch the network
   --port <n>              Port for the live map (default 47219)
+  --demo                  Try it on made-up projects: nothing on your computer is read or changed
   -v, --version           Print the version
   -h, --help              Show this help
 
@@ -81,7 +84,7 @@ async function openMap(port: number | undefined): Promise<LiveServer | null> {
 }
 
 /** After the report: o opens the live map, q (or Ctrl-C) quits. */
-function waitForKeys(port: number | undefined, code: number): Promise<never> {
+function waitForKeys(port: number | undefined, code: number, demo: boolean): Promise<never> {
   const c = paint(process.stdout);
   out(`  ${c.bold("o")} ${c.dim("open the map")}   ${c.bold("q")} ${c.dim("quit")}`);
   let server: LiveServer | null = null;
@@ -96,6 +99,7 @@ function waitForKeys(port: number | undefined, code: number): Promise<never> {
     process.stdin.on("data", (key: Buffer) => {
       const k = key.toString();
       if (k === "q" || k === "\u0003" || k === "\u001b") void quit();
+      else if (k === "o" && demo) openDemo();
       else if (k === "o") {
         void openMap(port).then((s) => {
           if (s) {
@@ -106,6 +110,13 @@ function waitForKeys(port: number | undefined, code: number): Promise<never> {
       }
     });
   });
+}
+
+/** The map with made-up projects, as a page of its own: no server, and nothing read or changed. */
+function openDemo(): void {
+  const file = join(STATE_DIR, "demo.html");
+  writeAtomic(file, renderDashboard(loadDemo(), { token: "demo", openers: [], demo: true }));
+  openBrowser(pathToFileURL(file).href);
 }
 
 /** SwiftBar runs this: the live server's state when it's up, otherwise a check of its own. */
@@ -147,6 +158,7 @@ async function main(): Promise<number> {
       fetch: { type: "boolean", default: false },
       offline: { type: "boolean", default: false },
       port: { type: "string" },
+      demo: { type: "boolean", default: false },
       version: { type: "boolean", short: "v", default: false },
       help: { type: "boolean", short: "h", default: false },
     },
@@ -163,6 +175,7 @@ async function main(): Promise<number> {
   }
   if (command === "menubar") return menubarCommand();
   if (command === "copy") return copyCommand(rest[0]);
+  if (values.demo && command === "open") return (openDemo(), 0);
   if (command === "serve" || command === "open") {
     if (command === "open") {
       const server = await openMap(port);
@@ -176,8 +189,8 @@ async function main(): Promise<number> {
   }
   if (rest.length) return (out(`housekeep: unexpected ${rest.join(" ")}. See housekeep --help.`), 3);
 
-  const done = values.json ? () => undefined : spinner(command ? "Checking this repo" : "Looking for repos you've worked on");
-  const data = await scan({ force: values.fetch, offline: values.offline, only: command });
+  const done = values.json || values.demo ? () => undefined : spinner(command ? "Checking this repo" : "Looking for repos you've worked on");
+  const data = values.demo ? loadDemo() : await scan({ force: values.fetch, offline: values.offline, only: command });
   done();
   const code = exitCode(data);
   if (values.json) {
@@ -185,9 +198,9 @@ async function main(): Promise<number> {
     return code;
   }
   const c = paint(process.stdout);
-  const only = command && data.projects[0];
+  const only = command && !values.demo && data.projects[0];
   out(only ? detailReport(only, c) : summaryReport(data, c));
-  if (process.stdin.isTTY && process.stdout.isTTY && !data.error) return waitForKeys(port, code);
+  if (process.stdin.isTTY && process.stdout.isTTY && !data.error) return waitForKeys(port, code, values.demo);
   return code;
 }
 
