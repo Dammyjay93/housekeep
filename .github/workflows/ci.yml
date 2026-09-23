@@ -12,8 +12,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # Every supported Node on Linux; one macOS job, since its minutes cost about ten times as much.
+        os: [ubuntu-latest]
         node: [20, 22, 24]
+        include:
+          - os: macos-latest
+            node: 22
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
