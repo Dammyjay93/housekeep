@@ -1,6 +1,6 @@
 /**
- * Running in the background on a Mac: a LaunchAgent keeps the live map going from login, and a
- * SwiftBar plugin shows the light in the menu bar. (The Mac app will take this over.)
+ * Running in the background on a Mac, for people who live in the terminal: a LaunchAgent keeps the
+ * live map going from login, and a SwiftBar plugin shows the light. The Mac app does both on its own.
  */
 
 import { chmodSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
@@ -71,7 +71,8 @@ export async function install(): Promise<string[]> {
   // The menu bar light.
   const app = swiftBarApp();
   if (!app) {
-    out.push("For the menu bar light, install SwiftBar (brew install --cask swiftbar, or swiftbar.app), then run housekeep install again.");
+    out.push("For the menu bar light, the Mac app is the easy way: https://housekeep.pages.dev",
+      "Or install SwiftBar (brew install --cask swiftbar), then run housekeep install again.");
     return out;
   }
   let dir = await pluginDir();

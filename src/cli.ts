@@ -28,7 +28,8 @@ Usage
   housekeep skill         Teach Claude Code to check with Housekeep before it says it's done
   housekeep serve         Run the live map in this terminal
   housekeep open          Open the live map in your browser
-  housekeep install       macOS: keep the live map running from login, with a menu bar light (SwiftBar)
+  housekeep install       macOS: keep the live map running from login, with a light in SwiftBar
+                          (the Mac app does this on its own: https://housekeep.pages.dev)
   housekeep uninstall     macOS: undo housekeep install
 
 Options

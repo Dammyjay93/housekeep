@@ -77,7 +77,8 @@ housekeep <path>        Check one repo in detail (e.g. housekeep .)
 housekeep copy <path>   Copy that repo's request for your AI assistant
 housekeep serve         Run the live map in this terminal
 housekeep open          Open the live map in your browser
-housekeep install       macOS: keep the live map running from login, with a menu bar light (SwiftBar; the Mac app does this on its own)
+housekeep install       macOS: keep the live map running from login, with a light in SwiftBar
+                        (the Mac app does this on its own: https://housekeep.pages.dev)
 housekeep uninstall     macOS: undo housekeep install
 
 --json                  The full result as JSON, for scripts and AI assistants
