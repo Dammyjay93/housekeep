@@ -2,11 +2,13 @@
 
 # Housekeep
 
-Is your git work committed, pushed, in sync with main, and cleaned up? One command tells you, for every repo you've worked on recently, in git's own words with a plain-English explanation of each. A live visual map shows why, and fixes what's safe to fix.
+Is your git work committed, pushed, in sync with main, and cleaned up? One command tells you, for every repo you've worked on recently, in git's own words with a plain-English explanation of each. A live visual map shows why, and every fix is a request you hand to your AI assistant.
 
 ```bash
 npx git-housekeep
 ```
+
+On a Mac, you can [download the app](https://github.com/Dammyjay93/housekeep/releases/latest/download/Housekeep.dmg) instead: a light in your menu bar, the map a click away, and no terminal needed.
 
 <img src="site/housekeep.gif" width="720" alt="Housekeep on a made-up project: copying a request to push 3 unpushed commits, then one to delete 2 merged branches; each time the assistant does the work, Housekeep notices, and the light goes from red to amber to green.">
 
@@ -42,6 +44,16 @@ Press `o` for the map: every repo's branches drawn like a transit map, with a re
 
 Try it without touching anything of yours: `npx git-housekeep --demo` shows the report for five made-up projects, and `npx git-housekeep open --demo` opens the map.
 
+## The Mac app
+
+[Download Housekeep.dmg](https://github.com/Dammyjay93/housekeep/releases/latest/download/Housekeep.dmg), drag Housekeep to Applications and open it. It needs macOS 13 or later, runs on Apple silicon and Intel, and is signed and notarized by Apple.
+
+- A light in your menu bar: red when work could be lost, amber when something needs attention, green when everything is committed, pushed and in sync.
+- Click it for each project's next step, with **Copy request** for your AI assistant, and **Open map** for the whole picture.
+- It can start at login. It carries its own Node, so there's nothing else to install, and like the command line it only reads your repos.
+
+If your menu bar is full, macOS can hide the light behind the camera notch. Opening Housekeep again from Applications brings up a window with the way to the map.
+
 ## The four checks
 
 | Check | Clean when |
@@ -63,7 +75,7 @@ housekeep <path>        Check one repo in detail (e.g. housekeep .)
 housekeep copy <path>   Copy that repo's request for your AI assistant
 housekeep serve         Run the live map in this terminal
 housekeep open          Open the live map in your browser
-housekeep install       macOS: keep the live map running from login, with a menu bar light (SwiftBar)
+housekeep install       macOS: keep the live map running from login, with a menu bar light (SwiftBar; the Mac app does this on its own)
 housekeep uninstall     macOS: undo housekeep install
 
 --json                  The full result as JSON, for scripts and AI assistants
@@ -160,6 +172,8 @@ node dist/src/cli.js
 The tests build throwaway repos, each with a local bare repo standing in for the remote.
 
 The demo (`--demo`, and the website's live map) is built from scripted throwaway repos by the real scanner: `npm run demo:build` regenerates `assets/demo.json`.
+
+The Mac app is in `mac/`, in SwiftUI. `mac/build.sh` builds it (needs Xcode and XcodeGen) with Node and Housekeep inside; `mac/build.sh --release` signs it with a Developer ID, notarizes it and packs the `.dmg`.
 
 The website is plain HTML in `site/`. `npm run site:build` adds the live demo page, the fonts, and the terminal report from the demo. It's served by Cloudflare Pages at [housekeep.pages.dev](https://housekeep.pages.dev): `npm run site:build && npx wrangler pages deploy` publishes it.
 
