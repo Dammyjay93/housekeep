@@ -1,0 +1,15 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Housekeep</title>
+        <item>
+            <title>0.1.2</title>
+            <pubDate>Thu, 24 Sep 2026 23:05:29 +0200</pubDate>
+            <link>https://housekeep.pages.dev</link>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>0.1.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/Dammyjay93/housekeep/releases/download/v0.1.2/Housekeep.dmg" length="79894508" type="application/octet-stream" sparkle:edSignature="QqnMFtjSx/B+0HYD45s0BDz/GtoiPJHW9vQsdGEykQrUVfujLN4Exq11MkDL+MuJXe4Kx/YBEjzOPfWpaK4vDg=="/>
+        </item>
+    </channel>
+</rss>

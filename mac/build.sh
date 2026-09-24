@@ -4,8 +4,9 @@
 #   mac/build.sh             a local build, signed ad hoc, in mac/dist/Housekeep.app
 #   mac/build.sh --release   signed with a Developer ID, notarized, as mac/dist/Housekeep.dmg
 #
-# --release needs a "Developer ID Application" certificate in the keychain, and a notarytool profile
-# named "housekeep" (xcrun notarytool store-credentials housekeep).
+# --release needs a "Developer ID Application" certificate in the keychain, a notarytool profile
+# named "housekeep" (xcrun notarytool store-credentials housekeep), and the Sparkle update key in the
+# keychain (generate_keys). It also writes site/appcast.xml, the feed the app checks for updates.
 set -euo pipefail
 
 NODE_VERSION=24.21.0
@@ -66,7 +67,16 @@ else
 fi
 
 step "Signing (${IDENTITY:-ad hoc})"
-# Inside out: Node first, with what V8 needs, then the app around it.
+# Inside out: Sparkle's helpers and framework, as its documentation lays out, then Node with what V8
+# needs, then the app around them all.
+SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+for helper in "$SPARKLE/Versions/B/XPCServices/Installer.xpc" "$SPARKLE/Versions/B/XPCServices/Downloader.xpc" \
+              "$SPARKLE/Versions/B/Autoupdate" "$SPARKLE/Versions/B/Updater.app"; do
+  keep=()
+  [[ "$helper" == *Downloader.xpc ]] && keep=(--preserve-metadata=entitlements)
+  codesign --force "${SIGN[@]}" ${keep[@]+"${keep[@]}"} "$helper"
+done
+codesign --force "${SIGN[@]}" "$SPARKLE"
 codesign --force "${SIGN[@]}" --entitlements "$MAC/node.entitlements" "$APP/Contents/Helpers/node"
 codesign --force "${SIGN[@]}" "$APP"
 codesign --verify --deep --strict "$APP"
@@ -83,7 +93,19 @@ if $RELEASE; then
   xcrun notarytool submit "$DIST/Housekeep.dmg" --keychain-profile housekeep --wait
   xcrun stapler staple "$DIST/Housekeep.dmg"
   spctl --assess --type open --context context:primary-signature "$DIST/Housekeep.dmg"
-  echo "Ready: $DIST/Housekeep.dmg"
+
+  step "Writing the update feed"
+  # The .dmg goes on the GitHub Release for this version; the feed on the site points there, signed
+  # with the Sparkle key in the keychain.
+  VERSION="$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")"
+  FEED="$MAC/.build/feed"
+  rm -rf "$FEED"
+  mkdir -p "$FEED"
+  cp "$DIST/Housekeep.dmg" "$FEED/"
+  "$MAC/.build/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast" \
+    --download-url-prefix "https://github.com/Dammyjay93/housekeep/releases/download/v$VERSION/" \
+    --link "https://housekeep.pages.dev" -o "$ROOT/site/appcast.xml" "$FEED"
+  echo "Ready: $DIST/Housekeep.dmg (version $VERSION), and site/appcast.xml"
 else
   echo "Ready: $APP"
 fi

@@ -7,6 +7,7 @@ import SwiftUI
 struct MenuView: View {
     @ObservedObject var housekeep: Housekeep
     @ObservedObject var login: LoginItem
+    @ObservedObject var updates: Updates
     let openMap: (URL) -> Void
 
     var body: some View {
@@ -79,6 +80,7 @@ struct MenuView: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 6) {
+                    if let version = updates.waiting { updateCard(version) }
                     if !login.answered && !login.enabled { loginCard }
                     ForEach(snapshot.needy) { project in
                         ProjectCard(project: project) { if let url = housekeep.mapURL(slug: project.slug) { openMap(url) } }
@@ -118,6 +120,20 @@ struct MenuView: View {
                 Button("Not Now") { login.answer() }.systemButton().accessibilityLabel("Not now")
             }
             .controlSize(.small)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .card()
+    }
+
+    private func updateCard(_ version: String) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Housekeep \(version) is ready").font(.system(size: 13, weight: .medium)).foregroundStyle(Palette.text)
+                Text("It installs in a few seconds and reopens.").font(.system(size: 12)).foregroundStyle(Palette.text2)
+            }
+            Spacer(minLength: 8)
+            Button("Install") { updates.check() }.systemButton(prominent: true).controlSize(.small).accessibilityLabel("Install the update")
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -166,6 +182,8 @@ struct MenuView: View {
             Menu {
                 Toggle("Start at Login", isOn: Binding(get: { login.enabled }, set: { login.set($0) }))
                 if login.needsApproval { Button("Allow in System Settings…") { login.openSettings() } }
+                Divider()
+                Button("Check for Updates…") { updates.check() }.disabled(!updates.canCheck)
                 Divider()
                 Button("How Housekeep Works") { open("https://housekeep.pages.dev") }
                 Button("Housekeep on GitHub") { open("https://github.com/Dammyjay93/housekeep") }

@@ -53,6 +53,7 @@ Try it without touching anything of yours: `npx git-housekeep --demo` shows the 
 - A light in your menu bar: red when work could be lost, amber when something needs attention, green when everything is committed, pushed and in sync.
 - Click it for each project's next step, with **Copy request** for your AI assistant, and **Open map** for the whole picture.
 - It can start at login. It carries its own Node, so there's nothing else to install, and like the command line it only reads your repos.
+- It keeps itself up to date: it checks once a day and asks before installing anything (Check for Updates… is in its menu).
 
 If your menu bar is full, macOS can hide the light behind the camera notch. Opening Housekeep again from Applications brings up a window with the way to the map.
 
@@ -176,7 +177,7 @@ The tests build throwaway repos, each with a local bare repo standing in for the
 
 The demo (`--demo`, and the website's live map) is built from scripted throwaway repos by the real scanner: `npm run demo:build` regenerates `assets/demo.json`.
 
-The Mac app is in `mac/`, in SwiftUI. `mac/build.sh` builds it (needs Xcode and XcodeGen) with Node and Housekeep inside; `mac/build.sh --release` signs it with a Developer ID, notarizes it and packs the `.dmg`.
+The Mac app is in `mac/`, in SwiftUI. `mac/build.sh` builds it (needs Xcode and XcodeGen) with Node and Housekeep inside; `mac/build.sh --release` signs it with a Developer ID, notarizes it, packs the `.dmg`, and writes `site/appcast.xml`, the update feed the app checks (with [Sparkle](https://sparkle-project.org); updates are signed with a key kept in the release machine's keychain). Attach the `.dmg` to a GitHub Release named `v<version>`, then deploy the site.
 
 The website is plain HTML in `site/`. `npm run site:build` adds the live demo page, the fonts, and the terminal report from the demo. It's served by Cloudflare Pages at [housekeep.pages.dev](https://housekeep.pages.dev): `npm run site:build && npx wrangler pages deploy` publishes it.
 

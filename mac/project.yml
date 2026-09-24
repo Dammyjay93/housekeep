@@ -6,10 +6,14 @@ options:
   deploymentTarget:
     macOS: "13.0"
   createIntermediateGroups: true
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.10.0
 settings:
   base:
-    MARKETING_VERSION: "0.1.1"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "0.1.2"
+    CURRENT_PROJECT_VERSION: "2"
     SWIFT_VERSION: "6.0"
     DEVELOPMENT_TEAM: S6KA37TYUM
 targets:
@@ -18,15 +22,25 @@ targets:
     platform: macOS
     sources:
       - path: Housekeep
+    dependencies:
+      - package: Sparkle
     info:
       path: Housekeep/Info.plist
       properties:
         CFBundleDisplayName: Housekeep
+        # From MARKETING_VERSION and CURRENT_PROJECT_VERSION above. Sparkle compares CFBundleVersion, so it
+        # must go up with every release.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleName: Housekeep
         LSApplicationCategoryType: public.app-category.developer-tools
         # A menu bar app: no Dock icon until the map window opens.
         LSUIElement: true
         NSHumanReadableCopyright: MIT License
+        # Updates, with Sparkle: the feed, the key they must be signed with, and a daily check.
+        SUFeedURL: https://housekeep.pages.dev/appcast.xml
+        SUPublicEDKey: 0YwuuWZQ+Nrcps/XJCpkdLW7XgHGBlKgVVJhjaV+at4=
+        SUEnableAutomaticChecks: true
         # macOS asks before Housekeep looks for repos in these folders; this is the reason it gives.
         NSDocumentsFolderUsageDescription: Housekeep looks for your git repos here, to check they're committed and pushed. It only reads them.
         NSDesktopFolderUsageDescription: Housekeep looks for your git repos here, to check they're committed and pushed. It only reads them.

@@ -8,7 +8,7 @@ struct HousekeepApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuView(housekeep: app.housekeep, login: app.login) { app.map.show($0) }
+            MenuView(housekeep: app.housekeep, login: app.login, updates: app.updates) { app.map.show($0) }
         } label: {
             MenuBarLabel(housekeep: app.housekeep)
         }
@@ -32,6 +32,7 @@ private struct MenuBarLabel: View {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let housekeep = Housekeep()
     let login = LoginItem()
+    let updates = Updates()
     let map = MapWindow()
     let welcome = WelcomeWindow()
     private var watching: AnyCancellable?
