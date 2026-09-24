@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- The Mac app icon: Housekeep's mark on macOS's icon grid (an 824-point tile, 100 points in). -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b1b1b"/>
+      <stop offset="1" stop-color="#050505"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#52a67c" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#52a67c" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#tile)" filter="url(#shadow)"/>
+  <rect x="100.5" y="100.5" width="823" height="823" rx="184.5" fill="none" stroke="#fff" stroke-opacity="0.1"/>
+  <!-- The mark spans 28.75 x 14 on its 32-point grid; here it's 580 points wide, centred. -->
+  <g transform="translate(186.8 189.2) scale(20.17)">
+    <circle cx="23.5" cy="16" r="6" fill="url(#glow)"/>
+    <path d="M3.5 16H12" stroke="#d9d9d9" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <rect x="11" y="10.5" width="18" height="11" rx="5.5" fill="none" stroke="#d9d9d9" stroke-width="3"/>
+    <circle cx="23.5" cy="16" r="2.4" fill="#52a67c"/>
+  </g>
+</svg>

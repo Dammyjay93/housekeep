@@ -5,3 +5,8 @@ dist/
 site/demo.html
 site/fonts/
 .wrangler/
+mac/.cache/
+mac/.build/
+mac/dist/
+mac/Housekeep.xcodeproj/
+mac/Housekeep/Info.plist

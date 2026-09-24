@@ -4,11 +4,12 @@
  */
 
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { devNull, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { after, before, describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 
 // Isolate from this machine's git settings (signing, hooks, default branch) and from real Housekeep state.
 const scratch = mkdtempSync(join(tmpdir(), "housekeep-test-"));
@@ -449,6 +450,23 @@ describe("the live map", () => {
     } finally {
       await server.close();
     }
+  });
+
+  it("stops when the Mac app that started it goes away", async () => {
+    mkdirSync(join(scratch, "nothing-here"), { recursive: true });
+    mkdirSync(dirname(CONFIG_FILE), { recursive: true });
+    writeFileSync(CONFIG_FILE, JSON.stringify({ roots: [join(scratch, "nothing-here")], fetchEveryMinutes: 0 }));
+    const cli = fileURLToPath(new URL("../src/cli.js", import.meta.url));
+    const child = spawn(process.execPath, [cli, "serve", "--port", "0"], {
+      env: { ...process.env, HOUSEKEEP_APP: "1" }, stdio: ["pipe", "ignore", "ignore"],
+    });
+    const exited = new Promise<number | null>((resolve) => child.once("exit", resolve));
+    for (let i = 0; i < 100 && !existsSync(SERVER_FILE); i++) await new Promise((r) => setTimeout(r, 100));
+    assert.ok(existsSync(SERVER_FILE), "the server started");
+    // The app holds stdin open; when it quits or crashes, stdin closes.
+    child.stdin.end();
+    assert.equal(await exited, 0);
+    assert.ok(!existsSync(SERVER_FILE), "it cleaned up after itself");
   });
 });
 

@@ -271,14 +271,15 @@ dialog.confirm::backdrop { background: rgba(0, 0, 0, 0.72); }
 dialog.ob { width: min(560px, calc(100vw - 32px)); max-width: none; max-height: calc(100vh - 32px); margin: auto; padding: 8px; border: 0; border-radius: 28px; background: var(--layer-1); color: var(--text); overflow: hidden; box-shadow: inset 0 0 0 1px var(--line-2), 0 40px 120px rgba(0, 0, 0, 0.85); }
 dialog.ob::backdrop { background: rgba(0, 0, 0, 0.74); backdrop-filter: blur(8px); }
 dialog.ob:focus { outline: none; }
-dialog.ob[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; animation: ob-open 420ms var(--ease) both; }
+/* A flex column, not a grid: Safari stretches a grid dialog to its full max-height whatever its content. */
+dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob-open 420ms var(--ease) both; }
 @keyframes ob-open { from { opacity: 0; transform: translateY(10px) scale(0.985); } }
-.ob-stage { position: relative; height: 248px; border-radius: 20px; background: var(--shell); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.ob-stage { position: relative; flex: none; height: 248px; border-radius: 20px; background: var(--shell); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
 .ob-skip { position: absolute; top: 12px; right: 12px; z-index: 1; }
 .ob-art { display: grid; place-items: center; width: 100%; height: 100%; padding: 42px 20px 14px; }
 /* Each step's drawing, sized to the compact stage. */
 .ob-art .orb { width: 184px; height: 184px; }
-.ob-text { display: grid; align-content: start; padding: 22px 22px 18px; border-radius: 20px; box-shadow: inset 0 0 0 1px var(--line); overflow-y: auto; }
+.ob-text { display: grid; align-content: start; min-height: 0; padding: 22px 22px 18px; border-radius: 20px; box-shadow: inset 0 0 0 1px var(--line); overflow-y: auto; }
 .ob-copy { min-height: 84px; }
 .ob-copy h1 { margin: 0; font-size: 21px; line-height: 1.2; font-weight: 500; letter-spacing: -0.025em; text-wrap: balance; }
 .ob-copy p { margin: 6px 0 0; max-width: 460px; color: var(--text-2); font-size: 14px; line-height: 1.55; text-wrap: pretty; }

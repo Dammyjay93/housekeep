@@ -73,6 +73,8 @@ async function serveUntilStopped(server: LiveServer): Promise<never> {
     const stop = (): void => void server.close().then(() => process.exit(0));
     process.once("SIGINT", stop);
     process.once("SIGTERM", stop);
+    // Run by the Mac app, which holds our stdin open: when it quits or crashes, stdin closes and we stop too.
+    if (process.env.HOUSEKEEP_APP === "1") process.stdin.once("end", stop).resume();
   });
 }
 
