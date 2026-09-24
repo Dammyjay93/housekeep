@@ -10,6 +10,8 @@ npx git-housekeep
 
 On a Mac, you can [download the app](https://github.com/Dammyjay93/housekeep/releases/latest/download/Housekeep.dmg) instead: a light in your menu bar, the map a click away, and no terminal needed.
 
+[![Watch the one-minute demo, with sound: the menu bar light goes from red to green as an AI assistant fixes two projects](site/housekeep-demo-play.jpg)](https://housekeep.pages.dev/#watch)
+
 <img src="site/housekeep.gif" width="720" alt="Housekeep on a made-up project: copying a request to push 3 unpushed commits, then one to delete 2 merged branches; each time the assistant does the work, Housekeep notices, and the light goes from red to amber to green.">
 
 ```

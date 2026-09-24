@@ -498,6 +498,9 @@ th.end, td.end { text-align: right; }
 .sect-body { display: grid; gap: 16px; min-width: 0; align-content: start; }
 .sect.wide { grid-template-columns: minmax(0, 1fr); }
 .sect.wide .sect-head { position: static; max-width: 560px; }
+/* The demo video: edge to edge in a panel, 16:9 before it loads so nothing jumps. */
+.panel.watch { padding: 0; overflow: hidden; }
+.panel.watch video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #000; }
 .sect .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .sect .strip .cell:nth-child(3) { box-shadow: inset 0 1px 0 var(--line); }
 .sect .strip .cell:nth-child(4) { box-shadow: inset 1px 0 0 var(--line), inset 0 1px 0 var(--line); }
