@@ -244,7 +244,12 @@ dialog.confirm::backdrop { background: rgba(0, 0, 0, 0.72); }
 .lane-list { border-radius: 14px; background: var(--shell); box-shadow: inset 0 0 0 1px var(--line); }
 .item { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 13px 16px; cursor: pointer; }
 .item + .item { box-shadow: inset 0 1px 0 var(--line); }
-.item input { width: 15px; height: 15px; margin: 2px 0 0; accent-color: var(--text); cursor: pointer; }
+.item input { appearance: none; -webkit-appearance: none; display: grid; place-content: center; width: 18px; height: 18px; margin: 0; border-radius: 6px; background: var(--layer-2); box-shadow: inset 0 0 0 1.5px var(--track-soft); cursor: pointer; transition: background-color 140ms var(--ease), box-shadow 140ms var(--ease); }
+.item input::before { content: ""; width: 10px; height: 10px; background: var(--black); clip-path: polygon(14% 44%, 0 65%, 40% 100%, 100% 22%, 84% 6%, 38% 66%); transform: scale(0); transition: transform 140ms var(--ease); }
+.item input:hover { box-shadow: inset 0 0 0 1.5px var(--text-3); }
+.item input:checked { background: var(--text); box-shadow: none; }
+.item input:checked::before { transform: scale(1); }
+.item input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .item b { display: block; font-size: 14px; font-weight: 500; }
 .item small { display: block; margin-top: 2px; color: var(--text-2); font-size: 12.5px; line-height: 1.45; }
 .item .where { margin-top: 3px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); font: 11px/1.4 var(--mono); }
