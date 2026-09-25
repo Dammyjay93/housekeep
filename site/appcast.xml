@@ -3,6 +3,15 @@
     <channel>
         <title>Housekeep</title>
         <item>
+            <title>0.2.0</title>
+            <pubDate>Fri, 25 Sep 2026 18:40:03 +0200</pubDate>
+            <link>https://housekeep.pages.dev</link>
+            <sparkle:version>3</sparkle:version>
+            <sparkle:shortVersionString>0.2.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/Dammyjay93/housekeep/releases/download/v0.2.0/Housekeep.dmg" length="80047267" type="application/octet-stream" sparkle:edSignature="8AzOq1wEOX97ThAduM6+1X3bQObnoGBFRBv4rI+zqmXGuHNk6S9mbY6UuDDpWhlzv7w2jxmXL0hLnUcOuzzQDg=="/>
+        </item>
+        <item>
             <title>0.1.2</title>
             <pubDate>Thu, 24 Sep 2026 23:05:29 +0200</pubDate>
             <link>https://housekeep.pages.dev</link>
