@@ -118,7 +118,7 @@ private struct WelcomeView: View {
             HStack(spacing: 8) {
                 Spacer()
                 Button("Done") { done() }.systemButton().accessibilityLabel("Done").keyboardShortcut(.cancelAction)
-                Button("Open Map") { if let url = housekeep.mapURL() { openMap(url) } }
+                Button("Open Housekeep") { if let url = housekeep.mapURL() { openMap(url) } }
                     .systemButton(prominent: true)
                     .accessibilityLabel("Open map")
                     .keyboardShortcut(.defaultAction)

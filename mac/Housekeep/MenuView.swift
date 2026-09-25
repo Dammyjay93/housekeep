@@ -43,9 +43,11 @@ struct MenuView: View {
         case .failed: return "Stopped"
         case .running:
             guard let snapshot = housekeep.snapshot, snapshot.error == nil else { return "" }
-            let n = snapshot.needy.count
             if snapshot.projects.isEmpty { return "No projects yet" }
-            return n == 0 ? "All clear" : "\(n) need\(n == 1 ? "s" : "") you"
+            let here = snapshot.projects.filter(\.onlyHere).count
+            if here > 0 { return "\(here) with work only here" }
+            let n = snapshot.needy.count
+            return n == 0 ? "All safe" : "\(n) worth a look"
         }
     }
 
@@ -82,9 +84,8 @@ struct MenuView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     if let version = updates.waiting { updateCard(version) }
                     if !login.answered && !login.enabled { loginCard }
-                    ForEach(snapshot.needy) { project in
-                        ProjectCard(project: project) { if let url = housekeep.mapURL(slug: project.slug) { openMap(url) } }
-                    }
+                    group("Not on GitHub yet", snapshot.projects.filter(\.onlyHere))
+                    group("Worth a look", snapshot.needy.filter { !$0.onlyHere })
                     if !snapshot.clean.isEmpty { allClear(snapshot.clean, alone: snapshot.needy.isEmpty) }
                 }
                 .padding(8)
@@ -94,11 +95,23 @@ struct MenuView: View {
         }
     }
 
+    @ViewBuilder private func group(_ title: String, _ projects: [Project]) -> some View {
+        if !projects.isEmpty {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.system(size: 11.5, weight: .medium)).foregroundStyle(Palette.text3)
+                    .padding(.horizontal, 10).padding(.top, 6).padding(.bottom, 2)
+                ForEach(projects) { project in
+                    ProjectRow(project: project) { if let url = housekeep.mapURL(slug: project.slug) { openMap(url) } }
+                }
+            }
+        }
+    }
+
     private func allClear(_ clean: [Project], alone: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 9) {
             TierDot(tier: .safe)
             VStack(alignment: .leading, spacing: 2) {
-                Text(alone ? "Everything is committed, pushed and in sync." : "All clear")
+                Text(alone ? "Everything is committed, on GitHub and in main." : "Safe")
                     .font(.system(size: 12.5, weight: .medium)).foregroundStyle(alone ? Palette.text : Palette.text2)
                 Text(clean.map(\.name).joined(separator: ", "))
                     .font(.system(size: 12)).foregroundStyle(Palette.text3).lineLimit(2)
@@ -174,9 +187,9 @@ struct MenuView: View {
             .accessibilityLabel("Check now")
             .disabled(housekeep.server == nil || housekeep.checking)
 
-            Button("Open Map") { if let url = housekeep.mapURL() { openMap(url) } }
+            Button("Open Housekeep") { if let url = housekeep.mapURL() { openMap(url) } }
                 .systemButton(prominent: true)
-                .accessibilityLabel("Open map")
+                .accessibilityLabel("Open Housekeep")
                 .disabled(housekeep.server == nil)
 
             Menu {
@@ -212,44 +225,41 @@ struct MenuView: View {
     }
 }
 
-/// One project that needs you: its next step in plain words, and the request for your assistant.
-private struct ProjectCard: View {
+/// One project, in a line: what's wrong, a request for everything, and the way into its card.
+private struct ProjectRow: View {
     let project: Project
     let open: () -> Void
     @State private var copied = false
+    @State private var hovering = false
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 9) {
-            TierDot(tier: project.tier)
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(project.name).font(.system(size: 13, weight: .medium)).foregroundStyle(Palette.text).lineLimit(1)
-                    Spacer(minLength: 8)
-                    Text(project.tier.verdict).font(.system(size: 11.5)).foregroundStyle(Palette.text3)
-                }
-                if let next = project.next {
-                    Text(next.title).font(.system(size: 12.5)).foregroundStyle(Palette.text)
-                        .padding(.top, 5).fixedSize(horizontal: false, vertical: true)
-                    Text(next.why).font(.system(size: 12)).foregroundStyle(Palette.text2).lineLimit(3)
-                        .padding(.top, 2).fixedSize(horizontal: false, vertical: true)
-                }
-                HStack(spacing: 6) {
-                    if let request = project.request {
-                        Button { copy(request) } label: {
-                            Label(copied ? "Copied" : "Copy Request", systemImage: copied ? "checkmark" : "doc.on.doc")
-                        }
-                        .systemButton(prominent: true)
-                        .help("Copy a request to paste into your AI assistant (Claude Code, Cursor, Codex)")
-                        .accessibilityLabel(copied ? "Copied" : "Copy request for \(project.name)")
-                    }
-                    Button("Open", action: open).systemButton().accessibilityLabel("Open \(project.name) on the map")
-                }
-                .controlSize(.small)
-                .padding(.top, 10)
+        HStack(spacing: 10) {
+            TierDot(tier: project.tier).frame(width: 10)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(project.name).font(.system(size: 13, weight: .medium)).foregroundStyle(Palette.text).lineLimit(1)
+                Text(project.line).font(.system(size: 12)).foregroundStyle(Palette.text2).lineLimit(1).truncationMode(.tail)
             }
+            Spacer(minLength: 6)
+            if let ask = project.ask {
+                Button { copy(ask) } label: {
+                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                }
+                .systemButton()
+                .help(copied ? "Copied. Paste it into your AI assistant." : "Copy one request that fixes everything in \(project.name)")
+                .accessibilityLabel(copied ? "Copied" : "Copy request for \(project.name)")
+            }
+            Button(action: open) { Image(systemName: "chevron.right") }
+                .buttonStyle(.plain).foregroundStyle(Palette.text3)
+                .help("Open \(project.name) in Housekeep")
+                .accessibilityLabel("Open \(project.name)")
         }
-        .padding(12)
-        .card()
+        .controlSize(.small)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(hovering ? Palette.layer1 : .clear))
+        .contentShape(Rectangle())
+        .onHover { hovering = $0 }
+        .onTapGesture(perform: open)
     }
 
     private func copy(_ request: String) {
