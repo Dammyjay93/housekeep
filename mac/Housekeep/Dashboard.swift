@@ -10,47 +10,12 @@ final class Navigator: ObservableObject {
     }
 
     @Published var place: Place? = .overview
+    /// Set when you ask for the window, so one SwiftUI restores on its own at launch can close again.
+    var requested = false
 }
 
 /// Housekeep's window, native: projects on the left, and on the right either every project as a card
 /// you can scan or open, or one project with its details. Everything follows the server live.
-@MainActor
-final class DashboardWindow: NSObject, NSWindowDelegate {
-    private var window: NSWindow?
-    private let navigator = Navigator()
-    let sent = SentRequests()
-
-    func show(housekeep: Housekeep, slug: String? = nil) {
-        navigator.place = slug.map { .project($0) } ?? .overview
-        let window = self.window ?? makeWindow(housekeep)
-        AppWindows.show(window)
-    }
-
-    private func makeWindow(_ housekeep: Housekeep) -> NSWindow {
-        let root = DashboardView(housekeep: housekeep).environmentObject(navigator).environmentObject(sent)
-        let controller = NSHostingController(rootView: root)
-        if #available(macOS 14, *) { controller.sceneBridgingOptions = [.toolbars, .title] }
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1240, height: 820),
-                              styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
-                              backing: .buffered, defer: false)
-        window.contentViewController = controller
-        window.title = "Housekeep"
-        window.appearance = NSAppearance(named: .darkAqua)
-        window.minSize = NSSize(width: 960, height: 600)
-        window.isReleasedWhenClosed = false
-        window.delegate = self
-        window.setContentSize(NSSize(width: 1240, height: 820))
-        window.center()
-        window.setFrameAutosaveName("HousekeepDashboard")
-        self.window = window
-        return window
-    }
-
-    func windowWillClose(_ notification: Notification) {
-        if let window { AppWindows.closing(window) }
-    }
-}
-
 struct DashboardView: View {
     @ObservedObject var housekeep: Housekeep
     @EnvironmentObject private var navigator: Navigator
@@ -82,6 +47,8 @@ struct DashboardView: View {
         .navigationTitle(title)
         .onReceive(housekeep.$snapshot) { if let snapshot = $0 { sent.update(with: snapshot) } }
         .preferredColorScheme(.dark)
+        .frame(minWidth: 960, minHeight: 600)
+        .background(WindowCloser(keep: navigator.requested))
     }
 
     private var title: String {
@@ -324,4 +291,19 @@ private struct Details: View {
             .padding(.vertical, 11)
         )
     }
+}
+
+/// Housekeep lives in the menu bar: its window opens when you ask for it, never on its own at launch.
+/// macOS 15 and later are told so up front; before that, a window that appears unasked closes again.
+private struct WindowCloser: NSViewRepresentable {
+    let keep: Bool
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        guard !keep else { return view }
+        DispatchQueue.main.async { view.window?.close() }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
 }
