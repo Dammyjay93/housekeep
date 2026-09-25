@@ -74,14 +74,14 @@ struct ProjectCard: View {
             }
             if !open && live == nil && canOpen {
                 Button { copy(Requests.combined(project, items), items: items) } label: {
-                    Label("Copy request", systemImage: "doc.on.doc")
+                    Label("Copy request", systemImage: "doc.on.doc").roomy()
                 }
                 .systemButton()
                 .help("Copy one request that fixes everything in \(project.name)")
             }
             if canOpen {
                 Button(action: toggle) {
-                    Image(systemName: "chevron.right").rotationEffect(.degrees(open ? 90 : 0))
+                    Image(systemName: "chevron.right").rotationEffect(.degrees(open ? 90 : 0)).frame(width: 14).roomy()
                 }
                 .systemButton()
                 .accessibilityLabel(open ? "Close \(project.name)" : "Open \(project.name)")
@@ -105,14 +105,14 @@ struct ProjectCard: View {
                 }
                 .font(.system(size: 12))
                 .foregroundStyle(Palette.text2)
-                .padding(.horizontal, 11)
-                .frame(height: 28)
+                .padding(.horizontal, 12)
+                .frame(height: 30)
                 .glassCapsule()
                 .fixedSize()
             }
             if items.count > shown {
                 Text("+\(items.count - shown)").font(.system(size: 12)).foregroundStyle(Palette.text2)
-                    .padding(.horizontal, 11).frame(height: 28).glassCapsule().fixedSize()
+                    .padding(.horizontal, 12).frame(height: 30).glassCapsule().fixedSize()
             }
         }
     }
@@ -244,7 +244,7 @@ struct ProjectCard: View {
                 Spacer(minLength: 0)
                 if !live.finished {
                     Button { copy(Requests.combined(project, items.filter { item in live.items.contains { $0.id == item.id } }), items: nil) } label: {
-                        Label("Copy request again", systemImage: "doc.on.doc").frame(maxWidth: .infinity)
+                        Label("Copy request again", systemImage: "doc.on.doc").frame(maxWidth: .infinity).roomy()
                     }
                     .systemButton()
                     .controlSize(.large)
@@ -272,7 +272,7 @@ struct ProjectCard: View {
                 }
                 Spacer(minLength: 0)
                 Button { copy(Requests.combined(project, chosen), items: chosen) } label: {
-                    Label("Copy request", systemImage: "doc.on.doc").frame(maxWidth: .infinity)
+                    Label("Copy request", systemImage: "doc.on.doc").frame(maxWidth: .infinity).roomy()
                 }
                 .systemButton(prominent: true)
                 .controlSize(.large)
@@ -317,4 +317,10 @@ struct ProjectCard: View {
         case .tidy: Palette.green
         }
     }
+}
+
+private extension View {
+    /// Room inside a glass button: macOS gives each control size a fixed, tight height, so the label
+    /// carries the extra space itself. Makes card buttons about 38pt tall.
+    func roomy() -> some View { padding(.vertical, 5).padding(.horizontal, 3) }
 }
