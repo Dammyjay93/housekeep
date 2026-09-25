@@ -24,14 +24,42 @@ struct Project: Decodable, Identifiable, Sendable {
     let path: String
     let tier: Tier
     let next: NextStep?
+    /// What to fix, in plain words (src/items.ts). Missing from servers older than 0.2.
+    let items: [Item]?
+    /// One request covering every item, backing up first.
+    let request: String?
 
     var id: String { path }
 
-    /// The request to copy, when there's something to do that's worth asking an assistant for.
-    var request: String? {
+    var toFix: [Item] { items ?? [] }
+
+    /// Work that exists only on this computer: the reason a project is listed first.
+    var onlyHere: Bool { toFix.contains { $0.lane == .mac } }
+
+    /// The request to copy: everything at once, or the next step from an older server.
+    var ask: String? {
+        if let request, !request.isEmpty { return request }
         guard let next, next.tier != .safe, !next.ask.isEmpty else { return nil }
         return next.ask
     }
+
+    /// What's wrong, in a line: the names of the first few things to fix.
+    var line: String {
+        let titles = toFix.map(\.title)
+        guard !titles.isEmpty else { return next?.title ?? tier.verdict }
+        let shown = titles.prefix(2).joined(separator: " · ")
+        return titles.count > 2 ? "\(shown) · +\(titles.count - 2)" : shown
+    }
+}
+
+struct Item: Decodable, Identifiable, Sendable {
+    enum Lane: String, Decodable, Sendable {
+        case mac, check, tidy
+    }
+
+    let id: String
+    let lane: Lane
+    let title: String
 }
 
 struct NextStep: Decodable, Sendable {
