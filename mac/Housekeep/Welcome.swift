@@ -47,12 +47,12 @@ final class WelcomeWindow: NSObject, NSWindowDelegate {
 
     static var seen: Bool { UserDefaults.standard.bool(forKey: seenKey) }
 
-    func show(housekeep: Housekeep, login: LoginItem, openMap: @escaping (URL) -> Void) {
+    func show(housekeep: Housekeep, login: LoginItem, openWindow: @escaping (String?) -> Void) {
         UserDefaults.standard.set(true, forKey: Self.seenKey)
         let view = WelcomeView(housekeep: housekeep, login: login, hidden: MenuBarPlace.hidden,
-                               openMap: { [weak self] url in
+                               openWindow: { [weak self] slug in
                                    self?.window?.close()
-                                   openMap(url)
+                                   openWindow(slug)
                                },
                                done: { [weak self] in self?.window?.close() })
         let window = self.window ?? makeWindow()
@@ -85,7 +85,7 @@ private struct WelcomeView: View {
     @ObservedObject var housekeep: Housekeep
     @ObservedObject var login: LoginItem
     let hidden: Bool
-    let openMap: (URL) -> Void
+    let openWindow: (String?) -> Void
     let done: () -> Void
 
     var body: some View {
@@ -118,7 +118,7 @@ private struct WelcomeView: View {
             HStack(spacing: 8) {
                 Spacer()
                 Button("Done") { done() }.systemButton().accessibilityLabel("Done").keyboardShortcut(.cancelAction)
-                Button("Open Housekeep") { if let url = housekeep.mapURL() { openMap(url) } }
+                Button("Open Housekeep") { openWindow(nil) }
                     .systemButton(prominent: true)
                     .accessibilityLabel("Open map")
                     .keyboardShortcut(.defaultAction)

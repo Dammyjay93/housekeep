@@ -8,7 +8,8 @@ struct MenuView: View {
     @ObservedObject var housekeep: Housekeep
     @ObservedObject var login: LoginItem
     @ObservedObject var updates: Updates
-    let openMap: (URL) -> Void
+    /// Opens the window: at one project, or the overview when nil.
+    let openWindow: (String?) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -101,7 +102,7 @@ struct MenuView: View {
                 Text(title).font(.system(size: 11.5, weight: .medium)).foregroundStyle(Palette.text3)
                     .padding(.horizontal, 10).padding(.top, 6).padding(.bottom, 2)
                 ForEach(projects) { project in
-                    ProjectRow(project: project) { if let url = housekeep.mapURL(slug: project.slug) { openMap(url) } }
+                    ProjectRow(project: project) { openWindow(project.slug) }
                 }
             }
         }
@@ -187,7 +188,7 @@ struct MenuView: View {
             .accessibilityLabel("Check now")
             .disabled(housekeep.server == nil || housekeep.checking)
 
-            Button("Open Housekeep") { if let url = housekeep.mapURL() { openMap(url) } }
+            Button("Open Housekeep") { openWindow(nil) }
                 .systemButton(prominent: true)
                 .accessibilityLabel("Open Housekeep")
                 .disabled(housekeep.server == nil)
