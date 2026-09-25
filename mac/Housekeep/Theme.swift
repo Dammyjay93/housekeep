@@ -55,10 +55,11 @@ struct TierDot: View {
 
 extension View {
     /// The system's buttons: Liquid Glass capsules on macOS 26 and later (macOS draws glass buttons as
-    /// rounded rectangles unless told otherwise), bordered before it. The prominent one is tinted with the accent.
+    /// rounded rectangles unless told otherwise), bordered before it. The prominent one is clear glass with a
+    /// light wash of the accent: glassProminent fills the glass with its tint until it reads as a solid pill.
     @ViewBuilder func systemButton(prominent: Bool = false) -> some View {
         if #available(macOS 26, *) {
-            if prominent { buttonStyle(.glassProminent).tint(Palette.accent).buttonBorderShape(.capsule) }
+            if prominent { buttonStyle(.glass(.regular.tint(Palette.accent.opacity(0.35)))).buttonBorderShape(.capsule) }
             else { buttonStyle(.glass).buttonBorderShape(.capsule) }
         } else {
             if prominent { buttonStyle(.borderedProminent).tint(Palette.text).foregroundStyle(Palette.black) } else { buttonStyle(.bordered) }
