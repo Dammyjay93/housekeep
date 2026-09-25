@@ -410,7 +410,10 @@ export async function runningServer(): Promise<{ url: string; token: string } | 
   if (!isRecord(info) || typeof info.url !== "string" || typeof info.token !== "string") return null;
   try {
     const res = await fetch(new URL("api/state", info.url), { headers: { "X-Housekeep-Token": info.token }, signal: AbortSignal.timeout(1500) });
-    return res.ok ? { url: info.url, token: info.token } : null;
+    if (!res.ok) return null;
+    // A server left running from an older version would show this version's page with its old data.
+    const state: unknown = await res.json();
+    return isRecord(state) && state.version === VERSION ? { url: info.url, token: info.token } : null;
   } catch {
     return null;
   }

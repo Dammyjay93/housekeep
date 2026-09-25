@@ -6,11 +6,11 @@ import { parseArgs } from "node:util";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { join } from "node:path";
-import { CONFIG_FILE, MAP_FILE, STATE_DIR, writeAtomic } from "./config.js";
+import { CONFIG_FILE, MAP_FILE, STATE_DIR, readJson, writeAtomic } from "./config.js";
 import { loadDemo } from "./demo.js";
-import { cliPath, install, swiftBarApp, uninstall } from "./install.js";
+import { LABEL, cliPath, install, swiftBarApp, uninstall } from "./install.js";
 import { menubar } from "./menubar.js";
-import { ENV, HOME, run, tilde } from "./proc.js";
+import { ENV, HOME, isRecord, run, tilde } from "./proc.js";
 import { renderDashboard } from "./render.js";
 import { detailReport, exitCode, paint, summaryReport } from "./report.js";
 import { VERSION, scan } from "./scan.js";
@@ -76,7 +76,18 @@ async function serveUntilStopped(server: LiveServer): Promise<never> {
     process.once("SIGTERM", stop);
     // Run by the Mac app, which holds our stdin open: when it quits or crashes, stdin closes and we stop too.
     if (process.env.HOUSEKEEP_APP === "1") process.stdin.once("end", stop).resume();
+    // Run at login, from wherever Housekeep is installed: once a newer version lands there, stop, and
+    // launchd starts the new one. Otherwise the map would keep serving the old version's view of things.
+    if (process.env.XPC_SERVICE_NAME === LABEL) {
+      setInterval(() => { if (installedVersion() !== VERSION) stop(); }, 60_000).unref();
+    }
   });
+}
+
+/** The version of Housekeep installed where this copy runs from, which an upgrade replaces under us. */
+function installedVersion(): string | null {
+  const pkg = readJson(fileURLToPath(new URL("../../package.json", import.meta.url)));
+  return isRecord(pkg) && typeof pkg.version === "string" ? pkg.version : null;
 }
 
 async function openMap(port: number | undefined): Promise<LiveServer | null> {

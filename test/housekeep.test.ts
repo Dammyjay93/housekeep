@@ -22,7 +22,8 @@ Object.assign(process.env, {
 
 // Loaded after the environment is set: modules read it when they load.
 const { buildProject, checkGit, folderStatus, gitSupport, inMain, lastActivity, onMissingDrive, remoteBranches, scan } = await import("../src/scan.js");
-const { startServer } = await import("../src/server.js");
+const { runningServer, startServer } = await import("../src/server.js");
+const { VERSION } = await import("../src/scan.js");
 const { SERVER_FILE, STATE_DIR, CONFIG_FILE } = await import("../src/config.js");
 const { githubRepo, hostName, localPathOf, remotesOf } = await import("../src/remote.js");
 const { workName } = await import("../src/items.js");
@@ -559,6 +560,25 @@ describe("the live map", () => {
     const p = await sb.project();
     assert.throws(() => openIn(p, scratch, "files"), OpenError);
     assert.throws(() => openIn(p, sb.repo, "no-such-app"), OpenError);
+  });
+
+  it("won't reuse a server left running from another version", async () => {
+    const { createServer } = await import("node:http");
+    let version = "0.0.1";
+    const old = createServer((_req, res) => { res.setHeader("content-type", "application/json"); res.end(JSON.stringify({ version, projects: [] })); });
+    await new Promise<void>((resolve) => old.listen(0, "127.0.0.1", resolve));
+    const address = old.address();
+    assert.ok(address && typeof address === "object");
+    mkdirSync(dirname(SERVER_FILE), { recursive: true });
+    writeFileSync(SERVER_FILE, JSON.stringify({ url: `http://127.0.0.1:${address.port}/`, token: "t", pid: process.pid }));
+    try {
+      assert.equal(await runningServer(), null);
+      version = VERSION;
+      assert.ok(await runningServer());
+    } finally {
+      old.close();
+      rmSync(SERVER_FILE, { force: true });
+    }
   });
 
   it("keeps its token and state readable only by you", async () => {

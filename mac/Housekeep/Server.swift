@@ -189,11 +189,16 @@ final class Housekeep: ObservableObject {
         return ServerInfo(url: url, token: token, pid: (json["pid"] as? NSNumber)?.int32Value)
     }
 
+    /// Whether the server answers, and runs the same version as this app. One left running from an older
+    /// version would pair this app's view with its old data, so the app starts its own instead.
     nonisolated private static func answers(_ info: ServerInfo) async -> Bool {
         var request = URLRequest(url: info.url.appending(path: "api/state"), timeoutInterval: 1.5)
         request.setValue(info.token, forHTTPHeaderField: "X-Housekeep-Token")
-        guard let (_, response) = try? await session.data(for: request) else { return false }
-        return (response as? HTTPURLResponse)?.statusCode == 200
+        guard let (data, response) = try? await session.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
+        let mine = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        return json["version"] as? String == mine
     }
 
     nonisolated private static func runningServer() async -> ServerInfo? {
