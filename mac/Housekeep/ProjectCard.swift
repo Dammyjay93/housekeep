@@ -88,8 +88,9 @@ struct ProjectCard: View {
             }
         }
         .controlSize(.large)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .padding(.leading, 22)
+        .padding(.trailing, 18)
+        .padding(.vertical, 20)
         .contentShape(Rectangle())
         .onTapGesture { if canOpen { toggle() } }
         .onHover { hovering = canOpen && !open && $0 }
