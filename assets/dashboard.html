@@ -154,19 +154,7 @@ button { font: inherit; color: inherit; }
 .panel-head .end { display: flex; align-items: center; gap: 10px; color: var(--text-3); font-size: 12.5px; }
 .panel-body { padding: 4px var(--inset) var(--inset); }
 
-.strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.cell { padding: 22px var(--inset) var(--inset); min-width: 0; }
-.cell + .cell { box-shadow: inset 1px 0 0 var(--line); }
-.cell .label { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; }
-.cell .value { display: block; margin-top: 18px; font-size: 38px; line-height: 1; font-weight: 400; letter-spacing: -0.035em; }
-.cell[data-tier="safe"] .value { color: var(--text-3); }
-.cell .caption { margin: 10px 0 0; color: var(--text-3); font-size: 12.5px; line-height: 1.45; overflow-wrap: anywhere; }
 
-.next { display: flex; align-items: center; justify-content: space-between; gap: 18px 32px; flex-wrap: wrap; padding: 22px var(--inset); }
-.next .kicker { display: flex; align-items: center; gap: 8px; color: var(--text-3); font-size: 12.5px; }
-.next h2 { margin: 8px 0 0; font-size: 21px; line-height: 1.25; font-weight: 500; letter-spacing: -0.02em; }
-.next p { margin: 4px 0 0; max-width: 560px; color: var(--text-2); font-size: 13.5px; line-height: 1.5; }
-.next .act { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 table { width: 100%; border-collapse: collapse; }
 .scroll { overflow-x: auto; }
@@ -227,10 +215,70 @@ dialog.confirm::backdrop { background: rgba(0, 0, 0, 0.72); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(6px); } }
 @keyframes toast-out { to { opacity: 0; } }
 
+/* ---------- projects as cards: scan closed, fix open ---------- */
+.group-head { display: flex; justify-content: space-between; align-items: baseline; margin: 12px 4px 0; color: var(--text-3); font-size: 12.5px; }
+.group-head h2 { margin: 0; font-size: 13px; font-weight: 500; color: var(--text-2); }
+.card { overflow: hidden; transition: box-shadow 160ms var(--ease), background-color 160ms var(--ease); }
+.card[data-open] { background: var(--layer-1); box-shadow: inset 0 0 0 1px var(--line-2), 0 24px 60px rgba(0, 0, 0, 0.45); }
+.card-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 10px 8px 8px; }
+.card-toggle { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 52px; padding: 8px 12px; border: 0; border-radius: 14px; background: transparent; text-align: left; cursor: pointer; }
+.card-toggle:hover { background: var(--layer-1); }
+.card[data-open] .card-toggle:hover { background: transparent; }
+.card-toggle .who { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.card-toggle .who b { font-size: 14.5px; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap; }
+.card-toggle .who small { color: var(--text-3); font: 11.5px/1.4 var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-toggle .line { display: block; margin-top: 2px; color: var(--text-2); font-size: 13px; }
+.card-toggle .line[data-live] { color: var(--green); }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.tag.lane { gap: 6px; height: 24px; padding: 0 9px; color: var(--text-2); font-size: 12px; box-shadow: inset 0 0 0 1px var(--line); }
+.tag.lane i { width: 5px; height: 5px; border-radius: 50%; background: var(--c); }
+.card-actions { display: flex; align-items: center; gap: 4px; }
+.card-actions .chev-btn svg { transition: transform 200ms var(--ease); }
+.card[data-open] .chev-btn svg { transform: rotate(90deg); }
+.card-map { padding: 6px var(--inset) 18px 44px; }
+.card-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; box-shadow: inset 0 1px 0 var(--line); }
+.lanes { display: grid; gap: 22px; padding: 22px var(--inset) 26px 44px; min-width: 0; }
+.lane { margin: 0; padding: 0; border: 0; min-width: 0; }
+.lane legend { display: flex; align-items: baseline; gap: 10px; padding: 0 0 8px; font-size: 12.5px; font-weight: 500; color: var(--c); }
+.lane legend span { color: var(--text-3); font-weight: 400; }
+.lane-list { border-radius: 14px; background: var(--shell); box-shadow: inset 0 0 0 1px var(--line); }
+.item { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 13px 16px; cursor: pointer; }
+.item + .item { box-shadow: inset 0 1px 0 var(--line); }
+.item input { width: 15px; height: 15px; margin: 2px 0 0; accent-color: var(--text); cursor: pointer; }
+.item b { display: block; font-size: 14px; font-weight: 500; }
+.item small { display: block; margin-top: 2px; color: var(--text-2); font-size: 12.5px; line-height: 1.45; }
+.item .where { margin-top: 3px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); font: 11px/1.4 var(--mono); }
+.item[data-done] b { color: var(--text-2); }
+.item[data-done] small { color: var(--text-3); }
+.tick { width: 18px; height: 18px; margin-top: 1px; }
+.notes { margin: 0; color: var(--text-3); font-size: 12.5px; line-height: 1.55; }
+.send { display: flex; flex-direction: column; gap: 16px; padding: 22px; background: var(--shell); box-shadow: inset 1px 0 0 var(--line); }
+.send h3 { margin: 0; font-size: 13.5px; font-weight: 500; }
+.send p { margin: 4px 0 0; color: var(--text-3); font-size: 12px; line-height: 1.5; }
+.send ol { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.send li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; color: var(--text); font-size: 12.5px; line-height: 1.45; counter-increment: step; }
+.send li::before { content: counter(step); display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--layer-2); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); font-size: 10.5px; }
+.send .grow { flex: 1; }
+.send .btn { width: 100%; height: 42px; }
+.send .hint { text-align: center; }
+.send .copied-at { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(82, 166, 124, 0.08); box-shadow: inset 0 0 0 1px rgba(82, 166, 124, 0.22); color: var(--text); font-size: 12.5px; }
+.send .copied-at svg { width: 14px; height: 14px; color: var(--green); flex: none; }
+.watching { display: flex; align-items: center; gap: 8px; }
+.watching .dot { background: var(--green); animation: breathe 1.6s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: 0.35; } }
+.log { display: grid; margin: 0; padding: 0; list-style: none; }
+.log li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 8px; padding: 8px 0; box-shadow: inset 0 -1px 0 var(--line); counter-increment: none; font-size: 12px; }
+.log li::before { content: none; }
+.log time { color: var(--text-3); font: 10.5px/1.6 var(--mono); }
+.progress { display: flex; align-items: center; gap: 12px; padding: 0 var(--inset) 0 44px; color: var(--text-2); font-size: 12.5px; }
+.progress .track { display: flex; flex: 1; gap: 4px; }
+.progress .track i { flex: 1; height: 4px; border-radius: 2px; background: var(--layer-3); transition: background-color 400ms var(--ease); }
+.progress .track i[data-done] { background: var(--green); }
+.details-head { margin: 28px 4px 0; color: var(--text-3); font-size: 12.5px; }
+.details-head h2 { margin: 0 0 2px; font-size: 13px; font-weight: 500; color: var(--text-2); }
 @media (max-width: 1100px) {
-  .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .cell:nth-child(3) { box-shadow: inset 0 1px 0 var(--line); }
-  .cell:nth-child(4) { box-shadow: inset 1px 0 0 var(--line), inset 0 1px 0 var(--line); }
+  .card-body { grid-template-columns: minmax(0, 1fr); }
+  .send { box-shadow: inset 0 1px 0 var(--line); }
 }
 @media (max-width: 860px) {
   .app { grid-template-columns: minmax(0, 1fr); height: auto; overflow: visible; }
@@ -246,9 +294,6 @@ dialog.confirm::backdrop { background: rgba(0, 0, 0, 0.72); }
   .bar .when { display: none; }
   :root { --edge: 16px; --gutter: 16px; --inset: 16px; }
   .head h1 { font-size: 28px; }
-  .cell .value { font-size: 32px; margin-top: 12px; }
-  .cell { padding-top: 16px; padding-bottom: 16px; }
-  .next { padding-top: 18px; padding-bottom: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .view.enter, dialog.confirm[open], .toast, .toast.leaving { animation: none; }
@@ -390,12 +435,8 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
 .plan-row small { display: block; color: var(--text-3); font-size: 12.5px; }
 
 /* numbers with a verdict */
-.cell .unit { display: block; margin-top: 8px; color: var(--text-2); font-size: 12.5px; }
 
 /* help for steps that need an AI assistant */
-.guide { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 12px 0 0; padding: 0; list-style: none; color: var(--text-3); font-size: 12.5px; counter-reset: g; }
-.guide li { counter-increment: g; }
-.guide li::before { content: counter(g) ". "; }
 .map-note { margin: -8px 0 14px; color: var(--text-3); font-size: 12.5px; display: flex; align-items: center; gap: 7px; }
 
 /* sidebar extras */
@@ -460,8 +501,6 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
   const LIVE = JSON.parse(document.getElementById("housekeep-live").textContent);
   let data = JSON.parse(document.getElementById("housekeep-data").textContent) || { projects: [], error: { title: "No data yet", detail: "Run housekeep in a terminal to fill this page." } };
   const SVG = "http://www.w3.org/2000/svg";
-  const KEYS = ["commit", "push", "sync", "cleanup"];
-  const TERM_FOR = { commit: "commit", push: "push", sync: "main", cleanup: "cleanup" };
   const SAY = { "at-risk": "Could lose work", attention: "Needs attention", safe: "All clear" };
   const OPENER_LABEL = { files: /Mac/.test(navigator.userAgent) ? "Finder" : "Files", terminal: "Terminal", vscode: "VS Code", cursor: "Cursor" };
   // The browser runs on the machine being checked, so it knows what to call it.
@@ -666,13 +705,14 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
   }
 
   // Every fix is a request to copy for your AI assistant: Housekeep itself never changes a repo.
-  function copyButton(text, { label = "Copy request", tone = "", title = null, iconOnly = false } = {}) {
+  function copyButton(text, { label = "Copy request", tone = "", title = null, iconOnly = false, onCopied = null } = {}) {
     const button = el("button", { class: `btn${tone ? " " + tone : ""}${iconOnly ? " icon" : ""}`, type: "button", title, "aria-label": title || label },
       icon("copy", "idle"), icon("check", "done"), iconOnly ? null : el("span", { text: label }));
     const words = button.querySelector("span");
     button.addEventListener("click", () => {
       const done = (ok) => {
         button.classList.toggle("copied", ok);
+        if (ok && onCopied) onCopied();
         if (words) words.textContent = ok ? "Copied" : label;
         toast(ok ? "safe" : "at-risk", ok ? "Copied. Paste it into your AI assistant (Claude Code, Codex, Cursor), opened in this project's folder." : "Couldn't reach the clipboard.", ok ? text : "");
         setTimeout(() => { button.classList.remove("copied"); if (words) words.textContent = label; }, 1800);
@@ -708,7 +748,7 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
   // Written by the scanner, so the map, the report and the JSON say the same thing.
   const remoteName = (p) => (p.remotes && p.remotes.push) || "origin";
   const mainRef = (p) => (p.main && p.main.remoteRef) || `${remoteName(p)}/${(p.main && p.main.name) || "main"}`;
-  const how = (b) => b.merged === "squashed" ? "squash-merged" : "merged";
+  const how = (b) => b.merged === "squashed" ? "squash-merged" : b.merged === "pull-request" ? "merged through a pull request" : "merged";
   const unchecked = (p) => {
     const g = p.github || {};
     if (g.checked) return null;
@@ -777,73 +817,201 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
   }
   setInterval(renderChecked, 20000);
 
-  /* ---------- overview ---------- */
+  /* ---------- projects as cards: scan them closed, open one to fix it ---------- */
 
-  function strip(cells) {
-    return el("section", { class: "panel strip" }, cells.map(({ tier, label, termKey, value, unit, hint }) =>
-      el("div", { class: "cell", "data-tier": tier },
-        el("div", { class: "label" }, dot(tier), termKey ? term(label, termKey) : label),
-        el("span", { class: "value", text: value }),
-        unit ? el("span", { class: "unit", text: unit }) : null,
-        el("p", { class: "caption", text: hint }))));
+  const LANES = [
+    ["mac", "at-risk", `Only on ${HERE}`, "Lost if this computer is"],
+    ["check", "attention", "Needs a check", "Nothing lost yet"],
+    ["tidy", "safe", "Tidy up", "Already in main, safe to clear"],
+  ];
+  const itemsOf = (p) => p.items || [];
+  const inLane = (p, lane) => itemsOf(p).filter((i) => i.lane === lane);
+
+  // What you left unticked, per project. Ticking only changes what the request asks for.
+  const skipped = {};
+  const chosen = (p) => itemsOf(p).filter((i) => !(skipped[p.slug] || new Set()).has(i.id));
+
+  // The same wording the CLI's --json gives as `request`, for just the ticked items.
+  function requestFor(p, items) {
+    if (!items.length) return "";
+    const prefix = `In ${p.path}, `;
+    const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+    const steps = items.map((it, i) => `${i + 1}. ${cap(it.ask.startsWith(prefix) ? it.ask.slice(prefix.length) : it.ask)}`);
+    return `In ${p.path}, please do the following, in this order.\n\n` +
+      "Before changing anything, back up: save a git bundle of every branch and a patch of any uncommitted changes, outside the repo, and tell me where they are. " +
+      "Ask me before pushing to main, deleting anything on the remote, or force-pushing.\n\n" +
+      `${steps.join("\n\n")}\n\nWhen you're done, tell me what you did and anything you left alone.`;
   }
 
-  function planPanel(projects) {
-    const todo = projects.filter((p) => p.next && p.next.tier !== "safe");
-    if (!todo.length) return null;
-    const rows = todo.slice(0, 3).map((p) => {
-      const open = el("a", { class: "btn ghost", href: `#${p.slug}` }, el("span", { text: "Open" }));
-      return el("div", { class: "plan-row" },
-        dot(p.next.tier),
-        el("div", { style: "min-width:0" }, el("b", { text: p.next.title }), el("small", { text: `${p.name} · ${p.next.why}` })),
-        el("div", { class: "row-actions" }, p.next.ask ? copyButton(p.next.ask) : null, open));
-    });
-    return el("section", { class: "panel", "data-tour": "next-steps" },
-      el("div", { class: "panel-head" }, el("h2", { text: "Your next steps" }), el("div", { class: "end", text: todo.length > 3 ? `Most urgent first · ${todo.length - 3} more below` : "Most urgent first" })),
-      rows);
+  // A request you copied, remembered so the card can tick items off as their changes land in git.
+  const SENT = "housekeep.sent";
+  const sentAll = () => { try { return JSON.parse(pref(SENT) || "{}"); } catch (err) { return {}; } };
+  const saveSent = (all) => pref(SENT, JSON.stringify(all));
+  const remember = (p, items) => {
+    const all = sentAll();
+    all[p.slug] = { at: new Date().toISOString(), items: items.map(({ id, title, why }) => ({ id, title, why })), done: {} };
+    saveSent(all);
+    render();
+  };
+  const forget = (p) => { const all = sentAll(); delete all[p.slug]; saveSent(all); render(); };
+  // Anything the request covered that's no longer in the latest check has landed.
+  function sentFor(p) {
+    const all = sentAll();
+    const s = all[p.slug];
+    if (!s) return null;
+    const still = new Set(itemsOf(p).map((i) => i.id));
+    let changed = false;
+    for (const it of s.items) if (!still.has(it.id) && !s.done[it.id]) { s.done[it.id] = new Date().toISOString(); changed = true; }
+    if (changed) saveSent(all);
+    return s;
+  }
+  const clock = (iso) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  let openSlug = null;
+  const firstToOpen = (projects) => (projects.find((p) => inLane(p, "mac").length) || projects.find((p) => itemsOf(p).length) || {}).slug || null;
+
+  function summary(p, sent) {
+    if (sent) {
+      const done = sent.items.filter((i) => sent.done[i.id]).length;
+      return done === sent.items.length ? "Done. Everything you sent is fixed." : done ? `${done} of ${sent.items.length} fixed. Your assistant is on the rest.` : "Waiting for your assistant to start.";
+    }
+    const mac = inLane(p, "mac"), check = inLane(p, "check"), tidy = inLane(p, "tidy");
+    if (mac.some((i) => i.id === "no-remote")) return `Not on ${H(p)} at all. The whole project exists only on ${HERE}.`;
+    if (mac.length) return `Some work here isn't on ${H(p)} yet.`;
+    if (check.length) return `${check[0].title}.`;
+    if (tidy.length) return `Nothing at risk. ${tidy.map((i) => i.title).join(" and ")} to clear.`;
+    return (p.notes || [])[0] || `Everything is in ${mainRef(p)}.`;
+  }
+
+  function tagsOf(p) {
+    const tier = { mac: "at-risk", check: "attention", tidy: "safe" };
+    const all = itemsOf(p);
+    const short = (t) => t.length > 26 ? t.slice(0, 24).trimEnd() + "…" : t;
+    return el("div", { class: "tags" }, all.slice(0, 3).map((i) => el("span", { class: "tag lane", "data-tier": tier[i.lane] }, el("i"), short(i.title))),
+      all.length > 3 ? el("span", { class: "tag lane", text: `+${all.length - 3}` }) : null);
+  }
+
+  const tickIcon = (done) => done
+    ? el("svg:svg", { class: "tick", viewBox: "0 0 18 18", role: "img", "aria-label": "Fixed" }, el("svg:circle", { cx: 9, cy: 9, r: 9, fill: "rgba(82, 166, 124, 0.18)" }), el("svg:path", { d: "M5.2 9.3l2.4 2.4 5.2-5.4", fill: "none", stroke: "var(--green)", "stroke-width": 1.8, "stroke-linecap": "round", "stroke-linejoin": "round" }))
+    : el("svg:svg", { class: "tick", viewBox: "0 0 18 18", role: "img", "aria-label": "Not yet" }, el("svg:circle", { cx: 9, cy: 9, r: 7, fill: "none", stroke: "var(--track-soft)", "stroke-width": 1.6, "stroke-dasharray": "2 3" }));
+
+  function laneBlock(tier, heading, hint, rows) {
+    return el("fieldset", { class: "lane", "data-tier": tier }, el("legend", {}, heading, el("span", { text: hint })), el("div", { class: "lane-list" }, rows));
+  }
+
+  function lanes(p, sent) {
+    const notes = (p.notes || []).map((n) => el("p", { class: "notes", text: n }));
+    if (sent) {
+      // Live: what the request covered, split by whether git shows it fixed yet.
+      const now = new Map(itemsOf(p).map((i) => [i.id, i]));
+      const row = (it) => el("div", { class: "item", "data-done": sent.done[it.id] ? "" : null },
+        tickIcon(Boolean(sent.done[it.id])),
+        el("div", {}, el("b", { text: it.title }), el("small", { text: sent.done[it.id] ? `Fixed at ${clock(sent.done[it.id])}` : (now.get(it.id) || it).why })),
+        el("span", { class: "where", text: (now.get(it.id) || {}).where || "" }));
+      const todo = sent.items.filter((i) => !sent.done[i.id]), fixed = sent.items.filter((i) => sent.done[i.id]);
+      return el("div", { class: "lanes" },
+        todo.length ? laneBlock("unknown", "Still to do", "Each one turns green when its change shows up in git", todo.map(row)) : null,
+        fixed.length ? laneBlock("safe", "Fixed", "Seen in git", fixed.map(row)) : null, ...notes);
+    }
+    const off = skipped[p.slug] || new Set();
+    const row = (i) => {
+      const box = el("input", { type: "checkbox" });
+      box.checked = !off.has(i.id);
+      box.addEventListener("change", () => {
+        const set = skipped[p.slug] || (skipped[p.slug] = new Set());
+        if (box.checked) set.delete(i.id); else set.add(i.id);
+        render();
+      });
+      return el("label", { class: "item" }, box, el("div", {}, el("b", { text: i.title }), el("small", { text: i.why })), el("span", { class: "where", text: i.where }));
+    };
+    return el("div", { class: "lanes" },
+      ...LANES.map(([lane, tier, heading, hint]) => { const rows = inLane(p, lane); return rows.length ? laneBlock(tier, heading, hint, rows.map(row)) : null; }), ...notes);
+  }
+
+  function sendPanel(p, sent) {
+    if (sent) {
+      const done = sent.items.filter((i) => sent.done[i.id]).sort((a, b) => sent.done[b.id].localeCompare(sent.done[a.id]));
+      const finished = done.length === sent.items.length;
+      const again = copyButton(requestFor(p, sent.items.map((i) => itemsOf(p).find((x) => x.id === i.id)).filter(Boolean)), { label: "Copy request again", tone: "ghost" });
+      const clear = el("button", { class: "btn ghost", type: "button" }, el("span", { text: finished ? "Done" : "Stop watching" }));
+      clear.addEventListener("click", () => forget(p));
+      return el("aside", { class: "send" },
+        el("div", { class: "copied-at" }, icon("check"), `Copied at ${clock(sent.at)}. Paste it into your assistant.`),
+        el("div", {}, el("h3", { class: "watching" }, dot("safe"), finished ? "All fixed" : "Watching for changes"),
+          el("p", { text: finished ? "Every change landed in git." : `Housekeep ticks each item off as its change lands in git. No need to keep checking.` })),
+        done.length ? el("ol", { class: "log" }, done.map((i) => el("li", {}, el("time", { text: clock(sent.done[i.id]) }), el("span", { text: i.title })))) : null,
+        el("div", { class: "grow" }),
+        finished ? null : again, clear);
+    }
+    const picked = chosen(p);
+    const text = requestFor(p, picked);
+    return el("aside", { class: "send" },
+      el("div", {}, el("h3", { text: "What your assistant will do" }), el("p", { text: "In this order. It backs up first and asks before deleting anything on the remote." })),
+      picked.length ? el("ol", {}, picked.map((i) => el("li", { text: i.step }))) : el("p", { text: "Tick at least one thing to fix." }),
+      el("div", { class: "grow" }),
+      picked.length ? copyButton(text, { tone: "primary", onCopied: () => remember(p, picked) }) : null,
+      el("p", { class: "hint", text: `Paste it into Claude Code, Codex or Cursor, opened in ${p.displayPath}.` }));
+  }
+
+  function progress(sent) {
+    const done = sent.items.filter((i) => sent.done[i.id]).length;
+    return el("div", { class: "progress", role: "img", "aria-label": `${done} of ${sent.items.length} fixed` },
+      el("div", { class: "track" }, sent.items.map((i) => el("i", { "data-done": sent.done[i.id] ? "" : null }))),
+      el("span", { text: `${done} of ${sent.items.length}` }));
+  }
+
+  // One project: closed, a line you can scan; open, everything needed to fix it.
+  function card(p, { pinned = false } = {}) {
+    const sent = sentFor(p);
+    const hasWork = itemsOf(p).length > 0 || Boolean(sent);
+    const open = hasWork && (pinned || openSlug === p.slug);
+    const tier = sent ? (sent.items.every((i) => sent.done[i.id]) ? "safe" : "attention") : p.tier;
+    const toggle = el("button", { class: "card-toggle", type: "button", "aria-expanded": open ? "true" : "false", disabled: pinned || !hasWork ? "" : null },
+      dot(tier),
+      el("span", { style: "min-width:0" },
+        pinned ? null : el("span", { class: "who" }, el("b", { text: p.name }), el("small", { text: p.displayPath })),
+        el("span", { class: "line", "data-live": sent ? "" : null, text: summary(p, sent) })),
+      open || sent ? null : tagsOf(p));
+    const flip = () => { openSlug = open ? null : p.slug; render(); };
+    if (!pinned && hasWork) toggle.addEventListener("click", flip);
+    const actions = el("div", { class: "card-actions" },
+      !open && !sent && p.request ? copyButton(p.request, { tone: "ghost", title: `Copy one request that fixes everything in ${p.name}`, onCopied: () => remember(p, itemsOf(p)) }) : null,
+      !pinned && hasWork ? (() => { const b = el("button", { class: "btn icon ghost chev-btn", type: "button", "aria-label": open ? `Close ${p.name}` : `Open ${p.name}` }, icon("chevron")); b.addEventListener("click", flip); return b; })() : null);
+    const section = el("section", { class: "panel card", "data-open": open ? "" : null, "data-tier": tier }, el("div", { class: "card-head" }, toggle, actions));
+    if (!open) return section;
+    mapBox = el("div", { class: "map" });
+    mapProject = p;
+    section.append(...[
+      el("div", { class: "card-map" }, mapBox, legend(p)),
+      sent ? progress(sent) : null,
+      el("div", { class: "card-body" }, lanes(p, sent), sendPanel(p, sent)),
+    ].filter(Boolean));
+    return section;
   }
 
   function overview(projects, need) {
     const n = projects.length;
-    const sum = (key) => projects.reduce((t, p) => t + (sig(p, key).value || 0), 0);
-    const affected = (key) => projects.filter((p) => sig(p, key).tier !== "safe").length;
-    const inSync = projects.filter((p) => sig(p, "sync").tier === "safe").length;
-    const loose = projects.reduce((t, p) => t + (sig(p, "commit").unit.startsWith("uncommitted") ? (sig(p, "commit").value || 0) : 0), 0);
-    const atRisk = projects.filter((p) => p.tier === "at-risk").length;
-    const unpushed = sum("push");
-    const where = (k) => `${affected(k)} of ${n} projects`;
-
-    const rows = projects.map((p) => {
-      const tr = el("tr", { class: "link", tabindex: "0", "aria-label": `Open ${p.name}` },
-        el("td", {}, el("div", { class: "proj" }, dot(p.tier), el("div", {}, el("b", { text: p.name }), el("small", { text: SAY[p.tier] })))),
-        ...KEYS.map((k) => { const s = sig(p, k); return el("td", { title: `${s.headline}. ${s.hint}` }, status(s.tier, s.cell)); }),
-        el("td", { class: "end" }, icon("chevron", "chev")));
-      const open = () => { location.hash = p.slug; };
-      tr.addEventListener("click", open);
-      tr.addEventListener("keydown", (e) => { if (e.key === "Enter") open(); });
-      return tr;
-    });
-
-    const sub = !need.length ? `Every working tree is clean, everything is pushed, and main is up to date with ${hostAll()} everywhere.`
-      : [atRisk ? `${atRisk} could lose work` : "", need.length - atRisk ? `${need.length - atRisk} need${need.length - atRisk === 1 ? "s" : ""} attention` : ""].filter(Boolean).join(" · ");
+    const onlyHere = projects.filter((p) => inLane(p, "mac").length || sentAll()[p.slug]);
+    if (!openSlug || !projects.some((p) => p.slug === openSlug && (itemsOf(p).length || sentAll()[p.slug]))) openSlug = firstToOpen(projects);
+    const groups = [
+      ["Not on the remote yet", onlyHere],
+      ["Worth a look", projects.filter((p) => !onlyHere.includes(p) && itemsOf(p).length)],
+      ["All clear", projects.filter((p) => !onlyHere.includes(p) && !itemsOf(p).length)],
+    ].filter(([, list]) => list.length);
+    const title = !need.length ? (n === 1 ? "Your project is safe" : `All ${n} projects are safe`)
+      : onlyHere.length ? `${plural(onlyHere.length, "project has", "projects have")} work only on ${HERE}`
+      : `${plural(need.length, "project needs", "projects need")} a look`;
+    const sub = !need.length ? `Everything is committed, on ${hostAll()} and in main. Housekeep keeps watching.`
+      : "Most urgent first. Open one to choose what your assistant fixes, or copy a request for everything.";
     return [
       el("section", { class: "head" }, el("div", {},
-        el("h1", { text: !need.length ? (n === 1 ? "Your project is safe" : `All ${n} projects are safe`) : need.length === n ? `All ${n} projects need you` : `${need.length} of ${n} projects need you` }),
+        el("h1", { text: title }),
         el("div", { class: "meta", text: sub }),
         (data.notices || []).length ? el("div", { class: "meta warn", text: data.notices.join(" ") }) : null)),
-      planPanel(projects),
-      strip([
-        { tier: affected("push") ? "at-risk" : "safe", label: "Unpushed", termKey: "push", value: unpushed, unit: unpushed === 1 ? "unpushed commit" : "unpushed commits", hint: affected("push") ? `In ${where("push")}. Push these first.` : `Everything is pushed to ${hostAll()}.` },
-        { tier: affected("commit") ? "attention" : "safe", label: "Uncommitted", termKey: "commit", value: loose, unit: loose === 1 ? "uncommitted change" : "uncommitted changes", hint: loose ? `In ${where("commit")}. Normal while you work.` : "Every working tree is clean." },
-        { tier: inSync === n ? "safe" : "attention", label: "main up to date", termKey: "main", value: `${inSync}/${n}`, unit: `projects up to date with ${hostAll() === "GitHub" ? "origin/main" : "the remote"}`, hint: inSync === n ? "One source of truth everywhere." : "The rest need a pull or a careful fix." },
-        { tier: affected("cleanup") ? "attention" : "safe", label: "Cleanup", termKey: "cleanup", value: sum("cleanup"), unit: "merged branches and worktrees", hint: affected("cleanup") ? `In ${where("cleanup")}. Safe to delete.` : "Nothing to clean up." },
+      ...groups.flatMap(([heading, list], gi) => [
+        el("div", { class: "group-head", "data-tour": gi === 0 ? "next-steps" : null }, el("h2", { text: heading }), el("span", { text: String(list.length) })),
+        ...list.map((p) => card(p)),
       ]),
-      el("section", { class: "panel" },
-        el("div", { class: "panel-head" }, el("h2", { text: "All projects" }), el("div", { class: "end", text: "Select one to see what to do" })),
-        el("div", { class: "scroll" }, el("table", {},
-          el("thead", {}, el("tr", {}, el("th", { text: "Project" }),
-            el("th", {}, term("Working tree", "commit")), el("th", {}, term("Push", "push")), el("th", {}, term("Sync", "main")), el("th", {}, term("Cleanup", "cleanup")), el("th", { class: "end" }))),
-          el("tbody", {}, rows)))),
     ];
   }
 
@@ -964,7 +1132,7 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
       const tags = b.current ? [["you are here", "var(--accent)"]] : b.worktree ? [["worktree", "var(--text-3)"]] : [];
       let note = b.state === "unpushed" ? plural(b.localOnly, "unpushed commit")
         : b.state === "kept" ? b.note
-        : b.state === "merged" ? `${how(b) === "merged" ? "Merged" : "Squash-merged"} into ${mainRef(p)}`
+        : b.state === "merged" ? b.note
         : b.upstreamGone ? "Upstream gone, work not in main"
         : b.behindUpstream ? `Behind its upstream by ${plural(b.behindUpstream, "commit")}`
         : `Unmerged · ${plural(b.aheadOfMain, "commit")} not in ${mainRef(p)}`;
@@ -1196,27 +1364,8 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
       el("div", { class: "end" }, status(p.tier, SAY[p.tier]), openMenu(p)));
     if (p.error) return [head, el("section", { class: "panel panel-body", text: p.error })];
 
-    const cells = KEYS.map((k) => {
-      const s = sig(p, k);
-      return { tier: s.tier, label: s.label, termKey: TERM_FOR[k], value: s.value === null || s.value === undefined ? "–" : s.value, unit: s.unit, hint: s.hint };
-    });
-
-    const step = p.next || { tier: "safe", kind: null, title: "You're all set", why: "", ask: "" };
-    const todo = step.tier !== "safe" && step.ask;
-    const next = el("section", { class: "panel next", "data-tier": step.tier },
-      el("div", { style: "min-width:0" },
-        el("div", { class: "kicker" }, dot(step.tier), step.tier === "safe" ? "All clear" : "Start here"),
-        el("h2", { text: step.title }),
-        step.why ? el("p", { text: step.why }) : null,
-        todo ? el("ol", { class: "guide" }, el("li", { text: "Copy the request" }), el("li", { text: "Open your AI coding assistant (Claude Code, Codex, Cursor) in this project's folder" }), el("li", { text: "Paste it and send" })) : null),
-      todo ? el("div", { class: "act" }, copyButton(step.ask, { tone: "primary" })) : null);
-
-    mapBox = el("div", { class: "map" });
-    mapProject = p;
-    const map = el("section", { class: "panel" },
-      el("div", { class: "panel-head" }, el("h2", { text: "Map" })),
-      el("div", { class: "panel-body" }, el("p", { class: "map-note" }, "Each line is a branch that starts from main.", q("branch")), mapBox, legend(p)));
-    return [head, strip(cells), next, map, branchesPanel(p), remotePanel(p), worktreesPanel(p)];
+    const details = el("div", { class: "details-head" }, el("h2", { text: "Details" }), el("span", { text: "Every branch here and on the remote, and every folder this project is checked out in." }));
+    return [head, card(p, { pinned: true }), details, branchesPanel(p), remotePanel(p), worktreesPanel(p)];
   }
 
   /* ---------- onboarding: the light, the check, the menu bar, where to start; then a short tour ---------- */
@@ -1423,7 +1572,6 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
   const TOUR = [
     { sel: "#nav-projects", title: "Your projects", body: "Each one has its own light. Click a project to see what's going on and how to fix it." },
     { sel: "[data-tour='next-steps']", title: "Most urgent first", body: "Your next steps across every project. Each has a request to copy: paste it into your AI assistant, and it does the fix where you can see it." },
-    { sel: ".strip .q", title: "Unfamiliar word?", body: "Click the ? beside it for a plain-English explanation." },
     { sel: "#side-tools", title: "Here whenever you need it", body: "Replay this from How this works whenever you like." },
   ];
 
