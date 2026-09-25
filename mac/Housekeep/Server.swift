@@ -60,14 +60,6 @@ final class Housekeep: ObservableObject {
         child?.terminate()
     }
 
-    func mapURL(slug: String? = nil) -> URL? {
-        guard let server else { return nil }
-        guard let slug else { return server.url }
-        var parts = URLComponents(url: server.url, resolvingAgainstBaseURL: false)
-        parts?.fragment = slug
-        return parts?.url ?? server.url
-    }
-
     /// Re-checks every repo, fetching from their remotes first, and waits for the result.
     func checkNow() async {
         guard let server, !checking else { return }

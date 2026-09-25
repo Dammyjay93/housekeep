@@ -70,3 +70,23 @@ extension View {
             .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Palette.line, lineWidth: 1))
     }
 }
+
+extension Palette {
+    static let track = Color(hex: 0xD9D9D9)
+    static let trackSoft = Color(hex: 0x3B3B3B)
+    static let accent = Color(hex: 0x8A8FD9)
+    static let red = Color(hex: 0xE0726E)
+    static let amber = Color(hex: 0xD4A85A)
+    static let green = Color(hex: 0x5FB88A)
+}
+
+extension View {
+    /// Liquid Glass in a capsule on macOS 26 and later; a hairline pill before it.
+    @ViewBuilder func glassCapsule() -> some View {
+        if #available(macOS 26, *) {
+            glassEffect(.regular, in: .capsule)
+        } else {
+            background(Capsule().fill(Palette.layer2)).overlay(Capsule().strokeBorder(Palette.line, lineWidth: 1))
+        }
+    }
+}

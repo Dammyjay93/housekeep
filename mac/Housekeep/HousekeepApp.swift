@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 import SwiftUI
 
 @main
@@ -8,7 +7,7 @@ struct HousekeepApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuView(housekeep: app.housekeep, login: app.login, updates: app.updates) { app.map.show($0) }
+            MenuView(housekeep: app.housekeep, login: app.login, updates: app.updates) { app.dashboard.show(housekeep: app.housekeep, slug: $0) }
         } label: {
             MenuBarLabel(housekeep: app.housekeep)
         }
@@ -33,15 +32,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let housekeep = Housekeep()
     let login = LoginItem()
     let updates = Updates()
-    let map = MapWindow()
+    let dashboard = DashboardWindow()
     let welcome = WelcomeWindow()
-    private var watching: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        watching = housekeep.$server
-            .map { $0?.url }
-            .removeDuplicates()
-            .sink { [map] url in map.serverChanged(to: url) }
         housekeep.start()
         // Give macOS a moment to place the light, then say where it is: always the first time, and
         // after that only when it's hidden behind the notch.
@@ -59,7 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showWelcome() {
-        welcome.show(housekeep: housekeep, login: login) { [map] url in map.show(url) }
+        welcome.show(housekeep: housekeep, login: login) { [dashboard, housekeep] slug in dashboard.show(housekeep: housekeep, slug: slug) }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
