@@ -58,7 +58,7 @@ extension View {
     /// takes the map's light primary colour, with dark text, like its primary buttons.
     @ViewBuilder func systemButton(prominent: Bool = false) -> some View {
         if #available(macOS 26, *) {
-            if prominent { buttonStyle(.glassProminent).tint(Palette.text).foregroundStyle(Palette.black) } else { buttonStyle(.glass) }
+            if prominent { buttonStyle(.glassProminent).tint(Palette.accent) } else { buttonStyle(.glass) }
         } else {
             if prominent { buttonStyle(.borderedProminent).tint(Palette.text).foregroundStyle(Palette.black) } else { buttonStyle(.bordered) }
         }
