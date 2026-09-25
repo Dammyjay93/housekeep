@@ -101,6 +101,25 @@ export interface PullRequest {
   own: boolean;
 }
 
+/** A pull request that's finished: merged into its base, or closed without merging. */
+export interface ClosedPullRequest {
+  number: number;
+  url: string;
+  head: string;
+  /** The commit its head branch pointed at when it closed. */
+  sha: string;
+  merged: boolean;
+}
+
+/** What GitHub's checks said about the latest commit on main. */
+export interface MainChecks {
+  sha: string;
+  /** failing: at least one check failed · pending: some still running · passing: all passed · none: nothing ran */
+  state: "failing" | "pending" | "passing" | "none";
+  /** Names of the checks that failed. */
+  failed: string[];
+}
+
 export interface GitHubMeta {
   ok: boolean;
   reason: string | null;
@@ -114,6 +133,57 @@ export interface GitHubMeta {
   canAdmin?: boolean;
   protected?: string[];
   prs?: PullRequest[];
+  /** Your recent pull requests that were merged or closed, so a branch they came from counts as done. */
+  closed?: ClosedPullRequest[];
+  checks?: MainChecks | null;
+}
+
+/**
+ * The finished pull request `name` came from, if its head was exactly `sha` when it closed. Anything
+ * pushed to the branch after that isn't covered, so a branch that moved on still counts as work.
+ */
+export function closedPullRequest(meta: GitHubMeta | null, name: string, sha: string): ClosedPullRequest | null {
+  return meta?.closed?.find((p) => p.head === name && p.sha === sha) ?? null;
+}
+
+/** GitHub's check runs and commit statuses (which services like Vercel use) on the tip of `branch`. */
+async function mainChecks(host: string, slug: string, branch: string): Promise<MainChecks | null> {
+  const [runsOut] = await gh(["api", `repos/${slug}/commits/${encodeURIComponent(branch)}/check-runs?per_page=100`], host);
+  const [statusOut] = await gh(["api", `repos/${slug}/commits/${encodeURIComponent(branch)}/status`], host);
+  const runs = runsOut === null ? null : parseJson(runsOut);
+  const status = statusOut === null ? null : parseJson(statusOut);
+  if (!isRecord(runs) && !isRecord(status)) return null;
+  const sha = (isRecord(status) ? asString(status.sha) : null)
+    ?? (isRecord(runs) && Array.isArray(runs.check_runs) && isRecord(runs.check_runs[0]) ? asString(runs.check_runs[0].head_sha) : null);
+  if (!sha) return { sha: "", state: "none", failed: [] };
+  const failed: string[] = [];
+  let pending = false, any = false;
+  for (const r of isRecord(runs) && Array.isArray(runs.check_runs) ? runs.check_runs : []) {
+    if (!isRecord(r)) continue;
+    const conclusion = asString(r.conclusion);
+    if (conclusion === "skipped" || conclusion === "neutral") continue;
+    any = true;
+    if (r.status !== "completed") pending = true;
+    else if (conclusion && !["success"].includes(conclusion)) failed.push(asString(r.name) ?? "A check");
+  }
+  for (const c of isRecord(status) && Array.isArray(status.statuses) ? status.statuses : []) {
+    if (!isRecord(c)) continue;
+    any = true;
+    if (c.state === "pending") pending = true;
+    else if (c.state === "failure" || c.state === "error") failed.push(asString(c.context) ?? "A status check");
+  }
+  return { sha, state: failed.length ? "failing" : pending ? "pending" : any ? "passing" : "none", failed: [...new Set(failed)] };
+}
+
+function closedFrom(listed: unknown, owner: string): ClosedPullRequest[] {
+  if (!Array.isArray(listed)) return [];
+  return listed.flatMap((p) => {
+    if (!isRecord(p)) return [];
+    const number = asNumber(p.number), url = asString(p.url), head = asString(p.headRefName), sha = asString(p.headRefOid);
+    const login = isRecord(p.headRepositoryOwner) ? asString(p.headRepositoryOwner.login) ?? "" : "";
+    if (number === null || !url || !head || !sha || login.toLowerCase() !== owner) return [];
+    return [{ number, url, head, sha, merged: p.state === "MERGED" }];
+  });
 }
 
 /** What only GitHub knows: the default branch, protected branches, open pull requests, a fork's parent. */
@@ -146,9 +216,16 @@ export async function githubMeta(rem: RemoteSet): Promise<GitHubMeta> {
     const login = isRecord(p.headRepositoryOwner) ? asString(p.headRepositoryOwner.login) ?? "" : "";
     prs.push({ number, url, head, base, own: login.toLowerCase() === owner });
   }
+  // Finished pull requests only add proof that work is done. If GitHub won't list them, nothing is lost:
+  // those branches are judged by git alone, as before.
+  const [closedOut] = await gh(["pr", "list", "--repo", `${host}/${prRepo}`, "--state", "closed", "--limit", "300",
+    "--json", "number,url,headRefName,headRefOid,headRepositoryOwner,state"], host);
+  const closed = closedOut === null ? [] : closedFrom(parseJson(closedOut), owner);
+  const defaultBranch = asString((parent ?? info).default_branch);
+  const checks = defaultBranch ? await mainChecks(host, prRepo, defaultBranch) : null;
   const permissions = isRecord(info.permissions) ? info.permissions : {};
   return {
-    ok: true, reason: null, host, slug, prRepo,
+    ok: true, reason: null, host, slug, prRepo, closed, checks,
     parent: parent ? asString(parent.full_name) : null,
     defaultBranch: asString((parent ?? info).default_branch),
     // GitHub only auto-deletes head branches in the same repository, so it's moot for a fork.
@@ -176,6 +253,16 @@ export function metaFromMemo(v: unknown): GitHubMeta | null {
     parent: asString(v.parent), defaultBranch: asString(v.defaultBranch),
     autoDelete: typeof v.autoDelete === "boolean" ? v.autoDelete : null,
     canAdmin: v.canAdmin === true, protected: strings(v.protected), prs,
+    closed: Array.isArray(v.closed)
+      ? v.closed.flatMap((p) => {
+        if (!isRecord(p)) return [];
+        const number = asNumber(p.number), url = asString(p.url), head = asString(p.head), sha = asString(p.sha);
+        return number !== null && url && head && sha ? [{ number, url, head, sha, merged: p.merged === true }] : [];
+      })
+      : [],
+    checks: isRecord(v.checks) && typeof v.checks.sha === "string" && ["failing", "pending", "passing", "none"].includes(String(v.checks.state))
+      ? { sha: v.checks.sha, state: v.checks.state as MainChecks["state"], failed: strings(v.checks.failed) }
+      : null,
   };
 }
 

@@ -7,8 +7,9 @@ import { tmpdir } from "node:os";
 import { CONFIG_FILE, CheckFailed, type Config, type DeletedBranch, type Memo, STATE_DIR, loadConfig, loadMemo, readJson, saveMemo, writeAtomic } from "./config.js";
 import type { Branch, Checkout, CommittedSecret, MergeKind, NextStep, Project, PrunedBranch, RemoteBranch, Request, Signal, Snapshot, Tier } from "./model.js";
 import { VERDICT, worst } from "./model.js";
+import { combinedRequest, itemsFor, notesFor } from "./items.js";
 import { HERE, type RunResult, capFirst, count, countOrNull, git, isRecord, iso, plural, pool, run, tilde, untilde } from "./proc.js";
-import { type GitHubMeta, type RemoteSet, fetchDue, githubMeta, metaFromMemo, refreshRemote, remotesOf } from "./remote.js";
+import { type GitHubMeta, type RemoteSet, closedPullRequest, fetchDue, githubMeta, metaFromMemo, refreshRemote, remotesOf } from "./remote.js";
 
 export const VERSION = "0.1.2";
 export const MIN_GIT: [number, number] = [2, 25];
@@ -295,10 +296,12 @@ async function committedSecrets(repo: string): Promise<CommittedSecret[]> {
 }
 
 /** Noted deleted branches whose work git still has, but no branch, remote branch or tag holds. */
-async function prunedBranches(repo: string, deleted: DeletedBranch[]): Promise<PrunedBranch[]> {
+async function prunedBranches(repo: string, deleted: DeletedBranch[], meta: GitHubMeta | null): Promise<PrunedBranch[]> {
   const out: PrunedBranch[] = [];
   for (const d of deleted) {
     if ((await git(repo, "cat-file", "-e", `${d.sha}^{commit}`)) === null) continue; // git has thrown it away
+    // Its pull request merged or was closed on purpose: the branch was finished with, not lost.
+    if (closedPullRequest(meta, d.name.split("/").slice(1).join("/"), d.sha)) continue;
     const commits = await count(repo, d.sha, "--not", "--branches", "--remotes", "--tags");
     if (commits) out.push({ ...d, commits });
   }
@@ -410,16 +413,17 @@ export function keptReason(name: string, main: string, meta: GitHubMeta | null):
 
 async function branchFacts(repo: string, host: string, main: string, mainRef: string, base: string | null, meta: GitHubMeta | null,
   held: Map<string, string>, current: Set<string>): Promise<Branch[]> {
-  const fmt = "%(refname:short)%09%(objectname)%09%(upstream)%09%(upstream:track)%09%(committerdate:unix)";
+  const fmt = "%(refname:short)%09%(objectname)%09%(upstream)%09%(upstream:track)%09%(committerdate:unix)%09%(contents:subject)";
   const pushDefault = (await git(repo, "config", "--get", "push.default")) ?? "simple";
   const prs = meta?.prs ?? [];
   const lines = ((await git(repo, "for-each-ref", "refs/heads", `--format=${fmt}`)) ?? "").split("\n");
   const out = (await pool(lines, 8, async (line): Promise<Branch | null> => {
-    const [name = "", tip = "", upstream = "", track = "", when = ""] = line.split("\t");
+    const [name = "", tip = "", upstream = "", track = "", when = "", subject = ""] = line.split("\t");
     if (!name || name === main) return null;
     const localOnly = await count(repo, tip, "--not", "--remotes");
     const gone = track === "[gone]";
-    const how = base ? await inMain(repo, tip, base) : null;
+    const byPr = closedPullRequest(meta, name, tip);
+    const how = base ? (await inMain(repo, tip, base)) ?? (byPr?.merged ? "pull-request" : null) : null;
     const upBranch = upstream.startsWith("refs/remotes/") ? upstream.split("/").slice(3).join("/") : "";
     const upstreamIsMain = Boolean(main) && upBranch === main;
     const upTip = upstream && !gone && !upstreamIsMain ? await git(repo, "rev-parse", "--verify", "--quiet", upstream) : null;
@@ -437,7 +441,8 @@ async function branchFacts(repo: string, host: string, main: string, mainRef: st
       note = kept;
     } else if (how && !behind) {
       state = "merged";
-      note = `${how === "squashed" ? "Squash-merged" : "Merged"} into ${mainRef}`;
+      note = how === "pull-request" && byPr ? `Pull request #${byPr.number} merged into ${mainRef}`
+        : `${how === "squashed" ? "Squash-merged" : "Merged"} into ${mainRef}`;
     } else if (how) {
       state = "unmerged";
       note = `Behind its upstream by ${plural(behind, "commit")} that aren't in ${mainRef}`;
@@ -454,7 +459,7 @@ async function branchFacts(repo: string, host: string, main: string, mainRef: st
       upstreamGone: gone, onRemote: Boolean(upTip) || gone, upstreamIsMain,
       pushesToMain: upstreamIsMain && (pushDefault === "upstream" || pushDefault === "tracking"),
       pr: pr ? { number: pr.number, url: pr.url } : null,
-      lastCommit: /^\d+$/.test(when) ? Number(when) : null,
+      lastCommit: /^\d+$/.test(when) ? Number(when) : null, subject: subject || null,
       worktree: held.get(name) ?? null, current: current.has(name),
     };
   })).filter((b): b is Branch => b !== null);
@@ -473,7 +478,7 @@ export async function remoteBranches(repo: string, rem: RemoteSet, main: string,
     const [ref = "", sha = "", when = "", symref = ""] = line.split("\t");
     const name = ref.replace(`refs/remotes/${push}/`, "");
     if (!ref || symref || name === "HEAD" || name === main) return null;
-    const how = await inMain(repo, sha, base);
+    const how = (await inMain(repo, sha, base)) ?? (closedPullRequest(meta, name, sha)?.merged ? "pull-request" : null);
     const kept = keptReason(name, main, meta);
     const pr = prs.find((p) => p.own && p.head === name);
     // Deleting a branch other pull requests are based on closes or retargets them.
@@ -492,7 +497,7 @@ export async function remoteBranches(repo: string, rem: RemoteSet, main: string,
 
 // --- what it means --------------------------------------------------------------
 
-type Draft = Omit<Project, "signals" | "next" | "requests" | "tier" | "verdict">;
+export type Draft = Omit<Project, "signals" | "next" | "requests" | "items" | "notes" | "request" | "tier" | "verdict">;
 
 /** The four questions every project answers. Labels are git's terms; hints say what they mean. */
 export function signals(p: Draft): Signal[] {
@@ -607,6 +612,10 @@ export function signals(p: Draft): Signal[] {
     if (p.limits.shallow) {
       details.push("This is a shallow clone, so these counts may be off");
       if (tier === "safe") [headline, hint, cell, tier] = ["Shallow clone", "Only part of the history is here, so the counts can't be trusted. Fetch the full history.", "Shallow", "attention"];
+    }
+    if (m.checks?.state === "failing") {
+      details.push(`Failing on ${ref}: ${m.checks.failed.slice(0, 3).join(", ")}${m.checks.failed.length > 3 ? ` and ${m.checks.failed.length - 3} more` : ""}`);
+      if (tier === "safe") [headline, hint, cell, tier] = [`Checks are failing on ${ref}`, `${host} ran checks on the latest commit and they failed, so ${ref} can't be trusted until they pass.`, "Checks failing", "attention"];
     }
     out.push({ key: "sync", label: "Sync", tier, headline, hint, details, cell, value, unit });
   }
@@ -880,6 +889,13 @@ function sameDisk(repo: string, localPath: string | null): boolean {
   return statSync(localPath).dev === statSync(repo).dev;
 }
 
+/** GitHub's checks on main, but only while they're about the commit origin/main points at here. */
+async function checksOnMain(repo: string, truthRef: string | null, meta: GitHubMeta | null): Promise<Project["main"]["checks"]> {
+  const c = meta?.checks;
+  if (!c || !truthRef || !c.sha || (await git(repo, "rev-parse", "--verify", "--quiet", truthRef)) !== c.sha) return null;
+  return { state: c.state, failed: c.failed };
+}
+
 const slugOf = (name: string): string => "p-" + name.toLowerCase().replace(/[^a-z0-9]/g, "-");
 
 export async function buildProject(repo: string, name: string, everyMs: number, force: boolean, memo: Memo, offline = false): Promise<Project> {
@@ -890,10 +906,10 @@ export async function buildProject(repo: string, name: string, everyMs: number, 
       remotes: { truth: null, push: null, fork: false, localPath: null, sameDisk: false },
       github: { checked: false, reason: null, host: null, slug: null, prRepo: null, autoDelete: null, canAdmin: false },
       limits: { shallow: false, singleBranch: false },
-      main: { name: "", local: false, remoteMain: false, remoteRef: null, ahead: 0, behind: 0, localOnly: 0 },
+      main: { name: "", local: false, remoteMain: false, remoteRef: null, ahead: 0, behind: 0, localOnly: 0, checks: null },
       head: { branch: null }, fetch: { hasRemote: true, at: null, error: null },
       checkouts: [], branches: [], remoteBranches: [], stashes: [], unpushed: null, pruned: [], committedSecrets: [],
-      signals: [], next: null, requests: [], tier: "attention", verdict: "Couldn't read this project",
+      signals: [], next: null, requests: [], items: [], notes: [], request: "", tier: "attention", verdict: "Couldn't read this project",
     };
   }
   let cached = metaFromMemo(memo.github[repo]);
@@ -955,14 +971,15 @@ export async function buildProject(repo: string, name: string, everyMs: number, 
     main: { name: main, local: localMain, remoteMain: truthRef !== null, remoteRef: truthRef ? mainRef : null,
       ahead: both ? await countOrNull(repo, `${truthRef}..refs/heads/${main}`) : 0,
       behind: both ? await countOrNull(repo, `refs/heads/${main}..${truthRef}`) : 0,
-      localOnly: localMain ? await count(repo, `refs/heads/${main}`, "--not", "--remotes") : 0 },
+      localOnly: localMain ? await count(repo, `refs/heads/${main}`, "--not", "--remotes") : 0,
+      checks: await checksOnMain(repo, truthRef, meta) },
     head: { branch: checkouts[0]?.branch ?? null },
     fetch, checkouts,
     branches: await branchFacts(repo, host, main, mainRef, base, meta, held, current),
     remoteBranches: await remoteBranches(repo, rem, main, base, meta),
     stashes: ((await git(repo, "stash", "list", "--format=%gs")) ?? "").split("\n").filter(Boolean).map((label) => ({ label })),
     unpushed: await countOrNull(repo, "--branches", "--not", "--remotes"),
-    pruned: await prunedBranches(repo, deleted),
+    pruned: await prunedBranches(repo, deleted, meta),
     committedSecrets: await committedSecrets(repo),
   };
   const sigs = signals(draft);
@@ -972,7 +989,9 @@ export async function buildProject(repo: string, name: string, everyMs: number, 
   else delete memo.deleted[repo];
   const byKey = Object.fromEntries(sigs.map((s) => [s.key, s])) as Record<Signal["key"], Signal>;
   const tier = worst(sigs.map((s) => s.tier));
-  return { ...draft, signals: sigs, next: nextStep(draft, byKey), requests: requestsFor(draft), tier, verdict: VERDICT[tier] };
+  const items = itemsFor(draft);
+  return { ...draft, signals: sigs, next: nextStep(draft, byKey), requests: requestsFor(draft), items, notes: notesFor(draft),
+    request: combinedRequest(repo, items), tier, verdict: VERDICT[tier] };
 }
 
 // --- scanning everything ------------------------------------------------------------

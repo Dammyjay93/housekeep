@@ -1,7 +1,8 @@
 /** The shape of what Housekeep knows about each project. The dashboard and `--json` read exactly this. */
 
 export type Tier = "at-risk" | "attention" | "safe";
-export type MergeKind = "merged" | "squashed";
+/** How a branch's work reached main: by its commits, by the same changes, or by a pull request that merged it. */
+export type MergeKind = "merged" | "squashed" | "pull-request";
 export type SignalKey = "commit" | "push" | "sync" | "cleanup";
 export type NextKind =
   | "assistant" | "push-all" | "pull" | "delete-merged" | "delete-remote"
@@ -72,6 +73,8 @@ export interface Branch {
   pushesToMain: boolean;
   pr: PullRequestRef | null;
   lastCommit: number | null;
+  /** The last commit's message, first line: often the plainest name for the work. */
+  subject: string | null;
   worktree: string | null;
   current: boolean;
 }
@@ -146,6 +149,8 @@ export interface MainFacts {
   ahead: number | null;
   behind: number | null;
   localOnly: number;
+  /** What GitHub's checks said about the latest commit on main, or null when there's no way to know. */
+  checks: { state: "failing" | "pending" | "passing" | "none"; failed: string[] } | null;
 }
 
 export interface FetchInfo {
@@ -164,6 +169,24 @@ export interface Request {
   name: string | null;
   /** What it asks for, as a short phrase: "push feat/checkout". */
   does: string;
+  ask: string;
+}
+
+/**
+ * One thing to fix, in plain words, grouped by what's at stake:
+ * mac: work that exists only on this computer · check: nothing lost, but needs a look · tidy: already in main, safe to clear.
+ */
+export interface Item {
+  id: string;
+  lane: "mac" | "check" | "tidy";
+  /** The work, named as a person would: a commit's subject, not a branch name. */
+  title: string;
+  why: string;
+  /** Where it lives: a branch, a folder, main. */
+  where: string;
+  /** What the assistant will do about it, as a short step. */
+  step: string;
+  /** The full request for this one thing. */
   ask: string;
 }
 
@@ -192,6 +215,12 @@ export interface Project {
   next: NextStep | null;
   /** Every request beyond the next step: one per branch, remote branch or worktree that needs something, and the groups. */
   requests: Request[];
+  /** Everything to fix, safest first: what could be lost, then what needs a look, then what's safe to clear. */
+  items: Item[];
+  /** Things that need nothing from you but are worth knowing, e.g. branches waiting for a pull request. */
+  notes: string[];
+  /** One request covering every item, in order, for your AI assistant. Empty when there's nothing to do. */
+  request: string;
   tier: Tier;
   verdict: string;
 }
