@@ -54,11 +54,12 @@ struct TierDot: View {
 }
 
 extension View {
-    /// The system's buttons: Liquid Glass on macOS 26 and later, bordered before it. The prominent one
-    /// takes the map's light primary colour, with dark text, like its primary buttons.
+    /// The system's buttons: Liquid Glass capsules on macOS 26 and later (macOS draws glass buttons as
+    /// rounded rectangles unless told otherwise), bordered before it. The prominent one is tinted with the accent.
     @ViewBuilder func systemButton(prominent: Bool = false) -> some View {
         if #available(macOS 26, *) {
-            if prominent { buttonStyle(.glassProminent).tint(Palette.accent) } else { buttonStyle(.glass) }
+            if prominent { buttonStyle(.glassProminent).tint(Palette.accent).buttonBorderShape(.capsule) }
+            else { buttonStyle(.glass).buttonBorderShape(.capsule) }
         } else {
             if prominent { buttonStyle(.borderedProminent).tint(Palette.text).foregroundStyle(Palette.black) } else { buttonStyle(.bordered) }
         }

@@ -61,8 +61,17 @@ struct ProjectCard: View {
                 }
                 Text(summary).font(.system(size: 13)).foregroundStyle(live != nil ? Palette.green : Palette.text2).lineLimit(1)
             }
+            .layoutPriority(1)
             Spacer(minLength: 12)
-            if !open && live == nil { tags }
+            if !open && live == nil {
+                // As many tags as fit on one line, never squeezed into two.
+                ViewThatFits(in: .horizontal) {
+                    tags(3)
+                    tags(2)
+                    tags(1)
+                    Color.clear.frame(width: 0, height: 0)
+                }
+            }
             if !open && live == nil && canOpen {
                 Button { copy(Requests.combined(project, items), items: items) } label: {
                     Label("Copy request", systemImage: "doc.on.doc")
@@ -78,7 +87,7 @@ struct ProjectCard: View {
                 .accessibilityLabel(open ? "Close \(project.name)" : "Open \(project.name)")
             }
         }
-        .controlSize(.regular)
+        .controlSize(.large)
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
         .contentShape(Rectangle())
@@ -86,22 +95,23 @@ struct ProjectCard: View {
         .onHover { hovering = canOpen && !open && $0 }
     }
 
-    private var tags: some View {
+    private func tags(_ shown: Int) -> some View {
         HStack(spacing: 6) {
-            ForEach(items.prefix(3)) { item in
+            ForEach(items.prefix(shown)) { item in
                 HStack(spacing: 6) {
                     Circle().fill(color(item.lane)).frame(width: 5, height: 5)
-                    Text(item.title.count > 26 ? "\(item.title.prefix(24))…" : item.title)
+                    Text(item.title.count > 26 ? "\(item.title.prefix(24))…" : item.title).lineLimit(1)
                 }
                 .font(.system(size: 12))
                 .foregroundStyle(Palette.text2)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
+                .padding(.horizontal, 11)
+                .frame(height: 28)
                 .glassCapsule()
+                .fixedSize()
             }
-            if items.count > 3 {
-                Text("+\(items.count - 3)").font(.system(size: 12)).foregroundStyle(Palette.text2)
-                    .padding(.horizontal, 10).padding(.vertical, 5).glassCapsule()
+            if items.count > shown {
+                Text("+\(items.count - shown)").font(.system(size: 12)).foregroundStyle(Palette.text2)
+                    .padding(.horizontal, 11).frame(height: 28).glassCapsule().fixedSize()
             }
         }
     }
@@ -236,6 +246,7 @@ struct ProjectCard: View {
                         Label("Copy request again", systemImage: "doc.on.doc").frame(maxWidth: .infinity)
                     }
                     .systemButton()
+                    .controlSize(.large)
                 }
                 Button(live.finished ? "Done" : "Stop watching") { sent.forget(project.slug) }
                     .buttonStyle(.plain).foregroundStyle(Palette.text2).frame(maxWidth: .infinity)
