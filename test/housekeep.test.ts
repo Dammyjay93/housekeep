@@ -25,6 +25,7 @@ const { buildProject, checkGit, folderStatus, gitSupport, inMain, lastActivity, 
 const { startServer } = await import("../src/server.js");
 const { SERVER_FILE, STATE_DIR, CONFIG_FILE } = await import("../src/config.js");
 const { githubRepo, hostName, localPathOf, remotesOf } = await import("../src/remote.js");
+const { workName } = await import("../src/items.js");
 const { OpenError, openIn } = await import("../src/open.js");
 const { menubar } = await import("../src/menubar.js");
 const { loadDemo } = await import("../src/demo.js");
@@ -189,6 +190,127 @@ describe("merges", () => {
     run(sb.repo, "fetch", "-q");
     const b = branchOf(await sb.project(), "feat/shared");
     assert.deepEqual([b.state, b.behindUpstream, b.aheadOfMain], ["unmerged", 1, 1]);
+  });
+});
+
+describe("finished pull requests", () => {
+  // What GitHub would have said, remembered as if from an earlier check, so no network is needed.
+  const github = (closed: { number: number; head: string; sha: string; merged: boolean }[]) => ({
+    ok: true, reason: null, at: Date.now(), host: "github.com", slug: "me/work", prRepo: "me/work", parent: null,
+    defaultBranch: "main", autoDelete: false, canAdmin: true, protected: [], prs: [],
+    closed: closed.map((c) => ({ ...c, url: `https://github.com/me/work/pull/${c.number}` })),
+  });
+
+  // Squash-merged through a pull request, then main rewrote the same file: git alone can't see it landed.
+  const rewritten = (sb: Sandbox): string => {
+    run(sb.repo, "switch", "-qc", "feat/form", "main");
+    writeFileSync(join(sb.repo, "form"), "one");
+    run(sb.repo, "add", "form");
+    run(sb.repo, "commit", "-qm", "form");
+    run(sb.repo, "push", "-q", "-u", "origin", "feat/form");
+    run(sb.repo, "switch", "-q", "main");
+    run(sb.repo, "merge", "-q", "--squash", "feat/form");
+    run(sb.repo, "commit", "-qm", "form (#59)");
+    writeFileSync(join(sb.repo, "form"), "two");
+    run(sb.repo, "commit", "-qam", "rework form");
+    run(sb.repo, "push", "-q", "origin", "main");
+    return run(sb.repo, "rev-parse", "feat/form");
+  };
+
+  it("counts a branch as done when its pull request merged, even after main changed the same lines", async () => {
+    const sb = sandbox();
+    const tip = rewritten(sb);
+    assert.equal(branchOf(await sb.project(), "feat/form").state, "unmerged"); // git alone
+    const memo = freshMemo();
+    memo.github[sb.repo] = github([{ number: 59, head: "feat/form", sha: tip, merged: true }]);
+    const p = await sb.project(sb.repo, memo);
+    const b = branchOf(p, "feat/form");
+    assert.deepEqual([b.state, b.merged], ["merged", "pull-request"]);
+    assert.match(b.note, /Pull request #59 merged/);
+    assert.ok(remoteOf(p, "feat/form").deletable);
+  });
+
+  it("still counts it as work when something was pushed after the pull request merged", async () => {
+    const sb = sandbox();
+    const tip = rewritten(sb);
+    run(sb.repo, "switch", "-q", "feat/form");
+    commit(sb.repo, "after-merge");
+    run(sb.repo, "push", "-q", "origin", "feat/form");
+    run(sb.repo, "switch", "-q", "main");
+    const memo = freshMemo();
+    memo.github[sb.repo] = github([{ number: 59, head: "feat/form", sha: tip, merged: true }]);
+    assert.equal(branchOf(await sb.project(sb.repo, memo), "feat/form").state, "unmerged");
+  });
+
+  it("says origin/main can't be trusted when its checks fail, but only for the commit they ran on", async () => {
+    const sb = sandbox();
+    const tip = run(sb.repo, "rev-parse", "origin/main");
+    const memo = freshMemo();
+    memo.github[sb.repo] = { ...github([]), checks: { sha: tip, state: "failing", failed: ["Typecheck & Lint", "Unit Tests"] } };
+    const p = await sb.project(sb.repo, memo);
+    assert.deepEqual(p.main.checks, { state: "failing", failed: ["Typecheck & Lint", "Unit Tests"] });
+    assert.deepEqual([sig(p, "sync").tier, sig(p, "sync").headline], ["attention", "Checks are failing on origin/main"]);
+    commit(sb.repo, "newer");
+    run(sb.repo, "push", "-q", "origin", "main");
+    const moved = await sb.project(sb.repo, memo);
+    assert.equal(moved.main.checks, null); // the answer was about an older commit
+    assert.equal(sig(moved, "sync").tier, "safe");
+  });
+
+  it("doesn't call a deleted branch lost work when its pull request was closed on purpose", async () => {
+    const sb = sandbox();
+    sb.branch("deps/bump", ["bump"]);
+    const tip = run(sb.repo, "rev-parse", "deps/bump");
+    run(sb.repo, "branch", "-q", "-D", "deps/bump");
+    run(sb.clone("other"), "push", "-q", "origin", "--delete", "deps/bump");
+    const memo = freshMemo();
+    await buildProject(sb.repo, "work", 600_000, true, memo);
+    assert.equal(memo.deleted[sb.repo]?.length, 1); // noted when the fetch dropped it
+    memo.github[sb.repo] = github([{ number: 57, head: "deps/bump", sha: tip, merged: false }]);
+    const p = await sb.project(sb.repo, memo);
+    assert.deepEqual(p.pruned, []);
+    assert.notEqual(sig(p, "push").tier, "at-risk"); // the sandbox remote is a folder, so "attention" remains
+    assert.notEqual(p.next?.kind, "restore-pruned");
+    assert.equal(memo.deleted[sb.repo], undefined);
+  });
+});
+
+describe("what to fix, in plain words", () => {
+  it("names work after its commit, not its branch", () => {
+    assert.equal(workName({ name: "feat/paystack", subject: "feat(payments): add Paystack tuition checkout" }), "Add Paystack tuition checkout");
+    assert.equal(workName({ name: "fix/funnel-leaks", subject: "Close the funnel leaks (#67)" }), "Close the funnel leaks");
+    assert.equal(workName({ name: "codex/preserved-lockfile-wip-20260814", subject: "wip" }), "Preserved lockfile wip");
+    assert.equal(workName({ name: "feat/x", subject: null }), "X");
+  });
+
+  it("lists what could be lost first and what's safe to clear last, and combines them into one request", async () => {
+    const sb = sandbox();
+    sb.branch("feat/done", ["done"]);
+    run(sb.repo, "merge", "-q", "--no-ff", "feat/done", "-m", "merge");
+    run(sb.repo, "push", "-q", "origin", "main");
+    run(sb.repo, "switch", "-qc", "feat/checkout", "main");
+    writeFileSync(join(sb.repo, "checkout"), "x");
+    run(sb.repo, "add", "checkout");
+    run(sb.repo, "commit", "-qm", "feat(payments): add tuition checkout");
+    run(sb.repo, "switch", "-q", "main");
+    writeFileSync(join(sb.repo, "draft"), "x");
+    const p = await sb.project();
+    const byId = new Map(p.items.map((i) => [i.id, i]));
+    assert.equal(byId.get("push:feat/checkout")?.title, "Add tuition checkout");
+    assert.equal(byId.get("push:feat/checkout")?.lane, "mac");
+    assert.equal(byId.get(`changes:${p.checkouts[0]?.path}`)?.lane, "mac");
+    assert.equal(byId.get("merged")?.lane, "tidy");
+    const lanes = p.items.map((i) => i.lane);
+    assert.deepEqual(lanes, [...lanes].sort((a, b) => ["mac", "check", "tidy"].indexOf(a) - ["mac", "check", "tidy"].indexOf(b)));
+    assert.match(p.request, /^In .+, please do the following, in this order\./);
+    assert.match(p.request, /back up/);
+    const [pushAt, clearAt] = [p.request.indexOf("Push the branch feat/checkout"), p.request.indexOf("Some branches are already in")];
+    assert.ok(pushAt > 0 && clearAt > pushAt, "saving work comes before clearing leftovers");
+  });
+
+  it("has nothing to ask for when everything is in main", async () => {
+    const p = await sandbox().project();
+    assert.deepEqual(p.items.filter((i) => i.lane !== "mac" || i.id !== "same-disk"), []);
   });
 });
 
