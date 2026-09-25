@@ -878,7 +878,7 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
   function summary(p, sent) {
     if (sent) {
       const done = sent.items.filter((i) => sent.done[i.id]).length;
-      return done === sent.items.length ? "Done. Everything you sent is fixed." : done ? `${done} of ${sent.items.length} fixed. Your assistant is on the rest.` : "Waiting for your assistant to start.";
+      return done === sent.items.length ? "All fixed. Everything in the request shows up in git." : done ? `${done} of ${sent.items.length} fixed, the rest is in progress.` : "Request copied. Nothing has changed in git yet.";
     }
     const mac = inLane(p, "mac"), check = inLane(p, "check"), tidy = inLane(p, "tidy");
     if (mac.some((i) => i.id === "no-remote")) return `Not on ${H(p)} at all. The whole project exists only on ${HERE}.`;
@@ -941,8 +941,8 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
       const clear = el("button", { class: "btn ghost", type: "button" }, el("span", { text: finished ? "Done" : "Stop watching" }));
       clear.addEventListener("click", () => forget(p));
       return el("aside", { class: "send" },
-        el("div", { class: "copied-at" }, icon("check"), `Copied at ${clock(sent.at)}. Paste it into your assistant.`),
-        el("div", {}, el("h3", { class: "watching" }, dot("safe"), finished ? "All fixed" : "Watching for changes"),
+        el("div", { class: "copied-at" }, icon("check"), `Request copied at ${clock(sent.at)}`),
+        el("div", {}, el("h3", { class: "watching" }, dot("safe"), finished ? "All fixed" : "Changes seen in git"),
           el("p", { text: finished ? "Every change landed in git." : `Housekeep ticks each item off as its change lands in git. No need to keep checking.` })),
         done.length ? el("ol", { class: "log" }, done.map((i) => el("li", {}, el("time", { text: clock(sent.done[i.id]) }), el("span", { text: i.title })))) : null,
         el("div", { class: "grow" }),
@@ -1007,7 +1007,7 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
       : onlyHere.length ? `${plural(onlyHere.length, "project has", "projects have")} work only on ${HERE}`
       : `${plural(need.length, "project needs", "projects need")} a look`;
     const sub = !need.length ? `Everything is committed, on ${hostAll()} and in main. Housekeep keeps watching.`
-      : "Most urgent first. Open one to choose what your assistant fixes, or copy a request for everything.";
+      : "Riskiest first. Open a project, pick what to fix, and copy one request for your AI assistant.";
     return [
       el("section", { class: "head" }, el("div", {},
         el("h1", { text: title }),
