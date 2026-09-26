@@ -11,7 +11,7 @@ import { LANE_TIER, combinedRequest, everywhereRequest, itemsFor, notesFor, summ
 import { HERE, type RunResult, capFirst, count, countOrNull, git, isRecord, iso, plural, pool, run, tilde, untilde } from "./proc.js";
 import { type GitHubMeta, type RemoteSet, closedPullRequest, fetchDue, githubMeta, metaFromMemo, refreshRemote, remotesOf } from "./remote.js";
 
-export const VERSION = "0.2.0";
+export const VERSION = "0.2.1";
 export const MIN_GIT: [number, number] = [2, 25];
 export const SQUASH_GIT: [number, number] = [2, 38]; // `git merge-tree --write-tree`, used to recognise squash merges
 let squashDetection = true;

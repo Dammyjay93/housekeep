@@ -12,8 +12,8 @@ packages:
     from: 2.10.0
 settings:
   base:
-    MARKETING_VERSION: "0.2.0"
-    CURRENT_PROJECT_VERSION: "3"
+    MARKETING_VERSION: "0.2.1"
+    CURRENT_PROJECT_VERSION: "4"
     SWIFT_VERSION: "6.0"
     DEVELOPMENT_TEAM: S6KA37TYUM
 targets:
