@@ -1016,7 +1016,11 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
       el("section", { class: "head" }, el("div", {},
         el("h1", { text: title }),
         el("div", { class: "meta", text: sub }),
-        (data.notices || []).length ? el("div", { class: "meta warn", text: data.notices.join(" ") }) : null)),
+        (data.notices || []).length ? el("div", { class: "meta warn", text: data.notices.join(" ") }) : null),
+        // One request that cleans up every project, one repository at a time; each card then follows its part.
+        data.request ? el("div", { class: "end" }, copyButton(data.request, { label: "Clean up everything", tone: "primary",
+          title: "Copy one request that cleans up every project, one at a time, asking before anything risky",
+          onCopied: () => projects.filter((p) => itemsOf(p).length).forEach((p) => remember(p, itemsOf(p))) })) : null),
       ...groups.flatMap(([heading, list], gi) => [
         el("div", { class: "group-head", "data-tour": gi === 0 ? "next-steps" : null }, el("h2", { text: heading }), el("span", { text: String(list.length) })),
         ...list.map((p) => card(p)),

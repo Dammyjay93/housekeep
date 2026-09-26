@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { CONFIG_FILE, CheckFailed, type Config, type DeletedBranch, type Memo, STATE_DIR, loadConfig, loadMemo, readJson, saveMemo, writeAtomic } from "./config.js";
 import type { Branch, Checkout, CommittedSecret, MergeKind, NextStep, Project, PrunedBranch, RemoteBranch, Request, Signal, Snapshot, Tier } from "./model.js";
 import { VERDICT, worst } from "./model.js";
-import { combinedRequest, itemsFor, notesFor } from "./items.js";
+import { combinedRequest, everywhereRequest, itemsFor, notesFor } from "./items.js";
 import { HERE, type RunResult, capFirst, count, countOrNull, git, isRecord, iso, plural, pool, run, tilde, untilde } from "./proc.js";
 import { type GitHubMeta, type RemoteSet, closedPullRequest, fetchDue, githubMeta, metaFromMemo, refreshRemote, remotesOf } from "./remote.js";
 
@@ -403,6 +403,15 @@ export async function inMain(repo: string, tip: string, base: string): Promise<M
   return result;
 }
 
+/** Your git email here, lower-cased, or null when none is set. */
+async function myEmail(repo: string): Promise<string | null> {
+  const email = await git(repo, "config", "--get", "user.email");
+  return email ? email.toLowerCase() : null;
+}
+
+/** Whether a branch's last commit is yours. With no email set, everything counts as yours. */
+const isMine = (author: string, me: string | null): boolean => !me || !author || author.toLowerCase() === me;
+
 /** Why a branch stays whatever it contains, or null. */
 export function keptReason(name: string, main: string, meta: GitHubMeta | null): string | null {
   if (name === main || name === meta?.defaultBranch) return "The default branch";
@@ -413,12 +422,13 @@ export function keptReason(name: string, main: string, meta: GitHubMeta | null):
 
 async function branchFacts(repo: string, host: string, main: string, mainRef: string, base: string | null, meta: GitHubMeta | null,
   held: Map<string, string>, current: Set<string>): Promise<Branch[]> {
-  const fmt = "%(refname:short)%09%(objectname)%09%(upstream)%09%(upstream:track)%09%(committerdate:unix)%09%(contents:subject)";
+  const fmt = "%(refname:short)%09%(objectname)%09%(upstream)%09%(upstream:track)%09%(committerdate:unix)%09%(authoremail:trim)%09%(contents:subject)";
+  const me = await myEmail(repo);
   const pushDefault = (await git(repo, "config", "--get", "push.default")) ?? "simple";
   const prs = meta?.prs ?? [];
   const lines = ((await git(repo, "for-each-ref", "refs/heads", `--format=${fmt}`)) ?? "").split("\n");
   const out = (await pool(lines, 8, async (line): Promise<Branch | null> => {
-    const [name = "", tip = "", upstream = "", track = "", when = "", subject = ""] = line.split("\t");
+    const [name = "", tip = "", upstream = "", track = "", when = "", author = "", subject = ""] = line.split("\t");
     if (!name || name === main) return null;
     const localOnly = await count(repo, tip, "--not", "--remotes");
     const gone = track === "[gone]";
@@ -459,7 +469,7 @@ async function branchFacts(repo: string, host: string, main: string, mainRef: st
       upstreamGone: gone, onRemote: Boolean(upTip) || gone, upstreamIsMain,
       pushesToMain: upstreamIsMain && (pushDefault === "upstream" || pushDefault === "tracking"),
       pr: pr ? { number: pr.number, url: pr.url } : null,
-      lastCommit: /^\d+$/.test(when) ? Number(when) : null, subject: subject || null,
+      lastCommit: /^\d+$/.test(when) ? Number(when) : null, subject: subject || null, mine: isMine(author, me),
       worktree: held.get(name) ?? null, current: current.has(name),
     };
   })).filter((b): b is Branch => b !== null);
@@ -472,10 +482,11 @@ export async function remoteBranches(repo: string, rem: RemoteSet, main: string,
   if (!push || !base) return [];
   const local = new Set(((await git(repo, "for-each-ref", "refs/heads", "--format=%(refname:short)")) ?? "").split("\n"));
   const prs = meta?.prs ?? [];
-  const fmt = "%(refname)%09%(objectname)%09%(committerdate:unix)%09%(symref)";
+  const fmt = "%(refname)%09%(objectname)%09%(committerdate:unix)%09%(symref)%09%(authoremail:trim)";
+  const me = await myEmail(repo);
   const lines = ((await git(repo, "for-each-ref", `refs/remotes/${push}`, `--format=${fmt}`)) ?? "").split("\n");
   const out = (await pool(lines, 8, async (line): Promise<RemoteBranch | null> => {
-    const [ref = "", sha = "", when = "", symref = ""] = line.split("\t");
+    const [ref = "", sha = "", when = "", symref = "", author = ""] = line.split("\t");
     const name = ref.replace(`refs/remotes/${push}/`, "");
     if (!ref || symref || name === "HEAD" || name === main) return null;
     const how = (await inMain(repo, sha, base)) ?? (closedPullRequest(meta, name, sha)?.merged ? "pull-request" : null);
@@ -489,7 +500,7 @@ export async function remoteBranches(repo: string, rem: RemoteSet, main: string,
       backup: BACKUP_PREFIXES.some((p) => name.startsWith(p)), local: local.has(name),
       pr: pr ? { number: pr.number, url: pr.url } : null,
       aheadOfMain: how ? 0 : await count(repo, `${base}..${sha}`),
-      lastCommit: /^\d+$/.test(when) ? Number(when) : null,
+      lastCommit: /^\d+$/.test(when) ? Number(when) : null, mine: isMine(author, me),
     };
   })).filter((b): b is RemoteBranch => b !== null);
   return out.sort((a, b) => Number(b.deletable) - Number(a.deletable) || (b.lastCommit ?? 0) - (a.lastCommit ?? 0));
@@ -991,7 +1002,8 @@ export async function buildProject(repo: string, name: string, everyMs: number, 
   const tier = worst(sigs.map((s) => s.tier));
   const items = itemsFor(draft);
   return { ...draft, signals: sigs, next: nextStep(draft, byKey), requests: requestsFor(draft), items, notes: notesFor(draft),
-    request: combinedRequest(repo, items), tier, verdict: VERDICT[tier] };
+    request: combinedRequest(repo, items, draft.main.remoteRef ?? `${draft.remotes.truth ?? "origin"}/${draft.main.name || "main"}`, draft.remotes.push ?? "origin"),
+    tier, verdict: VERDICT[tier] };
 }
 
 // --- scanning everything ------------------------------------------------------------
@@ -1038,10 +1050,11 @@ export async function scan(opts: ScanOptions = {}): Promise<Snapshot> {
     const rank = { "at-risk": 0, attention: 1, safe: 2 } as const;
     projects.sort((a, b) => rank[a.tier] - rank[b.tier] || a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
     return { version: VERSION, generatedAt: iso(Date.now()) ?? "", watching: projects.length, quiet: found - watch.length,
-      activeDays: cfg.activeDays, configPath: tilde(CONFIG_FILE), blocked, notices: [...notices], error: null, projects };
+      activeDays: cfg.activeDays, configPath: tilde(CONFIG_FILE), blocked, notices: [...notices], error: null, projects,
+      request: everywhereRequest(projects) };
   } catch (err) {
     if (!(err instanceof CheckFailed)) throw err;
     return { version: VERSION, generatedAt: iso(Date.now()) ?? "", watching: 0, quiet: 0, activeDays: 0,
-      configPath: tilde(CONFIG_FILE), blocked: [], notices: [], error: { title: err.title, detail: err.detail }, projects: [] };
+      configPath: tilde(CONFIG_FILE), blocked: [], notices: [], error: { title: err.title, detail: err.detail }, projects: [], request: "" };
   }
 }
