@@ -120,6 +120,7 @@ private struct Overview: View {
     @EnvironmentObject private var sent: SentRequests
     @State private var openSlug: String?
     @State private var copied = false
+    @State private var explaining = false
 
     private var onlyHere: [Project] { projects.filter { $0.onlyHere || sent.bySlug[$0.slug] != nil } }
     private var worthALook: [Project] { projects.filter { p in !onlyHere.contains { $0.slug == p.slug } && !p.toFix.isEmpty } }
@@ -153,7 +154,7 @@ private struct Overview: View {
     /// One request for every project, repository by repository; each card then follows its part live.
     private var cleanUpEverything: some View {
         let todo = projects.filter { !$0.toFix.isEmpty }
-        return VStack(alignment: .trailing, spacing: 6) {
+        return HStack(spacing: 8) {
             Button {
                 Requests.copy(request)
                 for project in todo { sent.remember(project, items: project.toFix) }
@@ -163,12 +164,24 @@ private struct Overview: View {
                 Label(copied ? "Copied" : "Clean up everything", systemImage: copied ? "checkmark" : "sparkles").padding(.vertical, 5).padding(.horizontal, 3)
             }
             .systemButton(prominent: true)
-            .controlSize(.large)
-            .help("Paste it into Claude Code opened in your home folder, so it can reach every project.")
-            Text("One request for all \(todo.count) projects that need you. Your assistant goes repo by repo and asks before anything risky.")
-                .font(.system(size: 11.5)).foregroundStyle(Palette.text3).multilineTextAlignment(.trailing)
-                .frame(maxWidth: 300, alignment: .trailing).fixedSize(horizontal: false, vertical: true)
+            Button { explaining.toggle() } label: {
+                Image(systemName: "questionmark").frame(width: 14).padding(.vertical, 5).padding(.horizontal, 3)
+            }
+            .systemButton()
+            .accessibilityLabel("What does Clean up everything do?")
+            .popover(isPresented: $explaining, arrowEdge: .bottom) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Clean up everything").font(.system(size: 13, weight: .semibold))
+                    Text("Copies one request for all \(todo.count) projects that need you. Your assistant goes repo by repo, backs up first, and asks before merging into main, deleting anything on the remote, or dropping work.")
+                    Text("Paste it into Claude Code opened in your home folder, so it can reach every project.").foregroundStyle(.secondary)
+                }
+                .font(.system(size: 12.5))
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: 300, alignment: .leading)
+                .padding(16)
+            }
         }
+        .controlSize(.large)
     }
 
     private var headline: String {

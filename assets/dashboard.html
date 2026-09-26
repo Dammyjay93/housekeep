@@ -530,6 +530,7 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
     upstream: ["Upstream", "The remote branch a local branch follows; git push and git pull use it by default. Upstream gone means that remote branch was deleted."],
     worktree: ["Worktree", "An extra working folder for the same repo, checked out on a different branch. Tools like Codex and Claude Code make these, and they're easy to forget. A prunable worktree is one whose folder was deleted."],
     stash: ["Stash", "Changes set aside with git stash to clear your working tree, without committing them. They sit out of sight until someone applies or drops them."],
+    everything: ["Clean up everything", "Copies one request for every project that needs you. Your assistant goes repo by repo, backs up first, and asks before merging into main, deleting anything on the remote, or dropping work. Paste it into Claude Code opened in your home folder, so it can reach every project."],
     cleanup: ["Cleanup", "Merged branches and worktrees left behind after the work is done, locally or on the remote. Unmerged branches are work in progress, not mess."],
     squash: ["Squash-merged", "A branch can be merged by folding all its commits into one new commit on main. The branch's own commits never land in main, but every change on it does, so it's merged."],
     detached: ["Detached HEAD", "A working tree that's on a specific commit instead of a branch. New commits made there belong to no branch, so switching away loses them unless they're saved to one. The push request asks your assistant to do that first."],
@@ -1018,9 +1019,8 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
         el("div", { class: "meta", text: sub }),
         (data.notices || []).length ? el("div", { class: "meta warn", text: data.notices.join(" ") }) : null),
         // One request that cleans up every project, one repository at a time; each card then follows its part.
-        data.request ? el("div", { class: "end", title: "Paste it into Claude Code opened in your home folder, so it can reach every project." }, copyButton(data.request, { label: "Clean up everything", tone: "primary",
-          title: `One request for all ${projects.filter((p) => itemsOf(p).length).length} projects that need you. Your assistant goes repo by repo and asks before anything risky.`,
-          onCopied: () => projects.filter((p) => itemsOf(p).length).forEach((p) => remember(p, itemsOf(p))) })) : null),
+        data.request ? el("div", { class: "end" }, copyButton(data.request, { label: "Clean up everything", tone: "primary",
+          onCopied: () => projects.filter((p) => itemsOf(p).length).forEach((p) => remember(p, itemsOf(p))) }), q("everything", "Clean up everything")) : null),
       ...groups.flatMap(([heading, list], gi) => [
         el("div", { class: "group-head", "data-tour": gi === 0 ? "next-steps" : null }, el("h2", { text: heading }), el("span", { text: String(list.length) })),
         ...list.map((p) => card(p)),
