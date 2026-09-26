@@ -222,8 +222,10 @@ dialog.confirm::backdrop { background: rgba(0, 0, 0, 0.72); }
 .card[data-open] { background: var(--layer-1); box-shadow: inset 0 0 0 1px var(--line-2), 0 24px 60px rgba(0, 0, 0, 0.45); }
 .card-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 10px 8px 8px; }
 .card-toggle { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 52px; padding: 8px 12px; border: 0; border-radius: 14px; background: transparent; text-align: left; cursor: pointer; }
-.card-toggle:hover { background: var(--layer-1); }
-.card[data-open] .card-toggle:hover { background: transparent; }
+.card-toggle:disabled { cursor: default; }
+/* The whole card answers the pointer, and only when there's something to open. */
+.card[data-openable]:not([data-open]):hover { background: var(--layer-1); box-shadow: inset 0 0 0 1px var(--line-2); }
+.card[data-openable]:not([data-open]):active { background: var(--layer-2); }
 .card-toggle .who { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 .card-toggle .who b { font-size: 14.5px; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap; }
 .card-toggle .who small { color: var(--text-3); font: 11.5px/1.4 var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -829,7 +831,9 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
     ["check", "attention", "Needs a check", "Nothing lost yet"],
     ["tidy", "safe", "Tidy up", "Already in main, safe to clear"],
   ];
-  const itemsOf = (p) => p.items || [];
+  // A server from before 0.2.0 sends no items: show its next step as the one thing to fix, rather than calling it clear.
+  const itemsOf = (p) => p.items || (p.next && p.next.tier !== "safe" && p.next.ask
+    ? [{ id: "next", lane: p.tier === "at-risk" ? "mac" : "check", title: p.next.title, why: p.next.why, where: "", step: p.next.title, ask: p.next.ask }] : []);
   const inLane = (p, lane) => itemsOf(p).filter((i) => i.lane === lane);
 
   // What you left unticked, per project. Ticking only changes what the request asks for.
@@ -980,9 +984,9 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
     const flip = () => { openSlug = open ? null : p.slug; render(); };
     if (!pinned && hasWork) toggle.addEventListener("click", flip);
     const actions = el("div", { class: "card-actions" },
-      !open && !sent && p.request ? copyButton(p.request, { tone: "ghost", title: `Copy one request that fixes everything in ${p.name}`, onCopied: () => remember(p, itemsOf(p)) }) : null,
+      !open && !sent && hasWork ? copyButton(p.request || requestFor(p, itemsOf(p)), { tone: "ghost", title: `Copy one request that fixes everything in ${p.name}`, onCopied: () => remember(p, itemsOf(p)) }) : null,
       !pinned && hasWork ? (() => { const b = el("button", { class: "btn icon ghost chev-btn", type: "button", "aria-label": open ? `Close ${p.name}` : `Open ${p.name}` }, icon("chevron")); b.addEventListener("click", flip); return b; })() : null);
-    const section = el("section", { class: "panel card", "data-open": open ? "" : null, "data-tier": tier }, el("div", { class: "card-head" }, toggle, actions));
+    const section = el("section", { class: "panel card", "data-open": open ? "" : null, "data-openable": !pinned && hasWork ? "" : null, "data-tier": tier }, el("div", { class: "card-head" }, toggle, actions));
     if (!open) return section;
     mapBox = el("div", { class: "map" });
     mapProject = p;

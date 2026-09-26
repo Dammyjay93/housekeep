@@ -10,7 +10,7 @@ import { CONFIG_DIR, STATE_DIR, loadConfig } from "./config.js";
 import { PLUGIN_NAME } from "./menubar.js";
 import { ENV, HOME, run, tilde } from "./proc.js";
 
-const LABEL = "dev.housekeep.server";
+export const LABEL = "dev.housekeep.server";
 const PLIST = join(HOME, "Library", "LaunchAgents", `${LABEL}.plist`);
 const PLUGIN_FILE = `${PLUGIN_NAME}.2m.sh`;
 const OWN_PLUGIN_DIR = join(CONFIG_DIR, "swiftbar");
