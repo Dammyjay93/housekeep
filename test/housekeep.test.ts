@@ -6,6 +6,7 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { createServer } from "node:net";
 import { devNull, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -654,6 +655,23 @@ describe("the live map", () => {
       assert.equal(statSync(STATE_DIR).mode & 0o777, 0o700);
     } finally {
       await server.close();
+    }
+  });
+
+  it("moves to the next fixed port when its own is taken, so the page keeps what it remembers", async () => {
+    mkdirSync(join(scratch, "nothing-here"), { recursive: true });
+    mkdirSync(dirname(CONFIG_FILE), { recursive: true });
+    writeFileSync(CONFIG_FILE, JSON.stringify({ roots: [join(scratch, "nothing-here")], fetchEveryMinutes: 0 }));
+    const taken = createServer();
+    await new Promise<void>((resolve) => taken.listen(0, "127.0.0.1", resolve));
+    const address = taken.address();
+    const wanted = typeof address === "object" && address ? address.port : 0;
+    const server = await startServer({ port: wanted });
+    try {
+      assert.ok(server.port > wanted && server.port <= wanted + 9, `${server.port} should follow ${wanted}`);
+    } finally {
+      await server.close();
+      await new Promise((resolve) => taken.close(resolve));
     }
   });
 
