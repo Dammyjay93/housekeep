@@ -37,6 +37,10 @@ struct Project: Decodable, Identifiable, Sendable {
     let notes: [String]?
     /// One request covering every item, backing up first.
     let request: String?
+    /// The project in a sentence, most at stake first. Missing from servers older than 0.2.1.
+    let summary: String?
+    /// Everything the summary doesn't cover, as short chips.
+    let tags: [Tag]?
     let main: MainFacts?
     let head: Head?
     let fetch: FetchInfo?
@@ -52,7 +56,7 @@ struct Project: Decodable, Identifiable, Sendable {
     var toFix: [Item] {
         if let items { return items }
         guard let next, next.tier != .safe, !next.ask.isEmpty else { return [] }
-        return [Item(id: "next", lane: tier == .atRisk ? .mac : .check, title: next.title, why: next.why, where: "", step: next.title, ask: next.ask)]
+        return [Item(id: "next", lane: tier == .atRisk ? .mac : .check, title: next.title, tag: nil, why: next.why, where: "", step: next.title, ask: next.ask)]
     }
 
     /// Work that exists only on this computer: the reason a project is listed first.
@@ -65,8 +69,9 @@ struct Project: Decodable, Identifiable, Sendable {
         return next.ask
     }
 
-    /// What's wrong, in a line: the names of the first few things to fix.
+    /// What's wrong, in a line: the server's summary, or the names of the first few things to fix.
     var line: String {
+        if let summary, !summary.isEmpty { return summary }
         let titles = toFix.map(\.title)
         guard !titles.isEmpty else { return next?.title ?? tier.verdict }
         let shown = titles.prefix(2).joined(separator: " · ")
@@ -82,10 +87,17 @@ struct Item: Decodable, Identifiable, Sendable, Hashable {
     let id: String
     let lane: Lane
     let title: String
+    /// A short label for a chip. Missing from servers older than 0.2.1.
+    let tag: String?
     let why: String
     let `where`: String
     let step: String
     let ask: String
+}
+
+struct Tag: Decodable, Sendable, Hashable {
+    let text: String
+    let lane: Item.Lane
 }
 
 struct MainFacts: Decodable, Sendable {

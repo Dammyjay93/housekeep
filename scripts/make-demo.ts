@@ -6,7 +6,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { devNull, homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -73,11 +73,15 @@ const lookLikeGitHub = (repo: string, name: string): void => {
   git(repo, "branch", "-q", "-D", "fix/cart-total");
   branch(repo, "feat/checkout-redesign", [["src/checkout.tsx", 5]]);
   git(repo, "switch", "-q", "feat/checkout-redesign");
-  commit(repo, "src/checkout.css", 1, "Style the new checkout");
-  commit(repo, "src/payment.tsx", 0, "Add Apple Pay");
-  commit(repo, "src/summary.tsx", 0, "Order summary");
-  for (const f of ["src/checkout.tsx", "src/payment.tsx"]) writeFileSync(join(repo, f), "work in progress\n");
-  writeFileSync(join(repo, "src/receipt.tsx"), "new file\n");
+  // A few days old: today's work is left alone as in progress, so this is work that has sat only here.
+  commit(repo, "src/checkout.css", 4, "Style the new checkout");
+  commit(repo, "src/payment.tsx", 3, "Add Apple Pay");
+  commit(repo, "src/summary.tsx", 3, "Order summary");
+  const edited = new Date(Date.now() - 3 * 86_400_000);
+  for (const [f, text] of [["src/checkout.tsx", "work in progress\n"], ["src/payment.tsx", "work in progress\n"], ["src/receipt.tsx", "new file\n"]] as const) {
+    writeFileSync(join(repo, f), text);
+    utimesSync(join(repo, f), edited, edited);
+  }
   lookLikeGitHub(repo, "shop-app");
 }
 

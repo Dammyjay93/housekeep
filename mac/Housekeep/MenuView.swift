@@ -46,7 +46,7 @@ struct MenuView: View {
             guard let snapshot = housekeep.snapshot, snapshot.error == nil else { return "" }
             if snapshot.projects.isEmpty { return "No projects yet" }
             let here = snapshot.projects.filter(\.onlyHere).count
-            if here > 0 { return "\(here) with work only here" }
+            if here > 0 { return "\(here) only on this Mac" }
             let n = snapshot.needy.count
             return n == 0 ? "All safe" : "\(n) worth a look"
         }
@@ -85,7 +85,7 @@ struct MenuView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     if let version = updates.waiting { updateCard(version) }
                     if !login.answered && !login.enabled { loginCard }
-                    group("Not on GitHub yet", snapshot.projects.filter(\.onlyHere))
+                    group("Only on this Mac", snapshot.projects.filter(\.onlyHere))
                     group("Worth a look", snapshot.needy.filter { !$0.onlyHere })
                     if !snapshot.clean.isEmpty { allClear(snapshot.clean, alone: snapshot.needy.isEmpty) }
                 }
@@ -112,7 +112,7 @@ struct MenuView: View {
         HStack(alignment: .firstTextBaseline, spacing: 9) {
             TierDot(tier: .safe)
             VStack(alignment: .leading, spacing: 2) {
-                Text(alone ? "Everything is committed, on GitHub and in main." : "Safe")
+                Text(alone ? "Nothing needs you." : "Safe")
                     .font(.system(size: 12.5, weight: .medium)).foregroundStyle(alone ? Palette.text : Palette.text2)
                 Text(clean.map(\.name).joined(separator: ", "))
                     .font(.system(size: 12)).foregroundStyle(Palette.text3).lineLimit(2)

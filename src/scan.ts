@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { CONFIG_FILE, CheckFailed, type Config, type DeletedBranch, type Memo, STATE_DIR, loadConfig, loadMemo, readJson, saveMemo, writeAtomic } from "./config.js";
 import type { Branch, Checkout, CommittedSecret, MergeKind, NextStep, Project, PrunedBranch, RemoteBranch, Request, Signal, Snapshot, Tier } from "./model.js";
 import { VERDICT, worst } from "./model.js";
-import { combinedRequest, everywhereRequest, itemsFor, notesFor } from "./items.js";
+import { LANE_TIER, combinedRequest, everywhereRequest, itemsFor, notesFor, summaryFor } from "./items.js";
 import { HERE, type RunResult, capFirst, count, countOrNull, git, isRecord, iso, plural, pool, run, tilde, untilde } from "./proc.js";
 import { type GitHubMeta, type RemoteSet, closedPullRequest, fetchDue, githubMeta, metaFromMemo, refreshRemote, remotesOf } from "./remote.js";
 
@@ -213,7 +213,7 @@ async function operation(path: string): Promise<string | null> {
 }
 
 /** Uncommitted and untracked files in one working tree, and any that look like they hold a secret. */
-export async function folderStatus(path: string): Promise<{ changed: number; untracked: number; secrets: string[]; unreadable: boolean }> {
+export async function folderStatus(path: string): Promise<{ changed: number; untracked: number; secrets: string[]; unreadable: boolean; lastEdit: number | null }> {
   const r = await run("git", ["-C", path, "status", "--porcelain=v1", "-z", "--untracked-files=normal"], { timeout: 30_000 });
   const changed: string[] = [];
   const untracked: string[] = [];
@@ -231,8 +231,11 @@ export async function folderStatus(path: string): Promise<{ changed: number; unt
       return SECRET_PATTERNS.some((p) => p.test(base)) && !TEMPLATE_SUFFIXES.some((s) => name.toLowerCase().endsWith(s)) && existsSync(join(path, name));
     })
     .sort();
+  // Deleted files have no time of their own; the rest say how fresh the work is.
+  const times = [...changed, ...untracked].map((name) => { try { return statSync(join(path, name)).mtimeMs; } catch { return 0; } });
+  const newest = Math.max(0, ...times);
   // A status that failed or timed out says nothing: it must never read as a clean working tree.
-  return { changed: changed.length, untracked: untracked.length, secrets, unreadable: !r.ok };
+  return { changed: changed.length, untracked: untracked.length, secrets, unreadable: !r.ok, lastEdit: newest ? Math.floor(newest / 1000) : null };
 }
 
 // Ignored files a build or install recreates. Anything else ignored (.env.local, a local database)
@@ -508,7 +511,7 @@ export async function remoteBranches(repo: string, rem: RemoteSet, main: string,
 
 // --- what it means --------------------------------------------------------------
 
-export type Draft = Omit<Project, "signals" | "next" | "requests" | "items" | "notes" | "request" | "tier" | "verdict">;
+export type Draft = Omit<Project, "signals" | "next" | "requests" | "items" | "notes" | "request" | "summary" | "tags" | "tier" | "verdict">;
 
 /** The four questions every project answers. Labels are git's terms; hints say what they mean. */
 export function signals(p: Draft): Signal[] {
@@ -920,7 +923,7 @@ export async function buildProject(repo: string, name: string, everyMs: number, 
       main: { name: "", local: false, remoteMain: false, remoteRef: null, ahead: 0, behind: 0, localOnly: 0, checks: null },
       head: { branch: null }, fetch: { hasRemote: true, at: null, error: null },
       checkouts: [], branches: [], remoteBranches: [], stashes: [], unpushed: null, pruned: [], committedSecrets: [],
-      signals: [], next: null, requests: [], items: [], notes: [], request: "", tier: "attention", verdict: "Couldn't read this project",
+      signals: [], next: null, requests: [], items: [], notes: [], request: "", summary: "Git couldn't open this folder.", tags: [], tier: "attention", verdict: "Couldn't read this project",
     };
   }
   let cached = metaFromMemo(memo.github[repo]);
@@ -955,7 +958,7 @@ export async function buildProject(repo: string, name: string, everyMs: number, 
   const checkouts: Checkout[] = await Promise.all(wts.map(async (w, i): Promise<Checkout> => {
     // git also calls a worktree prunable when it merely can't read the folder; only a folder that's gone is missing.
     const missing = !existsSync(w.path);
-    const st = missing ? { changed: 0, untracked: 0, secrets: [], unreadable: false } : await folderStatus(w.path);
+    const st = missing ? { changed: 0, untracked: 0, secrets: [], unreadable: false, lastEdit: null } : await folderStatus(w.path);
     const op = missing ? null : await operation(w.path);
     const keep = i === 0 || missing ? [] : await ignoredKeep(w.path);
     // Commits a detached HEAD holds that no branch, remote or tag does: lost the moment HEAD moves.
@@ -966,7 +969,7 @@ export async function buildProject(repo: string, name: string, everyMs: number, 
     const tier: Tier = st.secrets.length || detached ? "at-risk" : st.changed + st.untracked || op || missing || unreadable ? "attention" : "safe";
     return { path: w.path, label, branch: w.branch, primary: i === 0, missing, changed: st.changed, untracked: st.untracked, secrets: st.secrets,
       operation: op, head: w.branch ? null : w.head, detachedCommits: detached, unreadable, ignoredKeep: keep ?? [],
-      offline: missing && onMissingDrive(w.path), locked: w.locked, temporary: inTempFolder(w.path), tier };
+      offline: missing && onMissingDrive(w.path), locked: w.locked, temporary: inTempFolder(w.path), lastEdit: st.lastEdit, tier };
   }));
   const host = rem.host ?? "the remote";
   const current = new Set(checkouts[0]?.branch ? [checkouts[0].branch] : []);
@@ -999,11 +1002,13 @@ export async function buildProject(repo: string, name: string, everyMs: number, 
   if (still.length) memo.deleted[repo] = still;
   else delete memo.deleted[repo];
   const byKey = Object.fromEntries(sigs.map((s) => [s.key, s])) as Record<Signal["key"], Signal>;
-  const tier = worst(sigs.map((s) => s.tier));
   const items = itemsFor(draft);
-  return { ...draft, signals: sigs, next: nextStep(draft, byKey), requests: requestsFor(draft), items, notes: notesFor(draft),
+  const notes = notesFor(draft);
+  // What there is to fix decides how the project reads: today's work still being written isn't a risk yet.
+  const tier = worst(items.map((i) => LANE_TIER[i.lane]));
+  return { ...draft, signals: sigs, next: nextStep(draft, byKey), requests: requestsFor(draft), items, notes,
     request: combinedRequest(repo, items, draft.main.remoteRef ?? `${draft.remotes.truth ?? "origin"}/${draft.main.name || "main"}`, draft.remotes.push ?? "origin"),
-    tier, verdict: VERDICT[tier] };
+    ...summaryFor(draft, items, notes), tier, verdict: VERDICT[tier] };
 }
 
 // --- scanning everything ------------------------------------------------------------

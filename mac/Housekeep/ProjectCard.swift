@@ -96,12 +96,15 @@ struct ProjectCard: View {
         .onHover { hovering = canOpen && !open && $0 }
     }
 
+    /// What the summary doesn't cover, from the server; an older one sends every item's title instead.
+    private var chips: [Tag] { project.tags ?? items.map { Tag(text: $0.title, lane: $0.lane) } }
+
     private func tags(_ shown: Int) -> some View {
         HStack(spacing: 6) {
-            ForEach(items.prefix(shown)) { item in
+            ForEach(chips.prefix(shown), id: \.self) { chip in
                 HStack(spacing: 6) {
-                    Circle().fill(color(item.lane)).frame(width: 5, height: 5)
-                    Text(item.title.count > 26 ? "\(item.title.prefix(24))…" : item.title).lineLimit(1)
+                    Circle().fill(color(chip.lane)).frame(width: 5, height: 5)
+                    Text(chip.text.count > 26 ? "\(chip.text.prefix(24))…" : chip.text).lineLimit(1)
                 }
                 .font(.system(size: 12))
                 .foregroundStyle(Palette.text2)
@@ -110,8 +113,8 @@ struct ProjectCard: View {
                 .glassCapsule()
                 .fixedSize()
             }
-            if items.count > shown {
-                Text("+\(items.count - shown)").font(.system(size: 12)).foregroundStyle(Palette.text2)
+            if chips.count > shown {
+                Text("+\(chips.count - shown)").font(.system(size: 12)).foregroundStyle(Palette.text2)
                     .padding(.horizontal, 12).frame(height: 30).glassCapsule().fixedSize()
             }
         }
@@ -122,9 +125,10 @@ struct ProjectCard: View {
             if live.finished { return "All fixed. Everything in the request shows up in git." }
             return live.fixed > 0 ? "\(live.fixed) of \(live.items.count) fixed, the rest is in progress." : "Request copied. Nothing has changed in git yet."
         }
+        if let summary = project.summary, !summary.isEmpty { return summary }
         let mac = items.filter { $0.lane == .mac }, check = items.filter { $0.lane == .check }, tidy = items.filter { $0.lane == .tidy }
         if mac.contains(where: { $0.id == "no-remote" }) { return "Not on \(project.hostName) at all. The whole project exists only on this Mac." }
-        if !mac.isEmpty { return "Some work here isn't on \(project.hostName) yet." }
+        if !mac.isEmpty { return "Some work exists only on this Mac." }
         if let first = check.first { return "\(first.title)." }
         if !tidy.isEmpty { return "Nothing at risk. \(tidy.map(\.title).joined(separator: " and ")) to clear." }
         return project.notes?.first ?? "Everything is in \(project.main?.remoteRef ?? "main")."
@@ -304,7 +308,7 @@ struct ProjectCard: View {
 
     private func hint(_ lane: Item.Lane) -> String {
         switch lane {
-        case .mac: "Lost if this Mac is"
+        case .mac: "Not backed up anywhere else"
         case .check: "Nothing lost yet"
         case .tidy: "Already in main, safe to clear"
         }
