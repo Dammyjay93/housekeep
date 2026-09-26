@@ -101,8 +101,9 @@ export function itemsFor(p: Draft): Item[] {
   if (p.stashes.length) {
     const n = p.stashes.length;
     mac.push({ id: "stashes", lane: "mac", title: plural(n, "stash", "stashes"), why: "Changes set aside and easy to forget", where: "git stash",
-      step: `Show you what's in ${one(n, "the stash", "each stash")} and ask what to keep`,
-      ask: `${at} there ${one(n, "is", "are")} ${plural(n, "stash", "stashes")}. For each, tell me in plain English what it contains and whether it's already committed. Recommend apply or drop, and don't drop anything without asking.` });
+      step: `Bring ${one(n, "the stash", "each stash")} into main or drop it, asking you first`,
+      ask: `${at} there ${one(n, "is", "are")} ${plural(n, "stash", "stashes")}. For each, tell me in plain English what it contains and whether it's already in ${ref}. ` +
+        `If it holds work worth keeping, put it on a branch of its own and get it into ${main} through a pull request; if not, drop it. Ask me before dropping anything.` });
   }
 
   // --- Needs a check: nothing lost yet ----------------------------------------------
@@ -147,6 +148,16 @@ export function itemsFor(p: Draft): Item[] {
       why: `A plain git push from it would change ${ref} directly.`, where: b.name, step: `Stop ${b.name} pushing to ${ref}`,
       ask: `${at} ${b.name} is set up so that a plain push would change ${ref} directly. Stop it tracking ${ref}, so it pushes to a branch of its own. Don't push anything.` });
   }
+  // A branch not in main that nothing explains is dangling: yours, no open pull request, untouched for two weeks.
+  // Housekeep asks you to finish it into main or delete it; it never assumes which.
+  for (const d of dangling(p)) {
+    check.push({ id: `dangling:${d.name}`, lane: "check", title: d.title,
+      why: `Not in main, and untouched for ${d.days} days`, where: d.name,
+      step: `Ask you whether to finish ${d.name} into ${main} or delete it`,
+      ask: `${at} the branch ${d.name}${d.localToo ? "" : ` (only on ${remote})`} has ${plural(d.commits, "commit")} that aren't in ${ref}, and no commits for ${d.days} days. ` +
+        `Tell me in plain English what it is, and whether later work in ${ref} already covers it. Then ask me: finish it or delete it. ` +
+        `To finish it, open a pull request into ${main} and merge it once its checks pass and I say yes. To delete it, remove it here and on ${remote}. Don't force-push.` });
+  }
   if (p.limits.shallow || p.limits.singleBranch) {
     const what = p.limits.shallow ? "the full history" : "all branches";
     check.push({ id: "clone", lane: "check", title: `This copy is missing ${what}`, why: `It's a ${p.limits.shallow ? "shallow" : "single-branch"} clone, so it can't be fully compared with ${host}.`,
@@ -185,24 +196,75 @@ export function itemsFor(p: Draft): Item[] {
   return [...mac, ...check, ...tidy];
 }
 
-/** Worth knowing, nothing to do: work that's safe on the remote, waiting for a pull request. */
+const DAY = 86_400;
+const IN_PROGRESS_DAYS = 14;
+
+/** Branches not in main with nothing to explain them: yours, no open pull request, untouched for two weeks. */
+function dangling(p: Draft): { name: string; title: string; commits: number; days: number; localToo: boolean }[] {
+  const now = Date.now() / 1000;
+  const days = (when: number | null): number => (when ? Math.floor((now - when) / DAY) : IN_PROGRESS_DAYS);
+  const out: { name: string; title: string; commits: number; days: number; localToo: boolean }[] = [];
+  for (const b of p.branches.filter((x) => x.state === "unmerged" && x.onRemote && !x.upstreamGone && !x.pushesToMain)) {
+    if (b.mine && !b.pr && days(b.lastCommit) >= IN_PROGRESS_DAYS) out.push({ name: b.name, title: workName(b), commits: b.aheadOfMain, days: days(b.lastCommit), localToo: true });
+  }
+  const local = new Set(p.branches.map((b) => b.name));
+  for (const r of p.remoteBranches.filter((x) => !x.merged && !x.kept && !local.has(x.name))) {
+    if (r.mine && !r.pr && days(r.lastCommit) >= IN_PROGRESS_DAYS) out.push({ name: r.name, title: workName({ name: r.name, subject: null }), commits: r.aheadOfMain, days: days(r.lastCommit), localToo: false });
+  }
+  return out;
+}
+
+/** Worth knowing, nothing to do: the branches that have a reason to exist, so the cleanup leaves them. */
 export function notesFor(p: Draft): string[] {
   const host = p.host ?? "the remote";
-  const waiting = p.branches.filter((b) => b.state === "unmerged" && b.onRemote && !b.pr && !b.upstreamGone && !b.pushesToMain).map((b) => b.name);
-  const withPr = p.branches.filter((b) => b.state === "unmerged" && b.pr).map((b) => `#${b.pr?.number}`);
+  const now = Date.now() / 1000;
+  const recent = (when: number | null): boolean => when !== null && now - when < IN_PROGRESS_DAYS * DAY;
+  const list = (names: string[]): string => [...new Set(names)].slice(0, 3).join(", ") + (new Set(names).size > 3 ? ` and ${new Set(names).size - 3} more` : "");
+  const unmerged = [...p.branches.filter((b) => b.state === "unmerged" && b.onRemote && !b.upstreamGone),
+    ...p.remoteBranches.filter((r) => !r.merged && !r.kept && !p.branches.some((b) => b.name === r.name))];
+  const progress = unmerged.filter((b) => b.mine && (b.pr || recent(b.lastCommit))).map((b) => b.name);
+  const others = unmerged.filter((b) => !b.mine).map((b) => b.name);
+  const kept = [...p.branches.filter((b) => b.state === "kept").map((b) => b.name), ...p.remoteBranches.filter((r) => r.kept).map((r) => r.name)];
   return [
-    waiting.length ? `On ${host}, waiting for a pull request: ${waiting.slice(0, 3).join(", ")}${waiting.length > 3 ? ` and ${waiting.length - 3} more` : ""}. They're safe.` : "",
-    withPr.length ? `Open pull ${one(withPr.length, "request", "requests")} ${withPr.join(", ")}: safe on ${host}, nothing to do here.` : "",
+    progress.length ? `In progress, so left alone: ${list(progress)}.` : "",
+    others.length ? `Someone else's work on ${host}, so left alone: ${list(others)}.` : "",
+    kept.length ? `Kept on purpose: ${list(kept)}. Housekeep never asks to delete these.` : "",
   ].filter(Boolean);
 }
 
-/** One request for every item, in order, with the backup and the checks it needs first. */
-export function combinedRequest(path: string, items: Item[]): string {
-  if (!items.length) return "";
+const GOAL = (ref: string, remote: string) =>
+  `The goal: ${ref} is the source of truth, with no dangling branches, worktrees or stashes here or on ${remote}. ` +
+  "The only other branches left should be ones with a reason to exist: in progress (an open pull request, or commits in the last two weeks), someone else's, or kept on purpose.";
+
+const SAFETY = "Before changing anything, back up: save a git bundle of every branch and a patch of any uncommitted changes, outside the repo, and tell me where they are. " +
+  "Ask me before merging into main, pushing to main, deleting anything on the remote, dropping any work, or force-pushing.";
+
+/** The numbered steps for one project, then a last check that only main is left. */
+function stepsFor(path: string, items: Item[]): string[] {
   const prefix = `In ${path}, `;
-  const steps = items.map((it, i) => `${i + 1}. ${capFirst(it.ask.startsWith(prefix) ? it.ask.slice(prefix.length) : it.ask)}`);
-  return `In ${path}, please do the following, in this order.\n\n` +
-    "Before changing anything, back up: save a git bundle of every branch and a patch of any uncommitted changes, outside the repo, and tell me where they are. " +
-    "Ask me before pushing to main, deleting anything on the remote, or force-pushing.\n\n" +
-    `${steps.join("\n\n")}\n\nWhen you're done, tell me what you did and anything you left alone.`;
+  const steps = items.map((it) => capFirst(it.ask.startsWith(prefix) ? it.ask.slice(prefix.length) : it.ask));
+  steps.push("Finally, fetch, then check that local main matches the remote's main, that no dangling branches, worktrees or stashes are left, " +
+    "and tell me which other branches remain and why (in progress, someone else's, or kept on purpose).");
+  return steps.map((s, i) => `${i + 1}. ${s}`);
+}
+
+/** One request for every item in one project, in order, with the backup and the checks it needs first. */
+export function combinedRequest(path: string, items: Item[], ref = "origin/main", remote = "origin"): string {
+  if (!items.length) return "";
+  return `In ${path}, please clean up so main is the source of truth. ${GOAL(ref, remote)}\n\n${SAFETY}\n\n` +
+    `${stepsFor(path, items).join("\n\n")}\n\nWhen you're done, tell me what you did and anything you left alone.`;
+}
+
+/** Clean up every project with something to fix, one repository at a time. */
+export function everywhereRequest(projects: { name: string; path: string; items: Item[] }[]): string {
+  const todo = projects.filter((p) => p.items.length);
+  if (!todo.length) return "";
+  return `Please clean up ${todo.length === 1 ? "this repository" : `these ${todo.length} repositories`} so main is the source of truth in each, with no dangling refs. ` +
+    "In each, main on the remote should hold all finished work, and the only other branches left should be ones with a reason to exist: " +
+    "in progress (an open pull request, or commits in the last two weeks), someone else's, or kept on purpose. No stale branches, extra worktrees or stashes.\n\n" +
+    "Work through them one repository at a time, in this order. In each: back up first (a git bundle of every branch and a patch of any uncommitted changes, outside the repo), " +
+    "then work through its list. Ask me before merging into main, pushing to main, deleting anything on the remote, dropping any work, or force-pushing. " +
+    "Finish one repository and tell me what's left there before starting the next.\n\n" +
+    todo.map((p, i) => `## ${i + 1}. ${p.name} (${p.path})\n\n${stepsFor(p.path, p.items).join("\n\n")}`).join("\n\n") +
+    "\n\nWhen you're done, give me a short summary for each repository.";
 }

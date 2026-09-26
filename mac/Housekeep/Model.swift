@@ -8,6 +8,8 @@ struct Snapshot: Decodable, Sendable {
     let error: SnapshotError?
     let notices: [String]?
     let activeDays: Int?
+    /// One request that cleans up every project with something to fix, one repository at a time.
+    let request: String?
 
     var needy: [Project] { projects.filter { $0.tier != .safe } }
     var clean: [Project] { projects.filter { $0.tier == .safe } }

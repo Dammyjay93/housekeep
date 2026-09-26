@@ -97,7 +97,7 @@ struct DashboardView: View {
             } else if case .project(let slug) = navigator.place, let project = projects.first(where: { $0.slug == slug }) {
                 ProjectPage(project: project)
             } else {
-                Overview(projects: projects, notices: housekeep.snapshot?.notices ?? [])
+                Overview(projects: projects, notices: housekeep.snapshot?.notices ?? [], request: housekeep.snapshot?.request ?? "")
             }
         }
     }
@@ -115,8 +115,11 @@ struct DashboardView: View {
 private struct Overview: View {
     let projects: [Project]
     let notices: [String]
+    /// The request that cleans up every project at once.
+    let request: String
     @EnvironmentObject private var sent: SentRequests
     @State private var openSlug: String?
+    @State private var copied = false
 
     private var onlyHere: [Project] { projects.filter { $0.onlyHere || sent.bySlug[$0.slug] != nil } }
     private var worthALook: [Project] { projects.filter { p in !onlyHere.contains { $0.slug == p.slug } && !p.toFix.isEmpty } }
@@ -125,10 +128,14 @@ private struct Overview: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(headline).font(.system(size: 32, weight: .medium)).tracking(-0.8).foregroundStyle(Palette.text)
-                    Text(subline).font(.system(size: 14)).foregroundStyle(Palette.text2)
-                    ForEach(notices, id: \.self) { Text($0).font(.system(size: 12.5)).foregroundStyle(Palette.amber) }
+                HStack(alignment: .bottom, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(headline).font(.system(size: 32, weight: .medium)).tracking(-0.8).foregroundStyle(Palette.text)
+                        Text(subline).font(.system(size: 14)).foregroundStyle(Palette.text2)
+                        ForEach(notices, id: \.self) { Text($0).font(.system(size: 12.5)).foregroundStyle(Palette.amber) }
+                    }
+                    Spacer(minLength: 0)
+                    if !request.isEmpty { cleanUpEverything }
                 }
                 .padding(.bottom, 18)
                 group("Not on the remote yet", onlyHere)
@@ -141,6 +148,26 @@ private struct Overview: View {
             .frame(maxWidth: .infinity)
         }
         .onAppear { if openSlug == nil { openSlug = onlyHere.first?.slug ?? worthALook.first?.slug } }
+    }
+
+    /// One request for every project, repository by repository; each card then follows its part live.
+    private var cleanUpEverything: some View {
+        let todo = projects.filter { !$0.toFix.isEmpty }
+        return VStack(alignment: .trailing, spacing: 6) {
+            Button {
+                Requests.copy(request)
+                for project in todo { sent.remember(project, items: project.toFix) }
+                copied = true
+                Task { try? await Task.sleep(for: .seconds(1.6)); copied = false }
+            } label: {
+                Label(copied ? "Copied" : "Clean up everything", systemImage: copied ? "checkmark" : "sparkles").padding(.vertical, 5).padding(.horizontal, 3)
+            }
+            .systemButton(prominent: true)
+            .controlSize(.large)
+            .help("Copy one request that cleans up all \(todo.count) projects, one at a time, asking before anything risky")
+            Text("\(todo.count) projects, one at a time. Paste into Claude Code opened in your home folder.")
+                .font(.system(size: 11.5)).foregroundStyle(Palette.text3)
+        }
     }
 
     private var headline: String {

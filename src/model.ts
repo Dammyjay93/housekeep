@@ -75,6 +75,8 @@ export interface Branch {
   lastCommit: number | null;
   /** The last commit's message, first line: often the plainest name for the work. */
   subject: string | null;
+  /** Its last commit is by you (your git user.email), so it's yours to finish or delete. */
+  mine: boolean;
   worktree: string | null;
   current: boolean;
 }
@@ -91,6 +93,8 @@ export interface RemoteBranch {
   pr: PullRequestRef | null;
   aheadOfMain: number;
   lastCommit: number | null;
+  /** Its last commit is by you, so it's yours to finish or delete. */
+  mine: boolean;
 }
 
 export interface Signal {
@@ -238,6 +242,8 @@ export interface Snapshot {
   notices: string[];
   error: { title: string; detail: string } | null;
   projects: Project[];
+  /** One request covering every project with something to fix, one repository at a time. */
+  request?: string;
 }
 
 export const TIER_RANK: Record<Tier, number> = { "at-risk": 0, attention: 1, safe: 2 };
