@@ -1011,15 +1011,15 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
       : onlyHere.length ? `${plural(onlyHere.length, "project has", "projects have")} work only on ${HERE}`
       : `${plural(need.length, "project needs", "projects need")} a look`;
     const sub = !need.length ? `Everything is committed, on ${hostAll()} and in main. Housekeep keeps watching.`
-      : "Riskiest first. Open a project, pick what to fix, and copy one request for your AI assistant.";
+      : data.request ? "Clean up everything in one go, or open a project to choose what to fix." : "Riskiest first. Open a project to choose what to fix.";
     return [
       el("section", { class: "head" }, el("div", {},
         el("h1", { text: title }),
         el("div", { class: "meta", text: sub }),
         (data.notices || []).length ? el("div", { class: "meta warn", text: data.notices.join(" ") }) : null),
         // One request that cleans up every project, one repository at a time; each card then follows its part.
-        data.request ? el("div", { class: "end" }, copyButton(data.request, { label: "Clean up everything", tone: "primary",
-          title: "Copy one request that cleans up every project, one at a time, asking before anything risky",
+        data.request ? el("div", { class: "end", title: "Paste it into Claude Code opened in your home folder, so it can reach every project." }, copyButton(data.request, { label: "Clean up everything", tone: "primary",
+          title: `One request for all ${projects.filter((p) => itemsOf(p).length).length} projects that need you. Your assistant goes repo by repo and asks before anything risky.`,
           onCopied: () => projects.filter((p) => itemsOf(p).length).forEach((p) => remember(p, itemsOf(p))) })) : null),
       ...groups.flatMap(([heading, list], gi) => [
         el("div", { class: "group-head", "data-tour": gi === 0 ? "next-steps" : null }, el("h2", { text: heading }), el("span", { text: String(list.length) })),

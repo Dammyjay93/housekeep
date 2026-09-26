@@ -164,9 +164,10 @@ private struct Overview: View {
             }
             .systemButton(prominent: true)
             .controlSize(.large)
-            .help("Copy one request that cleans up all \(todo.count) projects, one at a time, asking before anything risky")
-            Text("\(todo.count) projects, one at a time. Paste into Claude Code opened in your home folder.")
-                .font(.system(size: 11.5)).foregroundStyle(Palette.text3)
+            .help("Paste it into Claude Code opened in your home folder, so it can reach every project.")
+            Text("One request for all \(todo.count) projects that need you. Your assistant goes repo by repo and asks before anything risky.")
+                .font(.system(size: 11.5)).foregroundStyle(Palette.text3).multilineTextAlignment(.trailing)
+                .frame(maxWidth: 300, alignment: .trailing).fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -178,7 +179,7 @@ private struct Overview: View {
 
     private var subline: String {
         onlyHere.isEmpty && worthALook.isEmpty ? "Everything is committed, pushed and in main. Housekeep keeps watching."
-            : "Riskiest first. Open a project, pick what to fix, and copy one request for your AI assistant."
+            : request.isEmpty ? "Riskiest first. Open a project to choose what to fix." : "Clean up everything in one go, or open a project to choose what to fix."
     }
 
     @ViewBuilder private func group(_ title: String, _ list: [Project]) -> some View {
