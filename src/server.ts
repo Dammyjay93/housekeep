@@ -246,7 +246,9 @@ function listen(server: Server, port: number): Promise<number> {
   });
 }
 
-/** Start the dashboard server. Uses the configured port, or any free one if something else has it. */
+const SPARE_PORTS = 9;
+
+/** Start the dashboard server. Uses the configured port, the next few if it's taken, or any free one after that. */
 export async function startServer(opts: { port?: number } = {}): Promise<LiveServer> {
   // Earlier versions left state readable by everyone on this machine; the token must be yours alone.
   secureDir(STATE_DIR);
@@ -357,13 +359,17 @@ export async function startServer(opts: { port?: number } = {}): Promise<LiveSer
     });
   });
 
+  // The page keeps what it remembers per address, so a busy port moves to the next few fixed ones,
+  // the same each time, before any free one. Port 0 asks for any free port straight away.
   const wanted = opts.port ?? loadConfig().port;
-  let port: number;
-  try {
-    port = await listen(server, wanted);
-  } catch (err) {
-    if (!(err instanceof Error) || !("code" in err) || err.code !== "EADDRINUSE") throw err;
-    port = await listen(server, 0);
+  let port = 0;
+  for (const candidate of wanted ? [...Array.from({ length: SPARE_PORTS + 1 }, (_, i) => wanted + i), 0] : [0]) {
+    try {
+      port = await listen(server, candidate);
+      break;
+    } catch (err) {
+      if (!(err instanceof Error) || !("code" in err) || err.code !== "EADDRINUSE" || candidate === 0) throw err;
+    }
   }
   hosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
   const url = `http://127.0.0.1:${port}/`;
