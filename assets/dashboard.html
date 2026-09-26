@@ -611,21 +611,25 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
   /* ---------- "What's this?" ---------- */
 
   const glossary = document.getElementById("glossary");
-  let lastQuestion = null;
+  let asked = null;
   for (const [key, [title, body]] of Object.entries(GLOSSARY)) {
     const pop = el("div", { class: "gloss", id: `g-${key}`, popover: "auto", role: "tooltip" }, el("b", { text: title }), body);
-    pop.addEventListener("toggle", (e) => {
-      if (e.newState !== "open" || !lastQuestion) return;
-      const r = lastQuestion.getBoundingClientRect();
-      const w = pop.offsetWidth, h = pop.offsetHeight;
+    // Placed before it shows (its width is fixed, its height a guess) so it never flashes elsewhere, then exactly once measured.
+    const place = (w, h) => {
+      const r = asked;
       const left = Math.max(12, Math.min(window.innerWidth - w - 12, r.left + r.width / 2 - w / 2));
       const below = r.bottom + 8 + h < window.innerHeight;
       pop.style.left = `${left}px`;
       pop.style.top = `${below ? r.bottom + 8 : r.top - h - 8}px`;
-    });
+    };
+    pop.addEventListener("beforetoggle", (e) => { if (e.newState === "open" && asked) place(290, 120); });
+    pop.addEventListener("toggle", (e) => { if (e.newState === "open" && asked) place(pop.offsetWidth, pop.offsetHeight); });
     glossary.append(pop);
   }
-  document.addEventListener("click", (e) => { const q = e.target.closest(".q"); if (q) lastQuestion = q; }, true);
+  // Where the question was when clicked: a live update can replace the button before its popover opens.
+  document.addEventListener("click", (e) => { const q = e.target.closest(".q"); if (q) asked = q.getBoundingClientRect(); }, true);
+  // Fixed in place, an open answer would drift away from its question as the page scrolls.
+  document.addEventListener("scroll", () => { for (const pop of glossary.querySelectorAll(".gloss:popover-open")) pop.hidePopover(); }, { capture: true, passive: true });
   const q = (key, label) => el("button", { class: "q", type: "button", popovertarget: `g-${key}`, "aria-label": `What does ${label || GLOSSARY[key][0]} mean?` }, "?");
   const term = (text, key) => el("span", { class: "term" }, text, q(key, text));
 
@@ -828,7 +832,7 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
   /* ---------- projects as cards: scan them closed, open one to fix it ---------- */
 
   const LANES = [
-    ["mac", "at-risk", `Only on ${HERE}`, "Lost if this computer is"],
+    ["mac", "at-risk", `Only on ${HERE}`, "Not backed up anywhere else"],
     ["check", "attention", "Needs a check", "Nothing lost yet"],
     ["tidy", "safe", "Tidy up", "Already in main, safe to clear"],
   ];
@@ -885,9 +889,10 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
       const done = sent.items.filter((i) => sent.done[i.id]).length;
       return done === sent.items.length ? "All fixed. Everything in the request shows up in git." : done ? `${done} of ${sent.items.length} fixed, the rest is in progress.` : "Request copied. Nothing has changed in git yet.";
     }
+    if (p.summary) return p.summary;
     const mac = inLane(p, "mac"), check = inLane(p, "check"), tidy = inLane(p, "tidy");
     if (mac.some((i) => i.id === "no-remote")) return `Not on ${H(p)} at all. The whole project exists only on ${HERE}.`;
-    if (mac.length) return `Some work here isn't on ${H(p)} yet.`;
+    if (mac.length) return `Some work exists only on ${HERE}.`;
     if (check.length) return `${check[0].title}.`;
     if (tidy.length) return `Nothing at risk. ${tidy.map((i) => i.title).join(" and ")} to clear.`;
     return (p.notes || [])[0] || `Everything is in ${mainRef(p)}.`;
@@ -895,9 +900,10 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
 
   function tagsOf(p) {
     const tier = { mac: "at-risk", check: "attention", tidy: "safe" };
-    const all = itemsOf(p);
+    // The server says what the summary doesn't cover; one from before 0.2.1 sends every item's title.
+    const all = p.tags || itemsOf(p).map((i) => ({ text: i.title, lane: i.lane }));
     const short = (t) => t.length > 26 ? t.slice(0, 24).trimEnd() + "…" : t;
-    return el("div", { class: "tags" }, all.slice(0, 3).map((i) => el("span", { class: "tag lane", "data-tier": tier[i.lane] }, el("i"), short(i.title))),
+    return el("div", { class: "tags" }, all.slice(0, 3).map((t) => el("span", { class: "tag lane", "data-tier": tier[t.lane] }, el("i"), short(t.text))),
       all.length > 3 ? el("span", { class: "tag lane", text: `+${all.length - 3}` }) : null);
   }
 
@@ -1004,15 +1010,15 @@ dialog.ob[open] { display: flex; flex-direction: column; gap: 8px; animation: ob
     const onlyHere = projects.filter((p) => inLane(p, "mac").length || sentAll()[p.slug]);
     if (!openSlug || !projects.some((p) => p.slug === openSlug && (itemsOf(p).length || sentAll()[p.slug]))) openSlug = firstToOpen(projects);
     const groups = [
-      ["Not on the remote yet", onlyHere],
+      [`Only on ${HERE}`, onlyHere],
       ["Worth a look", projects.filter((p) => !onlyHere.includes(p) && itemsOf(p).length)],
       ["All clear", projects.filter((p) => !onlyHere.includes(p) && !itemsOf(p).length)],
     ].filter(([, list]) => list.length);
     const title = !need.length ? (n === 1 ? "Your project is safe" : `All ${n} projects are safe`)
       : onlyHere.length ? `${plural(onlyHere.length, "project has", "projects have")} work only on ${HERE}`
       : `${plural(need.length, "project needs", "projects need")} a look`;
-    const sub = !need.length ? `Everything is committed, on ${hostAll()} and in main. Housekeep keeps watching.`
-      : data.request ? "Clean up everything in one go, or open a project to choose what to fix." : "Riskiest first. Open a project to choose what to fix.";
+    const sub = !need.length ? "Nothing needs you. Housekeep keeps watching."
+      : `${need.length} of ${plural(n, "project")} ${need.length === 1 ? "needs" : "need"} you. Riskiest first.`;
     return [
       el("section", { class: "head" }, el("div", {},
         el("h1", { text: title }),

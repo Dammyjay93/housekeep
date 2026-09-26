@@ -139,7 +139,7 @@ private struct Overview: View {
                     if !request.isEmpty { cleanUpEverything }
                 }
                 .padding(.bottom, 18)
-                group("Not on the remote yet", onlyHere)
+                group("Only on this Mac", onlyHere)
                 group("Worth a look", worthALook)
                 group("All clear", clear)
             }
@@ -191,8 +191,9 @@ private struct Overview: View {
     }
 
     private var subline: String {
-        onlyHere.isEmpty && worthALook.isEmpty ? "Everything is committed, pushed and in main. Housekeep keeps watching."
-            : request.isEmpty ? "Riskiest first. Open a project to choose what to fix." : "Clean up everything in one go, or open a project to choose what to fix."
+        let need = onlyHere.count + worthALook.count
+        guard need > 0 else { return "Nothing needs you. Housekeep keeps watching." }
+        return "\(need) of \(projects.count) \(projects.count == 1 ? "project" : "projects") \(need == 1 ? "needs" : "need") you. Riskiest first."
     }
 
     @ViewBuilder private func group(_ title: String, _ list: [Project]) -> some View {
