@@ -63,7 +63,8 @@ if $RELEASE; then
   [[ -n "$IDENTITY" ]] || { echo "No Developer ID Application certificate in the keychain."; exit 1; }
   SIGN=(--sign "$IDENTITY" --timestamp --options runtime)
 else
-  SIGN=(--sign - --options runtime)
+  # Ad hoc: no hardened runtime, whose library validation would refuse the ad hoc Sparkle framework.
+  SIGN=(--sign -)
 fi
 
 step "Signing (${IDENTITY:-ad hoc})"

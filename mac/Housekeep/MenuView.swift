@@ -8,7 +8,8 @@ struct MenuView: View {
     @ObservedObject var housekeep: Housekeep
     @ObservedObject var login: LoginItem
     @ObservedObject var updates: Updates
-    let openMap: (URL) -> Void
+    /// Opens the window: at one project, or the overview when nil.
+    let openWindow: (String?) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -45,7 +46,7 @@ struct MenuView: View {
             guard let snapshot = housekeep.snapshot, snapshot.error == nil else { return "" }
             if snapshot.projects.isEmpty { return "No projects yet" }
             let here = snapshot.projects.filter(\.onlyHere).count
-            if here > 0 { return "\(here) with work only here" }
+            if here > 0 { return "\(here) only on this Mac" }
             let n = snapshot.needy.count
             return n == 0 ? "All safe" : "\(n) worth a look"
         }
@@ -84,7 +85,7 @@ struct MenuView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     if let version = updates.waiting { updateCard(version) }
                     if !login.answered && !login.enabled { loginCard }
-                    group("Not on GitHub yet", snapshot.projects.filter(\.onlyHere))
+                    group("Only on this Mac", snapshot.projects.filter(\.onlyHere))
                     group("Worth a look", snapshot.needy.filter { !$0.onlyHere })
                     if !snapshot.clean.isEmpty { allClear(snapshot.clean, alone: snapshot.needy.isEmpty) }
                 }
@@ -101,7 +102,7 @@ struct MenuView: View {
                 Text(title).font(.system(size: 11.5, weight: .medium)).foregroundStyle(Palette.text3)
                     .padding(.horizontal, 10).padding(.top, 6).padding(.bottom, 2)
                 ForEach(projects) { project in
-                    ProjectRow(project: project) { if let url = housekeep.mapURL(slug: project.slug) { openMap(url) } }
+                    ProjectRow(project: project) { openWindow(project.slug) }
                 }
             }
         }
@@ -111,7 +112,7 @@ struct MenuView: View {
         HStack(alignment: .firstTextBaseline, spacing: 9) {
             TierDot(tier: .safe)
             VStack(alignment: .leading, spacing: 2) {
-                Text(alone ? "Everything is committed, on GitHub and in main." : "Safe")
+                Text(alone ? "Nothing needs you." : "Safe")
                     .font(.system(size: 12.5, weight: .medium)).foregroundStyle(alone ? Palette.text : Palette.text2)
                 Text(clean.map(\.name).joined(separator: ", "))
                     .font(.system(size: 12)).foregroundStyle(Palette.text3).lineLimit(2)
@@ -187,7 +188,7 @@ struct MenuView: View {
             .accessibilityLabel("Check now")
             .disabled(housekeep.server == nil || housekeep.checking)
 
-            Button("Open Housekeep") { if let url = housekeep.mapURL() { openMap(url) } }
+            Button("Open Housekeep") { openWindow(nil) }
                 .systemButton(prominent: true)
                 .accessibilityLabel("Open Housekeep")
                 .disabled(housekeep.server == nil)

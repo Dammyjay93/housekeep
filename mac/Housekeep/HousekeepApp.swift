@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 import SwiftUI
 
 @main
@@ -8,22 +7,38 @@ struct HousekeepApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuView(housekeep: app.housekeep, login: app.login, updates: app.updates) { app.map.show($0) }
+            MenuView(housekeep: app.housekeep, login: app.login, updates: app.updates) { app.showDashboard(slug: $0) }
         } label: {
-            MenuBarLabel(housekeep: app.housekeep)
+            MenuBarLabel(housekeep: app.housekeep, app: app)
         }
         .menuBarExtraStyle(.window)
+
+        dashboard
+    }
+
+    /// The window, opened when you ask for it: from the menu, or by opening the app again.
+    @SceneBuilder private var dashboard: some Scene {
+        let window = Window("Housekeep", id: AppDelegate.dashboardID) {
+            DashboardView(housekeep: app.housekeep).environmentObject(app.navigator).environmentObject(app.sent)
+        }
+        .defaultSize(width: 1240, height: 820)
+        .windowToolbarStyle(.unified)
+        window
     }
 }
 
 /// The light, and how many projects need you when any do.
 private struct MenuBarLabel: View {
     @ObservedObject var housekeep: Housekeep
+    let app: AppDelegate
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         let snapshot = housekeep.phase == .running ? housekeep.snapshot : nil
         let needy = snapshot?.needy.count ?? 0
         Image(nsImage: StatusIcon.image(tier: snapshot?.error == nil ? snapshot?.worst : nil))
+            // Always on screen, so it's where the app gets SwiftUI's way to open its window.
+            .onAppear { app.openWindow = openWindow }
         if needy > 0 { Text("\(needy)") }
     }
 }
@@ -33,15 +48,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let housekeep = Housekeep()
     let login = LoginItem()
     let updates = Updates()
-    let map = MapWindow()
+    let navigator = Navigator()
+    let sent = SentRequests()
+    var openWindow: OpenWindowAction?
+    static let dashboardID = "dashboard"
     let welcome = WelcomeWindow()
-    private var watching: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        watching = housekeep.$server
-            .map { $0?.url }
-            .removeDuplicates()
-            .sink { [map] url in map.serverChanged(to: url) }
+        // Back to a menu bar app, with no Dock icon, once the window closes.
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { note in
+            guard let window = note.object as? NSWindow, window.identifier?.rawValue.hasPrefix(AppDelegate.dashboardID) == true else { return }
+            MainActor.assumeIsolated { AppWindows.closing(window) }
+        }
         housekeep.start()
         // Give macOS a moment to place the light, then say where it is: always the first time, and
         // after that only when it's hidden behind the notch.
@@ -59,7 +77,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showWelcome() {
-        welcome.show(housekeep: housekeep, login: login) { [map] url in map.show(url) }
+        welcome.show(housekeep: housekeep, login: login) { [weak self] slug in self?.showDashboard(slug: slug) }
+    }
+
+    /// Opens the window at one project, or the overview.
+    func showDashboard(slug: String?) {
+        navigator.place = slug.map { .project($0) } ?? .overview
+        navigator.requested = true
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        openWindow?(id: Self.dashboardID)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

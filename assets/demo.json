@@ -1,6 +1,6 @@
 {
   "version": "0.2.0",
-  "generatedAt": "2026-09-25T16:38:00.097Z",
+  "generatedAt": "2026-09-26T13:42:32.319Z",
   "watching": 5,
   "quiet": 12,
   "activeDays": 45,
@@ -9,6 +9,240 @@
   "notices": [],
   "error": null,
   "projects": [
+    {
+      "name": "mobile-app",
+      "slug": "p-mobile-app",
+      "path": "/Users/you/code/mobile-app",
+      "displayPath": "~/code/mobile-app",
+      "error": null,
+      "host": "GitHub",
+      "remotes": {
+        "truth": "origin",
+        "push": "origin",
+        "fork": false,
+        "localPath": null,
+        "sameDisk": false
+      },
+      "github": {
+        "checked": true,
+        "reason": null,
+        "host": "github.com",
+        "slug": "you/mobile-app",
+        "prRepo": "you/mobile-app",
+        "autoDelete": true,
+        "canAdmin": true
+      },
+      "limits": {
+        "shallow": false,
+        "singleBranch": false
+      },
+      "main": {
+        "name": "main",
+        "local": true,
+        "remoteMain": true,
+        "remoteRef": "origin/main",
+        "ahead": 0,
+        "behind": 0,
+        "localOnly": 0,
+        "checks": null
+      },
+      "head": {
+        "branch": "main"
+      },
+      "fetch": {
+        "hasRemote": true,
+        "at": "2026-09-26T13:38:32.319Z",
+        "error": null
+      },
+      "checkouts": [
+        {
+          "path": "/Users/you/code/mobile-app",
+          "label": "main working tree",
+          "branch": "main",
+          "primary": true,
+          "missing": false,
+          "changed": 0,
+          "untracked": 0,
+          "secrets": [],
+          "operation": null,
+          "head": null,
+          "detachedCommits": 0,
+          "unreadable": false,
+          "ignoredKeep": [],
+          "offline": false,
+          "locked": false,
+          "temporary": false,
+          "lastEdit": null,
+          "tier": "safe"
+        },
+        {
+          "path": "/Users/you/code/mobile-app-release",
+          "label": "code/mobile-app-release",
+          "branch": "release/1.2",
+          "primary": false,
+          "missing": true,
+          "changed": 0,
+          "untracked": 0,
+          "secrets": [],
+          "operation": null,
+          "head": null,
+          "detachedCommits": 0,
+          "unreadable": false,
+          "ignoredKeep": [],
+          "offline": false,
+          "locked": false,
+          "temporary": false,
+          "lastEdit": null,
+          "tier": "attention"
+        }
+      ],
+      "branches": [
+        {
+          "name": "release/1.2",
+          "state": "kept",
+          "note": "Long-lived branch",
+          "merged": "merged",
+          "aheadOfMain": 0,
+          "localOnly": 0,
+          "behindUpstream": 0,
+          "upstreamGone": false,
+          "onRemote": true,
+          "upstreamIsMain": false,
+          "pushesToMain": false,
+          "pr": null,
+          "lastCommit": 1786972574,
+          "subject": "Set up the app",
+          "mine": true,
+          "worktree": "~/code/mobile-app-release",
+          "current": false
+        }
+      ],
+      "remoteBranches": [
+        {
+          "name": "release/1.2",
+          "sha": "53c3f34a657ac3ac3e909543a8f30df56834f330",
+          "merged": "merged",
+          "kept": "Long-lived branch",
+          "blockedBy": "Long-lived branch",
+          "deletable": false,
+          "backup": false,
+          "local": true,
+          "pr": null,
+          "aheadOfMain": 0,
+          "lastCommit": 1786972574,
+          "mine": true
+        }
+      ],
+      "stashes": [
+        {
+          "label": "On main: try new onboarding"
+        }
+      ],
+      "unpushed": 0,
+      "pruned": [],
+      "committedSecrets": [],
+      "signals": [
+        {
+          "key": "commit",
+          "label": "Working tree",
+          "tier": "attention",
+          "headline": "1 stash",
+          "hint": "Changes set aside with git stash are easy to forget. Apply what matters and drop the rest.",
+          "details": [],
+          "cell": "1 stashed",
+          "value": 1,
+          "unit": "stashed"
+        },
+        {
+          "key": "push",
+          "label": "Push",
+          "tier": "safe",
+          "headline": "Everything pushed",
+          "hint": "Every commit is on GitHub.",
+          "details": [],
+          "cell": "Pushed",
+          "count": "0 unpushed commits",
+          "value": 0,
+          "unit": "unpushed commits"
+        },
+        {
+          "key": "sync",
+          "label": "Sync",
+          "tier": "safe",
+          "headline": "main is up to date with origin/main",
+          "hint": "This Mac and GitHub agree.",
+          "details": [],
+          "cell": "Up to date",
+          "value": 0,
+          "unit": "commits apart"
+        },
+        {
+          "key": "cleanup",
+          "label": "Cleanup",
+          "tier": "attention",
+          "headline": "1 prunable worktree (folder deleted)",
+          "hint": "Their work is already in origin/main. Safe to delete.",
+          "details": [],
+          "cell": "1 to clean up",
+          "value": 1,
+          "unit": "to clean up",
+          "mergedHere": 0,
+          "mergedOnRemote": 0,
+          "prunable": 1,
+          "unmerged": 0
+        }
+      ],
+      "next": {
+        "tier": "attention",
+        "kind": "assistant",
+        "title": "Review 1 stash",
+        "why": "Stashed changes are easy to forget. Apply what matters and drop the rest.",
+        "ask": "In /Users/you/code/mobile-app there is 1 stash. For each, tell me in plain English what it contains and whether it's already committed. Recommend apply or drop, and don't drop anything without asking."
+      },
+      "requests": [
+        {
+          "about": "worktree",
+          "name": "/Users/you/code/mobile-app-release",
+          "does": "clear git's record of this deleted folder",
+          "ask": "In /Users/you/code/mobile-app, the folder for the worktree at /Users/you/code/mobile-app-release was deleted, but git still lists it. Clear it from git's list, after making sure the folder is really gone (not just on a drive that isn't plugged in) and didn't hold commits that aren't on any branch."
+        }
+      ],
+      "items": [
+        {
+          "id": "stashes",
+          "lane": "mac",
+          "title": "1 stash",
+          "tag": "1 stash",
+          "why": "Changes set aside and easy to forget",
+          "where": "git stash",
+          "step": "Bring the stash into main or drop it, asking you first",
+          "ask": "In /Users/you/code/mobile-app, there is 1 stash. For each, tell me in plain English what it contains and whether it's already in origin/main. If it holds work worth keeping, put it on a branch of its own and get it into main through a pull request; if not, drop it. Ask me before dropping anything."
+        },
+        {
+          "id": "folders",
+          "lane": "tidy",
+          "title": "1 extra folder",
+          "tag": "1 extra folder",
+          "why": "Deleted folders git still lists",
+          "where": "1 worktree",
+          "step": "Remove the 1 extra folder",
+          "ask": "In /Users/you/code/mobile-app, clean up these worktrees: /Users/you/code/mobile-app-release (folder already deleted). First check each has no uncommitted or new files, no files git ignores that are worth keeping (like .env.local), and no commits that aren't on a branch; for deleted folders, make sure they're really gone and not on a drive that isn't plugged in. Don't touch the main working tree."
+        }
+      ],
+      "notes": [
+        "Kept on purpose: release/1.2. Housekeep never asks to delete these."
+      ],
+      "request": "In /Users/you/code/mobile-app, please clean up so main is the source of truth. The goal: origin/main is the source of truth, with no dangling branches, worktrees or stashes here or on origin. The only other branches left should be ones with a reason to exist: in progress (an open pull request, or commits in the last two weeks), someone else's, or kept on purpose.\n\nBefore changing anything, back up: save a git bundle of every branch and a patch of any uncommitted changes, outside the repo, and tell me where they are. Ask me before merging into main, pushing to main, deleting anything on the remote, dropping any work, or force-pushing.\n\n1. There is 1 stash. For each, tell me in plain English what it contains and whether it's already in origin/main. If it holds work worth keeping, put it on a branch of its own and get it into main through a pull request; if not, drop it. Ask me before dropping anything.\n\n2. Clean up these worktrees: /Users/you/code/mobile-app-release (folder already deleted). First check each has no uncommitted or new files, no files git ignores that are worth keeping (like .env.local), and no commits that aren't on a branch; for deleted folders, make sure they're really gone and not on a drive that isn't plugged in. Don't touch the main working tree.\n\n3. Finally, fetch, then check that local main matches the remote's main, that no dangling branches, worktrees or stashes are left, and tell me which other branches remain and why (in progress, someone else's, or kept on purpose).\n\nWhen you're done, tell me what you did and anything you left alone.",
+      "summary": "Only on this Mac: 1 stash.",
+      "tags": [
+        {
+          "lane": "tidy",
+          "text": "1 extra folder"
+        }
+      ],
+      "tier": "at-risk",
+      "verdict": "Could lose work"
+    },
     {
       "name": "portfolio",
       "slug": "p-portfolio",
@@ -51,7 +285,7 @@
       },
       "fetch": {
         "hasRemote": true,
-        "at": "2026-09-25T16:34:00.097Z",
+        "at": "2026-09-26T13:38:32.319Z",
         "error": null
       },
       "checkouts": [
@@ -72,6 +306,7 @@
           "offline": false,
           "locked": false,
           "temporary": false,
+          "lastEdit": null,
           "tier": "safe"
         }
       ],
@@ -159,6 +394,7 @@
           "id": "secret:.env",
           "lane": "mac",
           "title": "Secret file committed: .env",
+          "tag": "Secret committed",
           "why": "It's in git's history. Take it out before you push.",
           "where": ".env",
           "step": "Check .env for real keys and take it out of git, without rewriting history",
@@ -168,6 +404,7 @@
           "id": "main-commits",
           "lane": "mac",
           "title": "1 commit on main",
+          "tag": "1 commit on main",
           "why": "Committed straight to main, and not on GitHub.",
           "where": "main",
           "step": "Move them to a branch of their own and push it, not main",
@@ -175,7 +412,9 @@
         }
       ],
       "notes": [],
-      "request": "In /Users/you/code/portfolio, please do the following, in this order.\n\nBefore changing anything, back up: save a git bundle of every branch and a patch of any uncommitted changes, outside the repo, and tell me where they are. Ask me before pushing to main, deleting anything on the remote, or force-pushing.\n\n1. The file .env was committed, and it looks like it holds secrets. Check whether the keys in it are real. If they are, tell me which services I need to change them on. Then take the file out of git without deleting it from my computer, and make git ignore it from now on. Don't rewrite history or force-push without asking me first.\n\n2. Main has 1 commit that exist only on this computer. Put them on a branch of their own and push that, not main, because pushing main can put the site live. Then tell me the right way to get them into origin/main, usually a pull request. Don't force-push.\n\nWhen you're done, tell me what you did and anything you left alone.",
+      "request": "In /Users/you/code/portfolio, please clean up so main is the source of truth. The goal: origin/main is the source of truth, with no dangling branches, worktrees or stashes here or on origin. The only other branches left should be ones with a reason to exist: in progress (an open pull request, or commits in the last two weeks), someone else's, or kept on purpose.\n\nBefore changing anything, back up: save a git bundle of every branch and a patch of any uncommitted changes, outside the repo, and tell me where they are. Ask me before merging into main, pushing to main, deleting anything on the remote, dropping any work, or force-pushing.\n\n1. The file .env was committed, and it looks like it holds secrets. Check whether the keys in it are real. If they are, tell me which services I need to change them on. Then take the file out of git without deleting it from my computer, and make git ignore it from now on. Don't rewrite history or force-push without asking me first.\n\n2. Main has 1 commit that exist only on this computer. Put them on a branch of their own and push that, not main, because pushing main can put the site live. Then tell me the right way to get them into origin/main, usually a pull request. Don't force-push.\n\n3. Finally, fetch, then check that local main matches the remote's main, that no dangling branches, worktrees or stashes are left, and tell me which other branches remain and why (in progress, someone else's, or kept on purpose).\n\nWhen you're done, tell me what you did and anything you left alone.",
+      "summary": "Secret file committed: .env.",
+      "tags": [],
       "tier": "at-risk",
       "verdict": "Could lose work"
     },
@@ -221,7 +460,7 @@
       },
       "fetch": {
         "hasRemote": true,
-        "at": "2026-09-25T16:34:00.097Z",
+        "at": "2026-09-26T13:38:32.319Z",
         "error": null
       },
       "checkouts": [
@@ -242,6 +481,7 @@
           "offline": false,
           "locked": false,
           "temporary": false,
+          "lastEdit": 1790170948,
           "tier": "attention"
         }
       ],
@@ -259,8 +499,9 @@
           "upstreamIsMain": false,
           "pushesToMain": false,
           "pr": null,
-          "lastCommit": 1790350613,
+          "lastCommit": 1790170009,
           "subject": "Order summary",
+          "mine": true,
           "worktree": "~/code/shop-app",
           "current": true
         }
@@ -268,7 +509,7 @@
       "remoteBranches": [
         {
           "name": "fix/cart-total",
-          "sha": "1fc70ed5c7f1b0a8b90ff18f6c6902b6eb91dff0",
+          "sha": "1d81d89242d0e5aa72f63a507208e71a704fc26d",
           "merged": "merged",
           "kept": null,
           "blockedBy": null,
@@ -277,11 +518,12 @@
           "local": false,
           "pr": null,
           "aheadOfMain": 0,
-          "lastCommit": 1789315023
+          "lastCommit": 1789388477,
+          "mine": true
         },
         {
           "name": "feat/checkout-redesign",
-          "sha": "809e8dd8784501dfc4cdde5fa7399523590f7213",
+          "sha": "383d055fd69d54bfb8e60119422cbfac3a279252",
           "merged": null,
           "kept": null,
           "blockedBy": null,
@@ -290,7 +532,8 @@
           "local": true,
           "pr": null,
           "aheadOfMain": 1,
-          "lastCommit": 1789915690
+          "lastCommit": 1789997816,
+          "mine": true
         }
       ],
       "stashes": [],
@@ -372,7 +615,7 @@
           "about": "remote",
           "name": "fix/cart-total",
           "does": "delete fix/cart-total on origin",
-          "ask": "In /Users/you/code/shop-app, delete the branch fix/cart-total on origin: its work is already in origin/main. Fetch first and check again, and skip any that has new commits (fix/cart-total should still be at 1fc70ed), is protected, or has an open pull request. Don't force-push."
+          "ask": "In /Users/you/code/shop-app, delete the branch fix/cart-total on origin: its work is already in origin/main. Fetch first and check again, and skip any that has new commits (fix/cart-total should still be at 1d81d89), is protected, or has an open pull request. Don't force-push."
         }
       ],
       "items": [
@@ -380,6 +623,7 @@
           "id": "push:feat/checkout-redesign",
           "lane": "mac",
           "title": "Order summary",
+          "tag": "Unpushed branch",
           "why": "3 commits, never pushed",
           "where": "feat/checkout-redesign",
           "step": "Push feat/checkout-redesign",
@@ -389,8 +633,9 @@
           "id": "changes:/Users/you/code/shop-app",
           "lane": "mac",
           "title": "3 changes",
+          "tag": "3 changes",
           "why": "Edited, never committed",
-          "where": "main folder",
+          "where": "",
           "step": "Commit the 3 changes on a new branch and push it",
           "ask": "In /Users/you/code/shop-app, there are 3 uncommitted changes in the main working tree. Look at what changed, group it into sensible commits on a new branch (not main), and push that branch to origin so the work is backed up. Leave out anything that looks like a secret or a build artefact, and show me the plan before committing."
         },
@@ -398,14 +643,22 @@
           "id": "merged",
           "lane": "tidy",
           "title": "1 finished branch",
+          "tag": "1 finished branch",
           "why": "Their work is already in main",
           "where": "1 on GitHub",
           "step": "Delete the 1 finished branch, asking before GitHub",
-          "ask": "In /Users/you/code/shop-app, some branches are already in origin/main and can be cleaned up. Delete the branch fix/cart-total on origin, after asking me. Fetch first and check again, and skip any that has new commits (fix/cart-total should still be at 1fc70ed), is protected, or has an open pull request. Don't touch main, and don't force-push."
+          "ask": "In /Users/you/code/shop-app, some branches are already in origin/main and can be cleaned up. Delete the branch fix/cart-total on origin, after asking me. Fetch first and check again, and skip any that has new commits (fix/cart-total should still be at 1d81d89), is protected, or has an open pull request. Don't touch main, and don't force-push."
         }
       ],
       "notes": [],
-      "request": "In /Users/you/code/shop-app, please do the following, in this order.\n\nBefore changing anything, back up: save a git bundle of every branch and a patch of any uncommitted changes, outside the repo, and tell me where they are. Ask me before pushing to main, deleting anything on the remote, or force-pushing.\n\n1. Push the branch feat/checkout-redesign to origin: it has 3 commits that exist only on this computer. Don't push main or anything else, and don't force-push.\n\n2. There are 3 uncommitted changes in the main working tree. Look at what changed, group it into sensible commits on a new branch (not main), and push that branch to origin so the work is backed up. Leave out anything that looks like a secret or a build artefact, and show me the plan before committing.\n\n3. Some branches are already in origin/main and can be cleaned up. Delete the branch fix/cart-total on origin, after asking me. Fetch first and check again, and skip any that has new commits (fix/cart-total should still be at 1fc70ed), is protected, or has an open pull request. Don't touch main, and don't force-push.\n\nWhen you're done, tell me what you did and anything you left alone.",
+      "request": "In /Users/you/code/shop-app, please clean up so main is the source of truth. The goal: origin/main is the source of truth, with no dangling branches, worktrees or stashes here or on origin. The only other branches left should be ones with a reason to exist: in progress (an open pull request, or commits in the last two weeks), someone else's, or kept on purpose.\n\nBefore changing anything, back up: save a git bundle of every branch and a patch of any uncommitted changes, outside the repo, and tell me where they are. Ask me before merging into main, pushing to main, deleting anything on the remote, dropping any work, or force-pushing.\n\n1. Push the branch feat/checkout-redesign to origin: it has 3 commits that exist only on this computer. Don't push main or anything else, and don't force-push.\n\n2. There are 3 uncommitted changes in the main working tree. Look at what changed, group it into sensible commits on a new branch (not main), and push that branch to origin so the work is backed up. Leave out anything that looks like a secret or a build artefact, and show me the plan before committing.\n\n3. Some branches are already in origin/main and can be cleaned up. Delete the branch fix/cart-total on origin, after asking me. Fetch first and check again, and skip any that has new commits (fix/cart-total should still be at 1d81d89), is protected, or has an open pull request. Don't touch main, and don't force-push.\n\n4. Finally, fetch, then check that local main matches the remote's main, that no dangling branches, worktrees or stashes are left, and tell me which other branches remain and why (in progress, someone else's, or kept on purpose).\n\nWhen you're done, tell me what you did and anything you left alone.",
+      "summary": "Only on this Mac: 3 commits and 3 uncommitted changes.",
+      "tags": [
+        {
+          "lane": "tidy",
+          "text": "1 finished branch"
+        }
+      ],
       "tier": "at-risk",
       "verdict": "Could lose work"
     },
@@ -451,7 +704,7 @@
       },
       "fetch": {
         "hasRemote": true,
-        "at": "2026-09-25T16:34:00.097Z",
+        "at": "2026-09-26T13:38:32.319Z",
         "error": null
       },
       "checkouts": [
@@ -472,6 +725,7 @@
           "offline": false,
           "locked": false,
           "temporary": false,
+          "lastEdit": null,
           "tier": "safe"
         },
         {
@@ -493,6 +747,7 @@
           "offline": false,
           "locked": false,
           "temporary": false,
+          "lastEdit": null,
           "tier": "safe"
         }
       ],
@@ -513,8 +768,9 @@
             "number": 14,
             "url": "https://github.com/you/api/pull/14"
           },
-          "lastCommit": 1790351221,
+          "lastCommit": 1790423756,
           "subject": "Structured logging",
+          "mine": true,
           "worktree": "~/code/.worktrees/api-codex",
           "current": false
         },
@@ -531,8 +787,9 @@
           "upstreamIsMain": false,
           "pushesToMain": false,
           "pr": null,
-          "lastCommit": 1790179593,
+          "lastCommit": 1790253459,
           "subject": "Update src/webhooks.ts",
+          "mine": true,
           "worktree": null,
           "current": false
         },
@@ -549,8 +806,9 @@
           "upstreamIsMain": false,
           "pushesToMain": false,
           "pr": null,
-          "lastCommit": 1789832574,
+          "lastCommit": 1789909609,
           "subject": "Update src/auth.ts",
+          "mine": true,
           "worktree": null,
           "current": false
         },
@@ -567,8 +825,9 @@
           "upstreamIsMain": false,
           "pushesToMain": false,
           "pr": null,
-          "lastCommit": 1789656890,
+          "lastCommit": 1789736240,
           "subject": "Update src/limit.test.ts",
+          "mine": true,
           "worktree": null,
           "current": false
         }
@@ -576,7 +835,7 @@
       "remoteBranches": [
         {
           "name": "fix/auth-timeout",
-          "sha": "641ae761accf6dbf7a48fd50b3948ec0a25f34c2",
+          "sha": "0634c230fccf5d7f5185f59edd31690cc761a5d6",
           "merged": "squashed",
           "kept": null,
           "blockedBy": null,
@@ -585,11 +844,12 @@
           "local": true,
           "pr": null,
           "aheadOfMain": 0,
-          "lastCommit": 1789832574
+          "lastCommit": 1789909609,
+          "mine": true
         },
         {
           "name": "feat/rate-limit",
-          "sha": "437adca2c4703da32b64b85cb1f68b820599a185",
+          "sha": "73186e6cdd175d2ea45e9cc359bbb9bb4fbf6387",
           "merged": "squashed",
           "kept": null,
           "blockedBy": null,
@@ -598,11 +858,12 @@
           "local": true,
           "pr": null,
           "aheadOfMain": 0,
-          "lastCommit": 1789656890
+          "lastCommit": 1789736240,
+          "mine": true
         },
         {
           "name": "codex/add-logging",
-          "sha": "fb2fa442981478cbf20dbe3f413874d080c5ee9b",
+          "sha": "e333791427c2a94e2a62a563235c8d65d40dfb63",
           "merged": null,
           "kept": null,
           "blockedBy": null,
@@ -614,11 +875,12 @@
             "url": "https://github.com/you/api/pull/14"
           },
           "aheadOfMain": 1,
-          "lastCommit": 1790351221
+          "lastCommit": 1790423756,
+          "mine": true
         },
         {
           "name": "feat/webhooks",
-          "sha": "2d8aa296cad632e1d694d96a740192327597113d",
+          "sha": "533ca6e0c17857b7d579e602a5f0c0b704169f7e",
           "merged": null,
           "kept": null,
           "blockedBy": null,
@@ -627,7 +889,8 @@
           "local": true,
           "pr": null,
           "aheadOfMain": 1,
-          "lastCommit": 1790179593
+          "lastCommit": 1790253459,
+          "mine": true
         }
       ],
       "stashes": [],
@@ -729,19 +992,19 @@
           "about": "remote",
           "name": "fix/auth-timeout",
           "does": "delete fix/auth-timeout on origin",
-          "ask": "In /Users/you/code/api, delete the branch fix/auth-timeout on origin: its work is already in origin/main. Fetch first and check again, and skip any that has new commits (fix/auth-timeout should still be at 641ae76), is protected, or has an open pull request. Don't force-push."
+          "ask": "In /Users/you/code/api, delete the branch fix/auth-timeout on origin: its work is already in origin/main. Fetch first and check again, and skip any that has new commits (fix/auth-timeout should still be at 0634c23), is protected, or has an open pull request. Don't force-push."
         },
         {
           "about": "remote",
           "name": "feat/rate-limit",
           "does": "delete feat/rate-limit on origin",
-          "ask": "In /Users/you/code/api, delete the branch feat/rate-limit on origin: its work is already in origin/main. Fetch first and check again, and skip any that has new commits (feat/rate-limit should still be at 437adca), is protected, or has an open pull request. Don't force-push."
+          "ask": "In /Users/you/code/api, delete the branch feat/rate-limit on origin: its work is already in origin/main. Fetch first and check again, and skip any that has new commits (feat/rate-limit should still be at 73186e6), is protected, or has an open pull request. Don't force-push."
         },
         {
           "about": "merged-remote",
           "name": null,
           "does": "delete 2 merged",
-          "ask": "In /Users/you/code/api, delete the branches fix/auth-timeout, feat/rate-limit on origin: their work is already in origin/main. Fetch first and check again, and skip any that has new commits (fix/auth-timeout should still be at 641ae76, feat/rate-limit should still be at 437adca), is protected, or has an open pull request. Don't force-push."
+          "ask": "In /Users/you/code/api, delete the branches fix/auth-timeout, feat/rate-limit on origin: their work is already in origin/main. Fetch first and check again, and skip any that has new commits (fix/auth-timeout should still be at 0634c23, feat/rate-limit should still be at 73186e6), is protected, or has an open pull request. Don't force-push."
         },
         {
           "about": "github",
@@ -755,6 +1018,7 @@
           "id": "main",
           "lane": "check",
           "title": "Update main",
+          "tag": "main is behind",
           "why": "GitHub has 4 commits this computer doesn't. Nothing is lost.",
           "where": "main ← origin/main",
           "step": "Update main from GitHub, only by adding the new commits",
@@ -764,235 +1028,24 @@
           "id": "merged",
           "lane": "tidy",
           "title": "2 finished branches",
+          "tag": "2 finished branches",
           "why": "Their work is already in main",
           "where": "2 here · 2 on GitHub",
           "step": "Delete the 2 finished branches, asking before GitHub",
-          "ask": "In /Users/you/code/api, some branches are already in origin/main and can be cleaned up. Delete the local branches fix/auth-timeout, feat/rate-limit. Before deleting, check each one again: every change on it should already be in origin/main. Some were squash-merged or merged through a pull request, so compare the changes, not the commits. Delete the branches fix/auth-timeout, feat/rate-limit on origin, after asking me. Fetch first and check again, and skip any that has new commits (fix/auth-timeout should still be at 641ae76, feat/rate-limit should still be at 437adca), is protected, or has an open pull request. Don't touch main, and don't force-push."
+          "ask": "In /Users/you/code/api, some branches are already in origin/main and can be cleaned up. Delete the local branches fix/auth-timeout, feat/rate-limit. Before deleting, check each one again: every change on it should already be in origin/main. Some were squash-merged or merged through a pull request, so compare the changes, not the commits. Delete the branches fix/auth-timeout, feat/rate-limit on origin, after asking me. Fetch first and check again, and skip any that has new commits (fix/auth-timeout should still be at 0634c23, feat/rate-limit should still be at 73186e6), is protected, or has an open pull request. Don't touch main, and don't force-push."
         }
       ],
       "notes": [
-        "On GitHub, waiting for a pull request: codex/add-logging, feat/webhooks. They're safe."
+        "In progress, so left alone: codex/add-logging, feat/webhooks."
       ],
-      "request": "In /Users/you/code/api, please do the following, in this order.\n\nBefore changing anything, back up: save a git bundle of every branch and a patch of any uncommitted changes, outside the repo, and tell me where they are. Ask me before pushing to main, deleting anything on the remote, or force-pushing.\n\n1. Bring main up to date with origin/main, only by adding the new commits on top (a fast-forward). If that isn't possible, explain why and stop.\n\n2. Some branches are already in origin/main and can be cleaned up. Delete the local branches fix/auth-timeout, feat/rate-limit. Before deleting, check each one again: every change on it should already be in origin/main. Some were squash-merged or merged through a pull request, so compare the changes, not the commits. Delete the branches fix/auth-timeout, feat/rate-limit on origin, after asking me. Fetch first and check again, and skip any that has new commits (fix/auth-timeout should still be at 641ae76, feat/rate-limit should still be at 437adca), is protected, or has an open pull request. Don't touch main, and don't force-push.\n\nWhen you're done, tell me what you did and anything you left alone.",
-      "tier": "attention",
-      "verdict": "Needs attention"
-    },
-    {
-      "name": "mobile-app",
-      "slug": "p-mobile-app",
-      "path": "/Users/you/code/mobile-app",
-      "displayPath": "~/code/mobile-app",
-      "error": null,
-      "host": "GitHub",
-      "remotes": {
-        "truth": "origin",
-        "push": "origin",
-        "fork": false,
-        "localPath": null,
-        "sameDisk": false
-      },
-      "github": {
-        "checked": true,
-        "reason": null,
-        "host": "github.com",
-        "slug": "you/mobile-app",
-        "prRepo": "you/mobile-app",
-        "autoDelete": true,
-        "canAdmin": true
-      },
-      "limits": {
-        "shallow": false,
-        "singleBranch": false
-      },
-      "main": {
-        "name": "main",
-        "local": true,
-        "remoteMain": true,
-        "remoteRef": "origin/main",
-        "ahead": 0,
-        "behind": 0,
-        "localOnly": 0,
-        "checks": null
-      },
-      "head": {
-        "branch": "main"
-      },
-      "fetch": {
-        "hasRemote": true,
-        "at": "2026-09-25T16:34:00.097Z",
-        "error": null
-      },
-      "checkouts": [
+      "request": "In /Users/you/code/api, please clean up so main is the source of truth. The goal: origin/main is the source of truth, with no dangling branches, worktrees or stashes here or on origin. The only other branches left should be ones with a reason to exist: in progress (an open pull request, or commits in the last two weeks), someone else's, or kept on purpose.\n\nBefore changing anything, back up: save a git bundle of every branch and a patch of any uncommitted changes, outside the repo, and tell me where they are. Ask me before merging into main, pushing to main, deleting anything on the remote, dropping any work, or force-pushing.\n\n1. Bring main up to date with origin/main, only by adding the new commits on top (a fast-forward). If that isn't possible, explain why and stop.\n\n2. Some branches are already in origin/main and can be cleaned up. Delete the local branches fix/auth-timeout, feat/rate-limit. Before deleting, check each one again: every change on it should already be in origin/main. Some were squash-merged or merged through a pull request, so compare the changes, not the commits. Delete the branches fix/auth-timeout, feat/rate-limit on origin, after asking me. Fetch first and check again, and skip any that has new commits (fix/auth-timeout should still be at 0634c23, feat/rate-limit should still be at 73186e6), is protected, or has an open pull request. Don't touch main, and don't force-push.\n\n3. Finally, fetch, then check that local main matches the remote's main, that no dangling branches, worktrees or stashes are left, and tell me which other branches remain and why (in progress, someone else's, or kept on purpose).\n\nWhen you're done, tell me what you did and anything you left alone.",
+      "summary": "Update main.",
+      "tags": [
         {
-          "path": "/Users/you/code/mobile-app",
-          "label": "main working tree",
-          "branch": "main",
-          "primary": true,
-          "missing": false,
-          "changed": 0,
-          "untracked": 0,
-          "secrets": [],
-          "operation": null,
-          "head": null,
-          "detachedCommits": 0,
-          "unreadable": false,
-          "ignoredKeep": [],
-          "offline": false,
-          "locked": false,
-          "temporary": false,
-          "tier": "safe"
-        },
-        {
-          "path": "/Users/you/code/mobile-app-release",
-          "label": "code/mobile-app-release",
-          "branch": "release/1.2",
-          "primary": false,
-          "missing": true,
-          "changed": 0,
-          "untracked": 0,
-          "secrets": [],
-          "operation": null,
-          "head": null,
-          "detachedCommits": 0,
-          "unreadable": false,
-          "ignoredKeep": [],
-          "offline": false,
-          "locked": false,
-          "temporary": false,
-          "tier": "attention"
-        }
-      ],
-      "branches": [
-        {
-          "name": "release/1.2",
-          "state": "kept",
-          "note": "Long-lived branch",
-          "merged": "merged",
-          "aheadOfMain": 0,
-          "localOnly": 0,
-          "behindUpstream": 0,
-          "upstreamGone": false,
-          "onRemote": true,
-          "upstreamIsMain": false,
-          "pushesToMain": false,
-          "pr": null,
-          "lastCommit": 1786897656,
-          "subject": "Set up the app",
-          "worktree": "~/code/mobile-app-release",
-          "current": false
-        }
-      ],
-      "remoteBranches": [
-        {
-          "name": "release/1.2",
-          "sha": "1b944ef9643fbded773af6ad9fe09c517eeaa901",
-          "merged": "merged",
-          "kept": "Long-lived branch",
-          "blockedBy": "Long-lived branch",
-          "deletable": false,
-          "backup": false,
-          "local": true,
-          "pr": null,
-          "aheadOfMain": 0,
-          "lastCommit": 1786897656
-        }
-      ],
-      "stashes": [
-        {
-          "label": "On main: try new onboarding"
-        }
-      ],
-      "unpushed": 0,
-      "pruned": [],
-      "committedSecrets": [],
-      "signals": [
-        {
-          "key": "commit",
-          "label": "Working tree",
-          "tier": "attention",
-          "headline": "1 stash",
-          "hint": "Changes set aside with git stash are easy to forget. Apply what matters and drop the rest.",
-          "details": [],
-          "cell": "1 stashed",
-          "value": 1,
-          "unit": "stashed"
-        },
-        {
-          "key": "push",
-          "label": "Push",
-          "tier": "safe",
-          "headline": "Everything pushed",
-          "hint": "Every commit is on GitHub.",
-          "details": [],
-          "cell": "Pushed",
-          "count": "0 unpushed commits",
-          "value": 0,
-          "unit": "unpushed commits"
-        },
-        {
-          "key": "sync",
-          "label": "Sync",
-          "tier": "safe",
-          "headline": "main is up to date with origin/main",
-          "hint": "This Mac and GitHub agree.",
-          "details": [],
-          "cell": "Up to date",
-          "value": 0,
-          "unit": "commits apart"
-        },
-        {
-          "key": "cleanup",
-          "label": "Cleanup",
-          "tier": "attention",
-          "headline": "1 prunable worktree (folder deleted)",
-          "hint": "Their work is already in origin/main. Safe to delete.",
-          "details": [],
-          "cell": "1 to clean up",
-          "value": 1,
-          "unit": "to clean up",
-          "mergedHere": 0,
-          "mergedOnRemote": 0,
-          "prunable": 1,
-          "unmerged": 0
-        }
-      ],
-      "next": {
-        "tier": "attention",
-        "kind": "assistant",
-        "title": "Review 1 stash",
-        "why": "Stashed changes are easy to forget. Apply what matters and drop the rest.",
-        "ask": "In /Users/you/code/mobile-app there is 1 stash. For each, tell me in plain English what it contains and whether it's already committed. Recommend apply or drop, and don't drop anything without asking."
-      },
-      "requests": [
-        {
-          "about": "worktree",
-          "name": "/Users/you/code/mobile-app-release",
-          "does": "clear git's record of this deleted folder",
-          "ask": "In /Users/you/code/mobile-app, the folder for the worktree at /Users/you/code/mobile-app-release was deleted, but git still lists it. Clear it from git's list, after making sure the folder is really gone (not just on a drive that isn't plugged in) and didn't hold commits that aren't on any branch."
-        }
-      ],
-      "items": [
-        {
-          "id": "stashes",
-          "lane": "mac",
-          "title": "1 stash",
-          "why": "Changes set aside and easy to forget",
-          "where": "git stash",
-          "step": "Show you what's in the stash and ask what to keep",
-          "ask": "In /Users/you/code/mobile-app, there is 1 stash. For each, tell me in plain English what it contains and whether it's already committed. Recommend apply or drop, and don't drop anything without asking."
-        },
-        {
-          "id": "folders",
           "lane": "tidy",
-          "title": "1 extra folder",
-          "why": "Deleted folders git still lists",
-          "where": "1 worktree",
-          "step": "Remove the 1 extra folder",
-          "ask": "In /Users/you/code/mobile-app, clean up these worktrees: /Users/you/code/mobile-app-release (folder already deleted). First check each has no uncommitted or new files, no files git ignores that are worth keeping (like .env.local), and no commits that aren't on a branch; for deleted folders, make sure they're really gone and not on a drive that isn't plugged in. Don't touch the main working tree."
+          "text": "2 finished branches"
         }
       ],
-      "notes": [],
-      "request": "In /Users/you/code/mobile-app, please do the following, in this order.\n\nBefore changing anything, back up: save a git bundle of every branch and a patch of any uncommitted changes, outside the repo, and tell me where they are. Ask me before pushing to main, deleting anything on the remote, or force-pushing.\n\n1. There is 1 stash. For each, tell me in plain English what it contains and whether it's already committed. Recommend apply or drop, and don't drop anything without asking.\n\n2. Clean up these worktrees: /Users/you/code/mobile-app-release (folder already deleted). First check each has no uncommitted or new files, no files git ignores that are worth keeping (like .env.local), and no commits that aren't on a branch; for deleted folders, make sure they're really gone and not on a drive that isn't plugged in. Don't touch the main working tree.\n\nWhen you're done, tell me what you did and anything you left alone.",
       "tier": "attention",
       "verdict": "Needs attention"
     },
@@ -1038,7 +1091,7 @@
       },
       "fetch": {
         "hasRemote": true,
-        "at": "2026-09-25T16:34:00.097Z",
+        "at": "2026-09-26T13:38:32.319Z",
         "error": null
       },
       "checkouts": [
@@ -1059,6 +1112,7 @@
           "offline": false,
           "locked": false,
           "temporary": false,
+          "lastEdit": null,
           "tier": "safe"
         }
       ],
@@ -1130,8 +1184,11 @@
       "items": [],
       "notes": [],
       "request": "",
+      "summary": "Everything is in origin/main.",
+      "tags": [],
       "tier": "safe",
       "verdict": "All clear"
     }
-  ]
+  ],
+  "request": "Please clean up these 4 repositories so main is the source of truth in each, with no dangling refs. In each, main on the remote should hold all finished work, and the only other branches left should be ones with a reason to exist: in progress (an open pull request, or commits in the last two weeks), someone else's, or kept on purpose. No stale branches, extra worktrees or stashes.\n\nWork through them one repository at a time, in this order. In each: back up first (a git bundle of every branch and a patch of any uncommitted changes, outside the repo), then work through its list. Ask me before merging into main, pushing to main, deleting anything on the remote, dropping any work, or force-pushing. Finish one repository and tell me what's left there before starting the next.\n\n## 1. mobile-app (/Users/you/code/mobile-app)\n\n1. There is 1 stash. For each, tell me in plain English what it contains and whether it's already in origin/main. If it holds work worth keeping, put it on a branch of its own and get it into main through a pull request; if not, drop it. Ask me before dropping anything.\n\n2. Clean up these worktrees: /Users/you/code/mobile-app-release (folder already deleted). First check each has no uncommitted or new files, no files git ignores that are worth keeping (like .env.local), and no commits that aren't on a branch; for deleted folders, make sure they're really gone and not on a drive that isn't plugged in. Don't touch the main working tree.\n\n3. Finally, fetch, then check that local main matches the remote's main, that no dangling branches, worktrees or stashes are left, and tell me which other branches remain and why (in progress, someone else's, or kept on purpose).\n\n## 2. portfolio (/Users/you/code/portfolio)\n\n1. The file .env was committed, and it looks like it holds secrets. Check whether the keys in it are real. If they are, tell me which services I need to change them on. Then take the file out of git without deleting it from my computer, and make git ignore it from now on. Don't rewrite history or force-push without asking me first.\n\n2. Main has 1 commit that exist only on this computer. Put them on a branch of their own and push that, not main, because pushing main can put the site live. Then tell me the right way to get them into origin/main, usually a pull request. Don't force-push.\n\n3. Finally, fetch, then check that local main matches the remote's main, that no dangling branches, worktrees or stashes are left, and tell me which other branches remain and why (in progress, someone else's, or kept on purpose).\n\n## 3. shop-app (/Users/you/code/shop-app)\n\n1. Push the branch feat/checkout-redesign to origin: it has 3 commits that exist only on this computer. Don't push main or anything else, and don't force-push.\n\n2. There are 3 uncommitted changes in the main working tree. Look at what changed, group it into sensible commits on a new branch (not main), and push that branch to origin so the work is backed up. Leave out anything that looks like a secret or a build artefact, and show me the plan before committing.\n\n3. Some branches are already in origin/main and can be cleaned up. Delete the branch fix/cart-total on origin, after asking me. Fetch first and check again, and skip any that has new commits (fix/cart-total should still be at 1d81d89), is protected, or has an open pull request. Don't touch main, and don't force-push.\n\n4. Finally, fetch, then check that local main matches the remote's main, that no dangling branches, worktrees or stashes are left, and tell me which other branches remain and why (in progress, someone else's, or kept on purpose).\n\n## 4. api (/Users/you/code/api)\n\n1. Bring main up to date with origin/main, only by adding the new commits on top (a fast-forward). If that isn't possible, explain why and stop.\n\n2. Some branches are already in origin/main and can be cleaned up. Delete the local branches fix/auth-timeout, feat/rate-limit. Before deleting, check each one again: every change on it should already be in origin/main. Some were squash-merged or merged through a pull request, so compare the changes, not the commits. Delete the branches fix/auth-timeout, feat/rate-limit on origin, after asking me. Fetch first and check again, and skip any that has new commits (fix/auth-timeout should still be at 0634c23, feat/rate-limit should still be at 73186e6), is protected, or has an open pull request. Don't touch main, and don't force-push.\n\n3. Finally, fetch, then check that local main matches the remote's main, that no dangling branches, worktrees or stashes are left, and tell me which other branches remain and why (in progress, someone else's, or kept on purpose).\n\nWhen you're done, give me a short summary for each repository."
 }

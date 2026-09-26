@@ -54,11 +54,13 @@ struct TierDot: View {
 }
 
 extension View {
-    /// The system's buttons: Liquid Glass on macOS 26 and later, bordered before it. The prominent one
-    /// takes the map's light primary colour, with dark text, like its primary buttons.
+    /// The system's buttons: Liquid Glass capsules on macOS 26 and later (macOS draws glass buttons as
+    /// rounded rectangles unless told otherwise), bordered before it. The prominent one is clear glass with a
+    /// light wash of the accent: glassProminent fills the glass with its tint until it reads as a solid pill.
     @ViewBuilder func systemButton(prominent: Bool = false) -> some View {
         if #available(macOS 26, *) {
-            if prominent { buttonStyle(.glassProminent).tint(Palette.text).foregroundStyle(Palette.black) } else { buttonStyle(.glass) }
+            if prominent { buttonStyle(.glass(.regular.tint(Palette.accent.opacity(0.35)))).buttonBorderShape(.capsule) }
+            else { buttonStyle(.glass).buttonBorderShape(.capsule) }
         } else {
             if prominent { buttonStyle(.borderedProminent).tint(Palette.text).foregroundStyle(Palette.black) } else { buttonStyle(.bordered) }
         }
@@ -68,5 +70,25 @@ extension View {
     func card(radius: CGFloat = 12) -> some View {
         background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Palette.layer1))
             .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Palette.line, lineWidth: 1))
+    }
+}
+
+extension Palette {
+    static let track = Color(hex: 0xD9D9D9)
+    static let trackSoft = Color(hex: 0x3B3B3B)
+    static let accent = Color(hex: 0x8A8FD9)
+    static let red = Color(hex: 0xE0726E)
+    static let amber = Color(hex: 0xD4A85A)
+    static let green = Color(hex: 0x5FB88A)
+}
+
+extension View {
+    /// Liquid Glass in a capsule on macOS 26 and later; a hairline pill before it.
+    @ViewBuilder func glassCapsule() -> some View {
+        if #available(macOS 26, *) {
+            glassEffect(.regular, in: .capsule)
+        } else {
+            background(Capsule().fill(Palette.layer2)).overlay(Capsule().strokeBorder(Palette.line, lineWidth: 1))
+        }
     }
 }

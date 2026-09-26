@@ -1,11 +1,15 @@
 import Foundation
 
-/// The part of Housekeep's state the menu shows. The server's JSON has much more (src/model.ts); this
-/// decodes only what the menu reads, so new fields on the server never break the app.
+/// Housekeep's state as the server sends it (src/model.ts): what the menu and the window read. Fields
+/// newer servers add are optional, so an older or newer server never breaks the app.
 struct Snapshot: Decodable, Sendable {
     let generatedAt: String
     let projects: [Project]
     let error: SnapshotError?
+    let notices: [String]?
+    let activeDays: Int?
+    /// One request that cleans up every project with something to fix, one repository at a time.
+    let request: String?
 
     var needy: [Project] { projects.filter { $0.tier != .safe } }
     var clean: [Project] { projects.filter { $0.tier == .safe } }
@@ -22,16 +26,38 @@ struct Project: Decodable, Identifiable, Sendable {
     let name: String
     let slug: String
     let path: String
+    let displayPath: String?
+    let host: String?
+    let error: String?
     let tier: Tier
     let next: NextStep?
     /// What to fix, in plain words (src/items.ts). Missing from servers older than 0.2.
     let items: [Item]?
+    /// Worth knowing, nothing to do: work safe on the remote, waiting for a pull request.
+    let notes: [String]?
     /// One request covering every item, backing up first.
     let request: String?
+    /// The project in a sentence, most at stake first. Missing from servers older than 0.2.1.
+    let summary: String?
+    /// Everything the summary doesn't cover, as short chips.
+    let tags: [Tag]?
+    let main: MainFacts?
+    let head: Head?
+    let fetch: FetchInfo?
+    let branches: [Branch]?
+    let remoteBranches: [RemoteBranch]?
+    let checkouts: [Checkout]?
 
     var id: String { path }
+    var shownPath: String { displayPath ?? path }
+    var hostName: String { host ?? "the remote" }
 
-    var toFix: [Item] { items ?? [] }
+    /// What to fix. An older server sends no items: its next step stands in, so nothing looks clear that isn't.
+    var toFix: [Item] {
+        if let items { return items }
+        guard let next, next.tier != .safe, !next.ask.isEmpty else { return [] }
+        return [Item(id: "next", lane: tier == .atRisk ? .mac : .check, title: next.title, tag: nil, why: next.why, where: "", step: next.title, ask: next.ask)]
+    }
 
     /// Work that exists only on this computer: the reason a project is listed first.
     var onlyHere: Bool { toFix.contains { $0.lane == .mac } }
@@ -43,8 +69,9 @@ struct Project: Decodable, Identifiable, Sendable {
         return next.ask
     }
 
-    /// What's wrong, in a line: the names of the first few things to fix.
+    /// What's wrong, in a line: the server's summary, or the names of the first few things to fix.
     var line: String {
+        if let summary, !summary.isEmpty { return summary }
         let titles = toFix.map(\.title)
         guard !titles.isEmpty else { return next?.title ?? tier.verdict }
         let shown = titles.prefix(2).joined(separator: " · ")
@@ -52,14 +79,88 @@ struct Project: Decodable, Identifiable, Sendable {
     }
 }
 
-struct Item: Decodable, Identifiable, Sendable {
-    enum Lane: String, Decodable, Sendable {
+struct Item: Decodable, Identifiable, Sendable, Hashable {
+    enum Lane: String, Decodable, Sendable, CaseIterable {
         case mac, check, tidy
     }
 
     let id: String
     let lane: Lane
     let title: String
+    /// A short label for a chip. Missing from servers older than 0.2.1.
+    let tag: String?
+    let why: String
+    let `where`: String
+    let step: String
+    let ask: String
+}
+
+struct Tag: Decodable, Sendable, Hashable {
+    let text: String
+    let lane: Item.Lane
+}
+
+struct MainFacts: Decodable, Sendable {
+    let name: String
+    let local: Bool
+    let remoteMain: Bool
+    let remoteRef: String?
+    let ahead: Int?
+    let behind: Int?
+}
+
+struct Head: Decodable, Sendable {
+    let branch: String?
+}
+
+struct FetchInfo: Decodable, Sendable {
+    let hasRemote: Bool
+    let at: String?
+    let error: String?
+}
+
+struct Branch: Decodable, Sendable, Identifiable {
+    enum State: String, Decodable, Sendable {
+        case unpushed, unmerged, merged, kept
+    }
+
+    let name: String
+    let state: State
+    let note: String
+    let localOnly: Int
+    let aheadOfMain: Int
+    let behindUpstream: Int
+    let upstreamGone: Bool
+    let lastCommit: Double?
+    let worktree: String?
+    let current: Bool
+
+    var id: String { name }
+}
+
+struct RemoteBranch: Decodable, Sendable, Identifiable {
+    let name: String
+    let merged: String?
+    let kept: String?
+    let blockedBy: String?
+    let deletable: Bool
+    let aheadOfMain: Int
+    let lastCommit: Double?
+
+    var id: String { name }
+}
+
+struct Checkout: Decodable, Sendable, Identifiable {
+    let path: String
+    let label: String
+    let branch: String?
+    let primary: Bool
+    let missing: Bool
+    let changed: Int
+    let untracked: Int
+    let tier: Tier
+
+    var id: String { path }
 }
 
 struct NextStep: Decodable, Sendable {

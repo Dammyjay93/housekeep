@@ -37,6 +37,8 @@ export interface Checkout {
   locked: boolean;
   /** In a temporary folder the system empties (e.g. /tmp), so anything only here can vanish. */
   temporary: boolean;
+  /** When the newest uncommitted or untracked file was last edited (unix seconds), or null if none can be read. */
+  lastEdit: number | null;
   tier: Tier;
 }
 
@@ -75,6 +77,8 @@ export interface Branch {
   lastCommit: number | null;
   /** The last commit's message, first line: often the plainest name for the work. */
   subject: string | null;
+  /** Its last commit is by you (your git user.email), so it's yours to finish or delete. */
+  mine: boolean;
   worktree: string | null;
   current: boolean;
 }
@@ -91,6 +95,8 @@ export interface RemoteBranch {
   pr: PullRequestRef | null;
   aheadOfMain: number;
   lastCommit: number | null;
+  /** Its last commit is by you, so it's yours to finish or delete. */
+  mine: boolean;
 }
 
 export interface Signal {
@@ -181,6 +187,8 @@ export interface Item {
   lane: "mac" | "check" | "tidy";
   /** The work, named as a person would: a commit's subject, not a branch name. */
   title: string;
+  /** A short label for a chip, e.g. "Stale branch" or "34 changes". */
+  tag: string;
   why: string;
   /** Where it lives: a branch, a folder, main. */
   where: string;
@@ -188,6 +196,11 @@ export interface Item {
   step: string;
   /** The full request for this one thing. */
   ask: string;
+}
+
+export interface Tag {
+  text: string;
+  lane: Item["lane"];
 }
 
 export interface Project {
@@ -221,6 +234,10 @@ export interface Project {
   notes: string[];
   /** One request covering every item, in order, for your AI assistant. Empty when there's nothing to do. */
   request: string;
+  /** The project in a sentence: what's most at stake, with counts. */
+  summary: string;
+  /** Everything else to fix, as short chips: the lanes the summary doesn't cover, alike ones counted together. */
+  tags: Tag[];
   tier: Tier;
   verdict: string;
 }
@@ -238,6 +255,8 @@ export interface Snapshot {
   notices: string[];
   error: { title: string; detail: string } | null;
   projects: Project[];
+  /** One request covering every project with something to fix, one repository at a time. */
+  request?: string;
 }
 
 export const TIER_RANK: Record<Tier, number> = { "at-risk": 0, attention: 1, safe: 2 };

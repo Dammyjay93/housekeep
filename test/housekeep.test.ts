@@ -5,7 +5,7 @@
 
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { devNull, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -26,7 +26,7 @@ const { runningServer, startServer } = await import("../src/server.js");
 const { VERSION } = await import("../src/scan.js");
 const { SERVER_FILE, STATE_DIR, CONFIG_FILE } = await import("../src/config.js");
 const { githubRepo, hostName, localPathOf, remotesOf } = await import("../src/remote.js");
-const { workName } = await import("../src/items.js");
+const { everywhereRequest, workName } = await import("../src/items.js");
 const { OpenError, openIn } = await import("../src/open.js");
 const { menubar } = await import("../src/menubar.js");
 const { loadDemo } = await import("../src/demo.js");
@@ -292,9 +292,13 @@ describe("what to fix, in plain words", () => {
     run(sb.repo, "switch", "-qc", "feat/checkout", "main");
     writeFileSync(join(sb.repo, "checkout"), "x");
     run(sb.repo, "add", "checkout");
-    run(sb.repo, "commit", "-qm", "feat(payments): add tuition checkout");
+    // Two days old: today's work in progress is left alone, older work only here is flagged.
+    const old = new Date(Date.now() - 2 * 86_400_000);
+    execFileSync("git", ["-C", sb.repo, "commit", "-qm", "feat(payments): add tuition checkout"],
+      { env: { ...process.env, GIT_AUTHOR_DATE: old.toISOString(), GIT_COMMITTER_DATE: old.toISOString() }, stdio: "ignore" });
     run(sb.repo, "switch", "-q", "main");
     writeFileSync(join(sb.repo, "draft"), "x");
+    utimesSync(join(sb.repo, "draft"), old, old);
     const p = await sb.project();
     const byId = new Map(p.items.map((i) => [i.id, i]));
     assert.equal(byId.get("push:feat/checkout")?.title, "Add tuition checkout");
@@ -303,10 +307,69 @@ describe("what to fix, in plain words", () => {
     assert.equal(byId.get("merged")?.lane, "tidy");
     const lanes = p.items.map((i) => i.lane);
     assert.deepEqual(lanes, [...lanes].sort((a, b) => ["mac", "check", "tidy"].indexOf(a) - ["mac", "check", "tidy"].indexOf(b)));
-    assert.match(p.request, /^In .+, please do the following, in this order\./);
+    assert.match(p.request, /^In .+, please clean up so main is the source of truth\./);
     assert.match(p.request, /back up/);
     const [pushAt, clearAt] = [p.request.indexOf("Push the branch feat/checkout"), p.request.indexOf("Some branches are already in")];
     assert.ok(pushAt > 0 && clearAt > pushAt, "saving work comes before clearing leftovers");
+    assert.equal(p.tier, "at-risk");
+    const here = process.platform === "darwin" ? "this Mac" : "this computer";
+    assert.equal(p.summary, `Only on ${here}: 1 commit and 1 uncommitted change. Its remote is a folder on this disk, so there's no copy anywhere else.`);
+    assert.deepEqual(p.tags, [{ text: "1 finished branch", lane: "tidy" }]);
+  });
+  it("leaves today's work in progress alone, and says so", async () => {
+    const sb = sandbox();
+    run(sb.repo, "switch", "-qc", "feat/today", "main");
+    commit(sb.repo, "today");
+    writeFileSync(join(sb.repo, "draft"), "x");
+    const p = await sb.project();
+    // The sandbox sits in a temporary folder the system can empty, so its uncommitted change is flagged anyway,
+    // and its remote is a folder on the same disk. Today's commit is the one thing left alone.
+    assert.deepEqual(p.items.map((i) => i.id), ["same-disk", `changes:${p.checkouts[0]?.path}`]);
+    assert.match(p.notes[0] ?? "", /^From the last day and not on .+, so left alone for now: feat\/today\./);
+  });
+
+  it("asks to finish or delete only your stale branches, and leaves ones with a reason to exist", async () => {
+    const sb = sandbox();
+    const at = (daysAgo: number, author = "Test <test@example.com>") => {
+      const when = new Date(Date.now() - daysAgo * 86_400_000).toISOString();
+      const [name, email] = author.replace(">", "").split(" <");
+      return { ...process.env, GIT_AUTHOR_DATE: when, GIT_COMMITTER_DATE: when, GIT_AUTHOR_NAME: name, GIT_AUTHOR_EMAIL: email };
+    };
+    const branch = (name: string, env: NodeJS.ProcessEnv) => {
+      run(sb.repo, "switch", "-qc", name, "main");
+      writeFileSync(join(sb.repo, name.replace("/", "-")), name);
+      run(sb.repo, "add", ".");
+      execFileSync("git", ["-C", sb.repo, "commit", "-qm", `work on ${name}`], { env });
+      run(sb.repo, "push", "-q", "-u", "origin", name);
+      run(sb.repo, "switch", "-q", "main");
+    };
+    run(sb.repo, "config", "user.email", "test@example.com");
+    branch("feat/stale", at(30));
+    branch("feat/fresh", at(2));
+    branch("feat/theirs", at(30, "Ada <ada@example.com>"));
+    branch("develop", at(30));
+    const p = await sb.project();
+    const ids = p.items.map((i) => i.id);
+    assert.ok(ids.includes("dangling:feat/stale"));
+    assert.ok(!ids.some((id) => /feat\/(fresh|theirs)|develop/.test(id)));
+    const stale = p.items.find((i) => i.id === "dangling:feat/stale");
+    assert.match(stale?.ask ?? "", /ask me: finish it or delete it/);
+    assert.doesNotMatch(stale?.ask ?? "", /merge it after I say yes\. If/);
+    const notes = p.notes.join(" ");
+    assert.match(notes, /In progress, so left alone: feat\/fresh/);
+    assert.match(notes, /Someone else's work .*feat\/theirs/);
+    assert.match(notes, /Kept on purpose: develop/);
+    assert.match(p.request, /clean up so main is the source of truth/);
+    assert.match(p.request, /no dangling branches, worktrees or stashes are left/);
+  });
+
+  it("cleans up every repo in one request, one repository at a time", () => {
+    const item = { id: "x", lane: "mac" as const, title: "X", tag: "X", why: "", where: "", step: "", ask: "In /r/a, push the branch x." };
+    const text = everywhereRequest([{ name: "a", path: "/r/a", items: [item] }, { name: "b", path: "/r/b", items: [] }]);
+    assert.match(text, /^Please clean up this repository so main is the source of truth/);
+    assert.match(text, /## 1\. a \(\/r\/a\)\n\n1\. Push the branch x\./);
+    assert.doesNotMatch(text, /## 2/);
+    assert.equal(everywhereRequest([{ name: "b", path: "/r/b", items: [] }]), "");
   });
 
   it("has nothing to ask for when everything is in main", async () => {
@@ -727,7 +790,7 @@ describe("the demo", () => {
   it("looks freshly checked, and mentions nobody's real machine", () => {
     const demo = loadDemo();
     assert.ok(Date.now() - new Date(demo.generatedAt).getTime() < 5000);
-    assert.deepEqual(demo.projects.map((p) => p.tier), ["at-risk", "at-risk", "attention", "attention", "safe"]);
+    assert.deepEqual(demo.projects.map((p) => p.tier), ["at-risk", "at-risk", "at-risk", "attention", "safe"]);
     const text = JSON.stringify(demo);
     for (const p of demo.projects) assert.ok(p.path.startsWith("/Users/you/code/"), p.path);
     assert.ok(!text.includes(process.env.HOME ?? "/nonexistent-home"));
