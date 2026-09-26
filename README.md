@@ -8,7 +8,11 @@ Is your git work committed, pushed, in sync with main, and cleaned up? One comma
 npx git-housekeep
 ```
 
-On a Mac, you can [download the app](https://github.com/Dammyjay93/housekeep/releases/latest/download/Housekeep.dmg) instead: a light in your menu bar, the map a click away, and no terminal needed.
+On a Mac, you can [download the app](https://github.com/Dammyjay93/housekeep/releases/latest/download/Housekeep.dmg) instead, or install it with Homebrew: a light in your menu bar, the map a click away, and no terminal needed.
+
+```bash
+brew install --cask dammyjay93/tap/housekeep
+```
 
 [![Watch the one-minute demo, with sound: the menu bar light goes from red to green as an AI assistant fixes two projects](site/housekeep-demo-play.jpg)](https://housekeep.pages.dev/#watch)
 
@@ -123,9 +127,9 @@ npx skills add Dammyjay93/housekeep
   - long-lived names like `develop`, `staging`, `production`, `release/*` and `gh-pages`
 - **When it can't see everything, it says so** instead of showing green: shallow clones, single-branch clones, unreachable remotes, and folders your operating system won't let it read (like `~/Documents` on macOS, until you allow your terminal).
 
-## It only reads
+## It never touches your work
 
-Housekeep never commits, pushes, merges, deletes or changes a setting in your repos. Every fix is a **request**: plain English you copy from the map, the report's JSON or the menu bar, and paste into your AI coding assistant (Claude Code, Cursor, Codex) opened in that project. Your assistant does the work where you can see it, and Housekeep notices when it's done.
+Housekeep never commits, pushes, merges, deletes or changes a setting in your repos, and never touches your branches or files. Every fix is a **request**: plain English you copy from the map, the report's JSON or the menu bar, and paste into your AI coding assistant (Claude Code, Cursor, Codex) opened in that project. Your assistant does the work where you can see it, and Housekeep notices when it's done.
 
 Each request carries the checks the change needs, so your assistant makes them before touching anything:
 - Only delete a branch whose changes are all in `main` on the remote (squash merges count), and never one that's checked out.
@@ -141,7 +145,20 @@ Two things touch git without you asking:
   - Use `--offline`, or set `fetchEveryMinutes` to `0`, to fetch only when you ask.
 - **The squash-merge check writes temporary objects** into the repo. Nothing refers to them, and git's normal cleanup removes them.
 
-The map can also open a project's folder in Finder, Terminal, VS Code or Cursor. Nothing leaves your computer except git's own traffic with your remotes, and GitHub's API when `gh` is installed. There's no telemetry.
+The map can also open a project's folder in Finder, Terminal, VS Code or Cursor.
+
+### Every network call
+
+There's no telemetry, no account and no server of ours that sees your repos. These are all the connections Housekeep makes:
+
+| What | To | When | Turn it off |
+| --- | --- | --- | --- |
+| `git fetch --prune`, `git ls-remote` | Your own remotes (GitHub, GitLab, …), with your own git credentials | Every `fetchEveryMinutes`, and when you press Check now | `--offline`, or `fetchEveryMinutes: 0` |
+| GitHub's API, through your `gh` | api.github.com | With each fetch, only if `gh` is installed and signed in: pull requests, the default branch, protected branches, and the checks on main | Uninstall or sign out of `gh` |
+| Update check (Mac app only) | housekeep.pages.dev/appcast.xml, then GitHub Releases for the download | Once a day; it asks before installing | `defaults write dev.housekeep.app SUEnableAutomaticChecks -bool NO` |
+| `npx git-housekeep` | The npm registry | When `npx` downloads the package | Install it once with `npm i -g git-housekeep` |
+
+Nothing about your repos is sent anywhere except what git and `gh` already send to your own remotes.
 
 The map only listens on `127.0.0.1`, and every request to it needs a token from the page it served, so other websites can't use it.
 
@@ -153,9 +170,9 @@ The map only listens on `127.0.0.1`, and every request to it needs a token from 
 - `activeDays`: watch repos you've committed to or switched branches in during this many days (default 45).
 - `watch`: folders to always watch, however old. `ignore`: folders never to watch.
 - `fetchEveryMinutes`: how often to fetch (default 10; `0` means only when you ask).
-- `port`: where the map listens (default 47219; any free port if it's taken).
+- `port`: where the map listens (default 47219; the next few ports if it's taken, then any free one).
 
-State (the last result, what the remotes said) lives in `~/.local/state/housekeep`.
+State lives in `~/.local/state/housekeep`, readable only by you: the last result, what `gh` and the remotes said, and the last commit of any branch deleted on a remote while it still held work. It holds no file contents.
 
 ## Fonts
 
